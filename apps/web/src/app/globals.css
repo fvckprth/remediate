@@ -1,0 +1,51 @@
+@import "tailwindcss";
+
+@theme inline {
+  --font-sans: var(--font-open-runde), system-ui, sans-serif;
+}
+
+@theme {
+  --color-background: #1c1c1c;
+  --color-foreground: #e7e7e7;
+  --color-muted: #737373;
+  --color-border: #2e2e2e;
+  --color-surface: #242424;
+}
+
+html.light {
+  --color-background: #e7e7e7;
+  --color-foreground: #1c1c1c;
+  --color-muted: #737373;
+  --color-border: #d5d5d5;
+  --color-surface: #dfdfdf;
+}
+
+body {
+  background: var(--color-background);
+  color: var(--color-foreground);
+}
+
+.bullet {
+  color: color-mix(in srgb, var(--color-foreground) 10%, transparent);
+  transition: color 300ms;
+}
+.section-active .bullet {
+  color: color-mix(in srgb, var(--color-foreground) 25%, transparent);
+}
+
+.landing-scroll::-webkit-scrollbar {
+  display: none;
+}
+.landing-scroll {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Scope the Remediate widget inside browser mockups */
+.builtin-feedback-scope .rm-bar {
+  position: absolute;
+  z-index: 10;
+}
+.builtin-feedback-scope [data-remediate-widget] {
+  position: static;
+}

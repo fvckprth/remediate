@@ -1,0 +1,129 @@
+{
+  "name": "remediate",
+  "version": "0.1.0",
+  "description": "Drop-in feedback widget for React apps. Screenshot, video, voice, text, and element annotation.",
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "require": {
+        "types": "./dist/index.d.cts",
+        "default": "./dist/index.cjs"
+      }
+    },
+    "./server": {
+      "import": {
+        "types": "./dist/server.d.ts",
+        "default": "./dist/server.js"
+      },
+      "require": {
+        "types": "./dist/server.d.cts",
+        "default": "./dist/server.cjs"
+      }
+    },
+    "./slack": {
+      "import": {
+        "types": "./dist/integrations/slack.d.ts",
+        "default": "./dist/integrations/slack.js"
+      },
+      "require": {
+        "types": "./dist/integrations/slack.d.cts",
+        "default": "./dist/integrations/slack.cjs"
+      }
+    },
+    "./linear": {
+      "import": {
+        "types": "./dist/integrations/linear.d.ts",
+        "default": "./dist/integrations/linear.js"
+      },
+      "require": {
+        "types": "./dist/integrations/linear.d.cts",
+        "default": "./dist/integrations/linear.cjs"
+      }
+    },
+    "./github": {
+      "import": {
+        "types": "./dist/integrations/github.d.ts",
+        "default": "./dist/integrations/github.js"
+      },
+      "require": {
+        "types": "./dist/integrations/github.d.cts",
+        "default": "./dist/integrations/github.cjs"
+      }
+    },
+    "./webhook": {
+      "import": {
+        "types": "./dist/integrations/webhook.d.ts",
+        "default": "./dist/integrations/webhook.js"
+      },
+      "require": {
+        "types": "./dist/integrations/webhook.d.cts",
+        "default": "./dist/integrations/webhook.cjs"
+      }
+    },
+    "./email": {
+      "import": {
+        "types": "./dist/integrations/email.d.ts",
+        "default": "./dist/integrations/email.js"
+      },
+      "require": {
+        "types": "./dist/integrations/email.d.cts",
+        "default": "./dist/integrations/email.cjs"
+      }
+    },
+    "./styles.css": "./dist/index.css",
+    "./widget": "./dist/widget.js"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "dev": "TSUP_WATCH=1 tsup --watch --no-dts",
+    "dev:init": "tsup --no-dts",
+    "prepublishOnly": "tsup"
+  },
+  "peerDependencies": {
+    "react": ">=18",
+    "react-dom": ">=18"
+  },
+  "dependencies": {
+    "html-to-image": "^1.11.11"
+  },
+  "devDependencies": {
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "react": "^19.2.3",
+    "react-dom": "^19.2.3",
+    "tsup": "^8.4.0",
+    "typescript": "^5"
+  },
+  "sideEffects": [
+    "*.css",
+    "./dist/index.js",
+    "./dist/index.cjs"
+  ],
+  "license": "MIT",
+  "keywords": [
+    "feedback",
+    "widget",
+    "screenshot",
+    "annotation",
+    "bug-report",
+    "react",
+    "screen-recording",
+    "voice-note"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/pxrth9/remediate"
+  }
+}
