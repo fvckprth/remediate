@@ -1,5 +1,15 @@
 {
   "$schema": "https://turbo.build/schema.json",
+  "globalPassThroughEnv": [
+    "DATABASE_URL",
+    "R2_ENDPOINT",
+    "R2_ACCESS_KEY_ID",
+    "R2_SECRET_ACCESS_KEY",
+    "R2_BUCKET",
+    "AUTH_SECRET",
+    "AUTH_GITHUB_ID",
+    "AUTH_GITHUB_SECRET"
+  ],
   "tasks": {
     "build": {
       "dependsOn": ["^build"],
