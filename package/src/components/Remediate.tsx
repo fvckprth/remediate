@@ -575,15 +575,15 @@ export function Remediate({ onSubmit, endpoint, projectKey, apiUrl, metadata: ex
     dispatch({ type: "ADD_ITEM", item });
   }, []);
 
-  const handleAddVoiceNote = useCallback((duration: number, blob: Blob) => {
+  const handleAddVoiceNote = useCallback((duration: number, blob: Blob, text: string, priority: AnnotationPriority) => {
     const item: FeedbackItem = {
       id: `voc_${nanoid(8)}`,
       index: 0,
       type: "voiceNote",
       duration,
       timestamp: Date.now(),
-      additionalText: "",
-      priority: "none",
+      additionalText: text,
+      priority,
       blob,
     };
     dispatch({ type: "ADD_ITEM", item });

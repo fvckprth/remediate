@@ -1,13 +1,14 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import type { WidgetMode } from "../../types";
+import type { WidgetMode, AnnotationPriority } from "../../types";
 import type { AudioRecorder } from "../../utils/capture-audio";
 import { StopFill, PlayFill, PauseFill } from "../icons";
+import { PriorityButton } from "../shared/PriorityButton";
 
 interface VoicePanelProps {
   mode: WidgetMode;
   recorder: AudioRecorder | null;
   onSetMode: (mode: WidgetMode) => void;
-  onAdd: (duration: number, blob: Blob) => void;
+  onAdd: (duration: number, blob: Blob, text: string, priority: AnnotationPriority) => void;
   onCancel: () => void;
 }
 
@@ -63,6 +64,8 @@ export function VoicePanel({ mode, recorder, onSetMode, onAdd, onCancel }: Voice
   const [isPlaying, setIsPlaying] = useState(false);
   const [finalDuration, setFinalDuration] = useState(0);
   const [previewBars, setPreviewBars] = useState<number[]>([]);
+  const [text, setText] = useState("");
+  const [priority, setPriority] = useState<AnnotationPriority>("none");
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const animRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const seedRef = useRef(0);
@@ -190,6 +193,20 @@ export function VoicePanel({ mode, recorder, onSetMode, onAdd, onCancel }: Voice
           />
         </div>
 
+        <div className="rm-input-group" style={{ marginTop: 10 }}>
+          <textarea
+            className="rm-input-group__textarea"
+            placeholder="Add a note…"
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            rows={2}
+            tabIndex={isPreview ? 0 : -1}
+          />
+          <div className="rm-input-group__footer">
+            <PriorityButton priority={priority} onCycle={setPriority} />
+          </div>
+        </div>
+
         <div className="rm-voice__bottom-row">
           <div className="rm-voice__bottom-inner">
             <span className="rm-voice__duration">{formatTime(finalDuration)}</span>
@@ -202,7 +219,7 @@ export function VoicePanel({ mode, recorder, onSetMode, onAdd, onCancel }: Voice
                 tabIndex={isPreview ? 0 : -1}
                 onClick={() => {
                   if (audioBlobRef.current) {
-                    onAdd(finalDuration, audioBlobRef.current);
+                    onAdd(finalDuration, audioBlobRef.current, text.trim(), priority);
                   }
                 }}
               >
