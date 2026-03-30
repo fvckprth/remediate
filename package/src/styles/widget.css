@@ -2061,33 +2061,9 @@
 
 /* Bottom row */
 .rm-voice__bottom-row {
-  display: block;
-}
-
-.rm-voice__bottom-inner {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-top: 16px;
-}
-
-/* Duration badge */
-.rm-voice__duration {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  height: 16px;
-  padding: 0 6px;
-  background: rgba(231, 231, 231, 0.25);
-  border-radius: 4px;
-  font-size: 12px;
-  font-weight: 500;
-  font-family: "Open Runde", -apple-system, sans-serif;
-  font-variant-numeric: tabular-nums;
-  color: #e7e7e7;
-  letter-spacing: -0.48px;
-  white-space: nowrap;
-  flex-shrink: 0;
+  justify-content: flex-end;
+  margin-top: 10px;
 }
 
 /* Actions container */

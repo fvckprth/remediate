@@ -7,6 +7,9 @@ import { PriorityButton } from "../shared/PriorityButton";
 interface VoicePanelProps {
   mode: WidgetMode;
   recorder: AudioRecorder | null;
+  initialText?: string;
+  initialPriority?: AnnotationPriority;
+  submitLabel?: string;
   onSetMode: (mode: WidgetMode) => void;
   onAdd: (duration: number, blob: Blob, text: string, priority: AnnotationPriority) => void;
   onCancel: () => void;
@@ -55,7 +58,7 @@ function Waveform({ bars, isAnimating }: { bars: number[]; isAnimating: boolean 
   );
 }
 
-export function VoicePanel({ mode, recorder, onSetMode, onAdd, onCancel }: VoicePanelProps) {
+export function VoicePanel({ mode, recorder, initialText, initialPriority, submitLabel = "Add", onSetMode, onAdd, onCancel }: VoicePanelProps) {
   const isRecording = mode === "voiceRecording";
   const isPreview = mode === "voicePreview";
 
@@ -64,8 +67,8 @@ export function VoicePanel({ mode, recorder, onSetMode, onAdd, onCancel }: Voice
   const [isPlaying, setIsPlaying] = useState(false);
   const [finalDuration, setFinalDuration] = useState(0);
   const [previewBars, setPreviewBars] = useState<number[]>([]);
-  const [text, setText] = useState("");
-  const [priority, setPriority] = useState<AnnotationPriority>("none");
+  const [text, setText] = useState(initialText ?? "");
+  const [priority, setPriority] = useState<AnnotationPriority>(initialPriority ?? "none");
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const animRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const seedRef = useRef(0);
@@ -208,24 +211,24 @@ export function VoicePanel({ mode, recorder, onSetMode, onAdd, onCancel }: Voice
         </div>
 
         <div className="rm-voice__bottom-row">
-          <div className="rm-voice__bottom-inner">
-            <span className="rm-voice__duration">{formatTime(finalDuration)}</span>
-            <div className="rm-voice__actions">
-              <button className="rm-voice__cancel" onClick={handleCancel} tabIndex={isPreview ? 0 : -1}>
-                Cancel
-              </button>
-              <button
-                className="rm-voice__add"
-                tabIndex={isPreview ? 0 : -1}
-                onClick={() => {
-                  if (audioBlobRef.current) {
-                    onAdd(finalDuration, audioBlobRef.current, text.trim(), priority);
-                  }
-                }}
-              >
-                Add
-              </button>
-            </div>
+          <div className="rm-voice__actions">
+            <button className="rm-voice__cancel" onClick={handleCancel} tabIndex={isPreview ? 0 : -1}>
+              Cancel
+            </button>
+            <button
+              className="rm-voice__add"
+              tabIndex={isPreview ? 0 : -1}
+              onClick={() => {
+                if (audioBlobRef.current) {
+                  onAdd(finalDuration, audioBlobRef.current, text.trim(), priority);
+                } else {
+                  // Save mode — blob lives on the existing item, parent only needs text/priority
+                  onAdd(finalDuration, new Blob(), text.trim(), priority);
+                }
+              }}
+            >
+              {submitLabel}
+            </button>
           </div>
         </div>
       </div>

@@ -2,7 +2,7 @@ import { useReducer, useCallback, useEffect, useState, useRef } from "react";
 import type {
   WidgetState, WidgetAction, WidgetMode, FeedbackItem,
   AnnotationItem, AnnotationPriority, PendingCapture, RemediateProps,
-  SelectionArea, TextNoteItem,
+  SelectionArea, TextNoteItem, VoiceNoteItem,
 } from "../types";
 import {
   DEFAULT_MARKER_COLOR, isCaptureMode, isNoteMode,
@@ -768,18 +768,32 @@ export function Remediate({ onSubmit, endpoint, projectKey, apiUrl, metadata: ex
           );
         })()}
 
-        {panelKey === "voicePanel" && (
-          <VoicePanel
-            mode={state.mode}
-            recorder={voiceRecorderRef.current}
-            onSetMode={(mode: WidgetMode) => dispatch({ type: "SET_MODE", mode })}
-            onAdd={handleAddVoiceNote}
-            onCancel={() => {
-              if (state.previewingItemId) anchorToButton("Review and submit");
-              dispatch({ type: "SET_MODE", mode: state.previewingItemId ? "reviewing" : "active" });
-            }}
-          />
-        )}
+        {panelKey === "voicePanel" && (() => {
+          const previewingVoice = state.previewingItemId
+            ? state.items.find(i => i.id === state.previewingItemId && i.type === "voiceNote") as VoiceNoteItem | undefined
+            : undefined;
+          return (
+            <VoicePanel
+              mode={state.mode}
+              recorder={voiceRecorderRef.current}
+              initialText={previewingVoice?.additionalText}
+              initialPriority={previewingVoice?.priority}
+              submitLabel={state.previewingItemId ? "Save" : "Add"}
+              onSetMode={(mode: WidgetMode) => dispatch({ type: "SET_MODE", mode })}
+              onAdd={state.previewingItemId
+                ? (_duration, _blob, text, priority) => {
+                    dispatch({ type: "UPDATE_ITEM", id: state.previewingItemId!, item: { additionalText: text, priority } });
+                    anchorToButton("Review and submit");
+                  }
+                : handleAddVoiceNote
+              }
+              onCancel={() => {
+                if (state.previewingItemId) anchorToButton("Review and submit");
+                dispatch({ type: "SET_MODE", mode: state.previewingItemId ? "reviewing" : "active" });
+              }}
+            />
+          );
+        })()}
 
         {panelKey === "review" && (
           <ReviewPanel
