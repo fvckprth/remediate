@@ -1,8 +1,18 @@
+import { config } from "dotenv";
+import { resolve } from "node:path";
 import { neon } from "@neondatabase/serverless";
 import { createHash, randomBytes } from "crypto";
 
+config({ path: resolve(process.cwd(), ".env.local") });
+config({ path: resolve(process.cwd(), ".env") });
+
 async function main() {
-  const sql = neon(process.env.DATABASE_URL as string);
+  const databaseUrl = process.env.DATABASE_URL;
+  if (!databaseUrl) {
+    console.error("Missing DATABASE_URL. Set it in .env.local or .env in apps/web.");
+    process.exit(1);
+  }
+  const sql = neon(databaseUrl);
 
   const projectId = "proj_" + randomBytes(8).toString("hex");
   const rawKey = "pk_" + randomBytes(16).toString("hex");

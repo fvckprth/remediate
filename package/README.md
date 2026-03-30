@@ -64,6 +64,10 @@ type FeedbackItem =
 - **Voice recording**: Requires HTTPS. Shows a native microphone permission prompt.
 - **Cross-origin note**: DOM-based screenshot capture cannot render cross-origin images or iframes (they appear blank).
 
+## Contributing
+
+This package is developed in the [Remediate monorepo](https://github.com/pxrth9/remediate); see [CONTRIBUTING.md](https://github.com/pxrth9/remediate/blob/main/CONTRIBUTING.md) for setup and pull requests, and the [repository README](https://github.com/pxrth9/remediate/blob/main/README.md) for layout and quick start.
+
 ## License
 
 MIT

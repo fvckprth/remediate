@@ -1,36 +1,41 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Remediate
 
-## Getting Started
+Monorepo for **Remediate**, a drop-in feedback widget for React apps: screenshots, screen recording, voice, text notes, and element annotation. The publishable library lives under [`package/`](package/); [`apps/web`](apps/web) is the optional hosted product (marketing, dashboard, API, auth).
 
-First, run the development server:
+## Requirements
+
+- [Node.js](https://nodejs.org/) (LTS recommended)
+- [pnpm](https://pnpm.io/) 10.x (see [`packageManager`](package.json) in the root `package.json`)
+
+## Quick start
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
+pnpm install
 pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+This runs [Turborepo](https://turbo.build/) tasks for:
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+- **`remediate`** — the npm package (watch build)
+- **`web`** — Next.js app at [http://localhost:3000](http://localhost:3000)
+- **`remediate-demo`** — example app at [http://localhost:3002](http://localhost:3002)
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+You do **not** need Postgres or object storage to work on the widget or the demo. The full `apps/web` dashboard and feedback API need a database and other env vars; see [`apps/web/README.md`](apps/web/README.md).
 
-## Learn More
+## Repository layout
 
-To learn more about Next.js, take a look at the following resources:
+| Path | Description |
+|------|-------------|
+| [`package/`](package/) | `remediate` npm package: `<Remediate />`, `remediate/server`, integrations, styles. |
+| [`package/example/`](package/example/) | Next.js demo that consumes the workspace package. |
+| [`apps/web`](apps/web) | Next.js site: landing, login, projects, feedback ingestion API, widget script route. |
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Library usage and API details: [`package/README.md`](package/README.md).
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Contributing
 
-## Deploy on Vercel
+See [CONTRIBUTING.md](CONTRIBUTING.md).
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## License
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+The `remediate` package is released under the [MIT License](package/LICENSE).
