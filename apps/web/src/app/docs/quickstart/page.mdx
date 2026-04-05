@@ -1,0 +1,144 @@
+<article>
+
+<PageHeader
+  eyebrow="getting started"
+  title="quickstart"
+  description="install the package, drop the widget in, and get your first feedback submission in under five minutes."
+/>
+
+## install
+
+add the package to your project.
+
+```bash
+npm install remediate
+# or
+pnpm add remediate
+# or
+yarn add remediate
+```
+
+then import the stylesheet once, anywhere in your app tree (most apps put this in the root layout).
+
+```tsx
+import "remediate/styles.css";
+```
+
+## drop-in with onSubmit
+
+the simplest integration — remediate hands you the full payload and you decide what to do with it. good for prototypes, client-side logging, or when you already have a submission pipeline.
+
+```tsx
+import { Remediate } from "remediate";
+import "remediate/styles.css";
+
+export default function App() {
+  return (
+    <>
+      <YourApp />
+      <Remediate
+        onSubmit={(payload) => {
+          // payload contains screenshots, recordings, voice notes,
+          // annotations, text notes, and full environment metadata
+          console.log(payload);
+        }}
+      />
+    </>
+  );
+}
+```
+
+the `payload` object is a `FeedbackSubmission`. see the [payload reference](/docs/reference/payload) for its full shape.
+
+## drop-in with endpoint
+
+point the widget at a server route and it will POST everything as `FormData` — blobs and all — when the user submits.
+
+```tsx
+import { Remediate } from "remediate";
+import "remediate/styles.css";
+
+export default function App() {
+  return (
+    <>
+      <YourApp />
+      <Remediate endpoint="/api/feedback" />
+    </>
+  );
+}
+```
+
+on the server, parse the multipart body and forward to whichever integration(s) you want.
+
+```ts
+// app/api/feedback/route.ts
+import { parseFeedback } from "remediate/server";
+import { toSlackMessage } from "remediate/slack";
+
+export async function POST(req: Request) {
+  const feedback = await parseFeedback(req);
+  const msg = toSlackMessage(feedback);
+
+  // forward `msg` to slack, linear, github, email, or a webhook
+  // see the integrations guides for each formatter
+
+  return Response.json({ ok: true, id: feedback.submission.id });
+}
+```
+
+see the per-integration guides for complete end-to-end examples: [slack](/docs/integrations/slack), [linear](/docs/integrations/linear), [github](/docs/integrations/github), [email](/docs/integrations/email), [webhook](/docs/integrations/webhook).
+
+## drop-in with projectKey
+
+if you run the remediate dashboard (the app hosting this site), you can point the widget at it directly with a project key. the dashboard handles parsing, storage, and integrations for you.
+
+```tsx
+import { Remediate } from "remediate";
+import "remediate/styles.css";
+
+export default function App() {
+  return (
+    <>
+      <YourApp />
+      <Remediate projectKey="pk_live_xxxxx" />
+    </>
+  );
+}
+```
+
+generate a key from your dashboard project settings. the `apiUrl` prop defaults to the public dashboard host — set it if you are self-hosting.
+
+## script-tag install
+
+for sites that are not react (static pages, wordpress, squarespace, plain html), drop the widget in with a single script tag.
+
+```html
+<script
+  src="https://your-dashboard.com/widget.js"
+  data-project-key="pk_live_xxxxx"
+  data-api-url="https://your-dashboard.com"
+></script>
+```
+
+the widget mounts itself onto the page, with no build step required. this path uses the hosted dashboard — behavior matches the `projectKey` mode above.
+
+## props
+
+every prop is optional. use exactly one of `onSubmit`, `endpoint`, or `projectKey` to decide where feedback goes.
+
+| prop | type | description |
+|---|---|---|
+| `onSubmit` | `(payload: FeedbackSubmission) => void \| Promise<void>` | called when the user submits. receives the full payload including any captured blobs. |
+| `endpoint` | `string` | url to POST feedback as `FormData`. if set, the widget auto-submits to this endpoint. |
+| `projectKey` | `string` | project key for the remediate hosted dashboard (e.g. `pk_xxx`). auto-sends feedback to the api. |
+| `apiUrl` | `string` | base url for the remediate api when using `projectKey`. defaults to `api.remediate.dev`. |
+| `metadata` | `Record<string, unknown>` | extra metadata merged into the submission (e.g. user id, tenant, feature flag state). |
+| `onError` | `(error: Error) => void` | called if the endpoint POST fails. |
+
+## next steps
+
+- pick an integration: [slack](/docs/integrations/slack), [linear](/docs/integrations/linear), [github](/docs/integrations/github), [email](/docs/integrations/email), or [webhook](/docs/integrations/webhook)
+- understand the [payload shape](/docs/reference/payload)
+- hit a snag? check [troubleshooting](/docs/troubleshooting)
+
+</article>

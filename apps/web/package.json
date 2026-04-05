@@ -12,8 +12,12 @@
     "@aws-sdk/client-s3": "^3.1009.0",
     "@aws-sdk/s3-request-presigner": "^3.1009.0",
     "@base-ui-components/react": "1.0.0-rc.0",
+    "@mdx-js/loader": "^3.1.1",
+    "@mdx-js/react": "^3.1.1",
     "@mingcute/react": "^1.4.1",
     "@neondatabase/serverless": "^1.0.2",
+    "@next/mdx": "^16.2.2",
+    "@types/mdx": "^2.0.13",
     "agentation": "^3.0.2",
     "drizzle-orm": "^0.45.1",
     "next": "16.1.6",
@@ -21,6 +25,7 @@
     "next-themes": "^0.4.6",
     "react": "19.2.3",
     "react-dom": "19.2.3",
+    "remark-gfm": "^4.0.1",
     "remediate": "workspace:*"
   },
   "devDependencies": {

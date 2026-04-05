@@ -1,0 +1,67 @@
+<article>
+
+<PageHeader
+  eyebrow="integrations"
+  title="webhook"
+  description="forward feedback as a single json post to any webhook consumer — zapier, make, n8n, or a custom service. files are inlined as base64 data uris."
+/>
+
+## prerequisites
+
+- a webhook endpoint that accepts `application/json` POSTs
+- the consumer should accept reasonably large bodies — screenshots and recordings can push payloads above 1 mb
+
+## install
+
+```bash
+npm install remediate
+```
+
+## environment variables
+
+```bash
+# .env
+WEBHOOK_URL=https://hooks.zapier.com/hooks/catch/xxxx/yyyy
+```
+
+## client — mount the widget
+
+```tsx
+<Remediate endpoint="/api/feedback" />
+```
+
+## server — api route
+
+`toWebhookPayload` is async because it reads each blob and base64-encodes it inline. the result is a plain json object safe to POST to any webhook.
+
+```ts
+// app/api/feedback/route.ts
+import { parseFeedback } from "remediate/server";
+import { toWebhookPayload } from "remediate/webhook";
+
+export async function POST(req: Request) {
+  const feedback = await parseFeedback(req);
+  const payload = await toWebhookPayload(feedback);
+
+  await fetch(process.env.WEBHOOK_URL!, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+
+  return Response.json({ ok: true, id: feedback.submission.id });
+}
+```
+
+## output shape
+
+the returned payload has a single `submission` key. its shape matches the `FeedbackSubmission` type with one addition: each item may carry a `fileDataUri` string containing a base64 data uri for its associated file (screenshot, recording, or voice note). items without files (text notes, annotations) do not carry this field.
+
+compatible with zapier, make, n8n, and any workflow tool that understands json webhooks. the format is also trivial to consume from a plain node or go server.
+
+## see also
+
+- [payload reference](/docs/reference/payload) — the base shape embedded in the webhook body
+- other integrations: [slack](/docs/integrations/slack), [linear](/docs/integrations/linear), [github](/docs/integrations/github), [email](/docs/integrations/email)
+
+</article>

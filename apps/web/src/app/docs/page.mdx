@@ -1,0 +1,66 @@
+import Link from "next/link";
+
+<article>
+
+<PageHeader
+  eyebrow="getting started"
+  title="remediate"
+  description="a drop-in feedback widget for react apps. screenshots, video, voice, text, and element annotations — handled client-side, shipped wherever you want."
+/>
+
+remediate is a single `<Remediate />` component. it captures everything the user shows you, bundles it into one payload, and hands it to your code. you decide what to do with it — call a backend, forward to an integration, or log it.
+
+there is no hosted service required. bring your own backend, pick an integration formatter, and ship.
+
+<img
+  src="/docs/overview-architecture.svg"
+  alt="remediate architecture: widget captures feedback, chooses a submission mode, and either handles client-side or forwards through an api route to an integration formatter"
+  className="my-8 w-full"
+/>
+
+<div className="my-10 grid gap-3 sm:grid-cols-3">
+  <Link
+    href="/docs/quickstart"
+    className="group flex flex-col gap-2 rounded-xl border border-border bg-surface/40 p-5 transition-colors hover:bg-surface"
+  >
+    <span className="text-[18px] font-bold tracking-[-0.72px] leading-none text-foreground">
+      quickstart
+    </span>
+    <span className="text-[15px] font-medium tracking-[-0.6px] leading-[1.4] text-foreground/50">
+      install, drop the widget in, and wire up a submit handler.
+    </span>
+    <span className="mt-1 text-[14px] font-medium tracking-[-0.56px] text-foreground/30 transition-colors group-hover:text-foreground/60">
+      read →
+    </span>
+  </Link>
+  <Link
+    href="/docs/integrations/slack"
+    className="group flex flex-col gap-2 rounded-xl border border-border bg-surface/40 p-5 transition-colors hover:bg-surface"
+  >
+    <span className="text-[18px] font-bold tracking-[-0.72px] leading-none text-foreground">
+      integrations
+    </span>
+    <span className="text-[15px] font-medium tracking-[-0.6px] leading-[1.4] text-foreground/50">
+      forward feedback to slack, linear, github, email, or a webhook.
+    </span>
+    <span className="mt-1 text-[14px] font-medium tracking-[-0.56px] text-foreground/30 transition-colors group-hover:text-foreground/60">
+      read →
+    </span>
+  </Link>
+  <Link
+    href="/docs/reference/payload"
+    className="group flex flex-col gap-2 rounded-xl border border-border bg-surface/40 p-5 transition-colors hover:bg-surface"
+  >
+    <span className="text-[18px] font-bold tracking-[-0.72px] leading-none text-foreground">
+      payload
+    </span>
+    <span className="text-[15px] font-medium tracking-[-0.6px] leading-[1.4] text-foreground/50">
+      the shape of every feedback submission, item by item.
+    </span>
+    <span className="mt-1 text-[14px] font-medium tracking-[-0.56px] text-foreground/30 transition-colors group-hover:text-foreground/60">
+      read →
+    </span>
+  </Link>
+</div>
+
+</article>

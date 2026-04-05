@@ -1,0 +1,10 @@
+%% source for public/docs/overview-architecture.svg
+%% regenerate: paste into https://mermaid.live, theme=dark, background=transparent, export svg
+flowchart LR
+  A[widget<br/>client] --> B{submission mode}
+  B -->|onSubmit| C[your code<br/>client-side]
+  B -->|endpoint| D[your api route]
+  B -->|projectKey| E[hosted<br/>remediate]
+  D --> F[parseFeedback]
+  F --> G[toSlack / toLinear /<br/>toGithub / toEmail / toWebhook]
+  G --> H[your integration]

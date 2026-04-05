@@ -1,0 +1,112 @@
+<article>
+
+<PageHeader
+  eyebrow="reference"
+  title="troubleshooting"
+  description="the most common launch issues and how to fix them fast."
+/>
+
+## widget not showing
+
+the package ships with a stylesheet. if you forget to import it, the widget mounts but is invisible. fix: add the css import once at your app root.
+
+```tsx
+// in app/layout.tsx (or wherever your app root lives)
+import "remediate/styles.css";
+```
+
+if the css import is already present, verify:
+
+- the `<Remediate />` component is actually rendered (not gated behind a conditional that evaluates to false)
+- no parent element has `display: none` or `visibility: hidden`
+- the widget root (`[data-remediate-widget]`) is not being overridden by a global `z-index: auto` rule or a fixed-position wrapper
+- for script-tag installs, the `data-project-key` and `data-api-url` attributes are both set
+
+<Prose.H2 id="safari-video">safari video recording</Prose.H2>
+
+video capture uses `navigator.mediaDevices.getDisplayMedia`. desktop safari 13+ supports it, but mobile safari does not — there is no api for screen capture on ios. on mobile, the video button is a no-op.
+
+desktop safari caveats:
+
+- requires https (or localhost during development)
+- the first click will trigger a native permission prompt to pick a screen, window, or tab
+- safari returns a different mime type than chrome (`video/mp4` vs `video/webm`). the blob is still valid; just expect variance in file extensions on the server side
+
+## voice permissions denied
+
+voice notes use `navigator.mediaDevices.getUserMedia({ audio: true })`. if the browser has never prompted, clicking the voice button will ask for mic permission. if the user denies, or has previously denied, recording will fail silently.
+
+to recover:
+
+- confirm the page is served over https — mic access is blocked on plain http (except on `localhost`)
+- in chrome: click the lock icon in the address bar → site settings → set microphone to `allow`
+- in safari: settings → websites → microphone → allow for your domain
+- in firefox: click the lock → connection secure → more information → permissions → reset microphone
+
+<Prose.H2 id="cors">cors on endpoint</Prose.H2>
+
+the widget POSTs feedback as `FormData` to the url you set on `endpoint`. if the widget is embedded on a different origin than the endpoint (e.g. widget on `app.example.com`, endpoint on `api.example.com`), the browser will block the request unless the server returns the right cors headers.
+
+the `FormData` request does not trigger a preflight on its own (the content type is `multipart/form-data`, a simple cors content type), but returning cors headers on both the POST and an OPTIONS handler is safer.
+
+```ts
+// app/api/feedback/route.ts
+export async function POST(req: Request) {
+  // ... your handler ...
+  return Response.json(
+    { ok: true },
+    {
+      headers: {
+        "Access-Control-Allow-Origin": "https://your-app.com",
+        "Access-Control-Allow-Methods": "POST, OPTIONS",
+      },
+    },
+  );
+}
+
+export async function OPTIONS() {
+  return new Response(null, {
+    headers: {
+      "Access-Control-Allow-Origin": "https://your-app.com",
+      "Access-Control-Allow-Methods": "POST, OPTIONS",
+      "Access-Control-Allow-Headers": "Content-Type",
+    },
+  });
+}
+```
+
+## submission 500s
+
+when the server responds with 500, the widget surfaces a submission error state but the real error is on the server. common causes:
+
+- missing environment variables — the integration helper calls your provider sdk which throws without a token or api key. log `process.env` at route boot to confirm they are set in production
+- malformed payload — if the incoming body is not valid multipart form data, `parseFeedback` throws. wrap it in a try/catch and log the error shape
+- provider rate limits — slack, linear, and github all rate-limit. if you are spamming requests during testing, sleep between submissions
+- oversized uploads — some hosts cap request bodies (vercel serverless: 4.5 mb by default). long screen recordings can exceed this. use a larger function region, switch to edge runtime, or upload blobs directly to storage from the client before posting
+
+guard the parse call to get a clean error in your logs:
+
+```ts
+try {
+  const feedback = await parseFeedback(req);
+  // ...
+} catch (err) {
+  console.error("[feedback] parseFeedback failed", err);
+  return Response.json({ ok: false, error: String(err) }, { status: 400 });
+}
+```
+
+## browser support
+
+| capability | requirement |
+|---|---|
+| screenshots | works in all modern browsers — rendered from the dom, no permission prompt |
+| video recording | requires https. desktop only (no mobile safari / ios support). triggers a native screen-share prompt |
+| voice recording | requires https. triggers a native microphone permission prompt |
+| cross-origin content | dom-based screenshots cannot render cross-origin images or iframes — they appear blank in the capture |
+
+## still stuck?
+
+open an issue on [github](https://github.com/prtk-s/remediate/issues) with the symptom, browser / os, and — if you can — a minimal reproduction. in the meantime, review the [quickstart](/docs/quickstart) to confirm the widget is installed the way the integration guides expect.
+
+</article>
