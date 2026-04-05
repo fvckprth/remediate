@@ -63,6 +63,7 @@ export async function POST(req: Request) {
     teamId: TEAM_ID,
     title: issue.title,
     description,
+    priority: issue.priority,
   });
 
   const createdIssue = await created.issue;

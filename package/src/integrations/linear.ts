@@ -1,11 +1,13 @@
 import type { ParsedFeedback } from "../server/parse";
-import { deriveFeedbackTitle, renderEnvironmentMarkdown, getFileForItem } from "./shared";
+import { deriveFeedbackTitle, renderEnvironmentMarkdown, getFileForItem, getHighestPriority, toLinearPriority, priorityTag } from "./shared";
 
 export interface LinearIssuePayload {
   /** Auto-generated issue title. */
   title: string;
   /** Markdown description with feedback details. */
   description: string;
+  /** Linear priority integer (0=None, 1=Urgent, 2=High, 3=Medium, 4=Low). */
+  priority: number;
   /** Suggested label names based on annotation priorities. */
   labelNames: string[];
   /** Files to upload and embed in the description. */
@@ -15,7 +17,7 @@ export interface LinearIssuePayload {
 /**
  * Format a parsed feedback submission as a Linear issue.
  *
- * Returns a title, markdown description, and files to upload.
+ * Returns a title, markdown description, priority, and files to upload.
  * The developer uploads files to Linear first, replaces placeholders
  * with the returned URLs, then creates the issue.
  *
@@ -24,8 +26,13 @@ export interface LinearIssuePayload {
  * import { toLinearIssue } from "remediate/linear";
  *
  * const issue = toLinearIssue(feedback);
- * // Upload files to Linear, replace placeholders in issue.description
- * // Then create the issue via Linear SDK
+ * // Upload files, replace placeholders, then:
+ * await linear.createIssue({
+ *   teamId: TEAM_ID,
+ *   title: issue.title,
+ *   description,
+ *   priority: issue.priority,
+ * });
  * ```
  */
 export function toLinearIssue(feedback: ParsedFeedback): LinearIssuePayload {
@@ -34,25 +41,18 @@ export function toLinearIssue(feedback: ParsedFeedback): LinearIssuePayload {
   const files: LinearIssuePayload["files"] = [];
   const labelNames = new Set<string>();
   const title = deriveFeedbackTitle(submission.items);
+  const highest = getHighestPriority(submission.items);
 
-  // Page info
+  // Page
   lines.push(`**Page:** ${submission.url}`);
-  lines.push(`**Time:** ${submission.timestamp}`);
-  lines.push("");
-
-  // Environment
-  lines.push(...renderEnvironmentMarkdown(submission.environment));
   lines.push("");
 
   // Items
-  lines.push("## Feedback Items");
-  lines.push("");
-
   for (const item of submission.items) {
     switch (item.type) {
       case "photo": {
         const placeholder = `{{screenshot-${item.id}}}`;
-        lines.push(`### Screenshot (${Math.round(item.area.width)}×${Math.round(item.area.height)})`);
+        lines.push(`**Screenshot**${priorityTag(item.priority)}`);
         lines.push(placeholder);
         if (item.additionalText) lines.push(`> ${item.additionalText}`);
         lines.push("");
@@ -65,7 +65,7 @@ export function toLinearIssue(feedback: ParsedFeedback): LinearIssuePayload {
       }
       case "video": {
         const placeholder = `{{recording-${item.id}}}`;
-        lines.push(`### Screen Recording (${item.duration}s)`);
+        lines.push(`**Screen Recording** (${item.duration}s)${priorityTag(item.priority)}`);
         lines.push(`*Attached: ${placeholder}*`);
         if (item.additionalText) lines.push(`> ${item.additionalText}`);
         lines.push("");
@@ -77,24 +77,21 @@ export function toLinearIssue(feedback: ParsedFeedback): LinearIssuePayload {
         break;
       }
       case "annotation":
-        lines.push(`### Annotation — \`${item.element.name}\``);
-        if (item.priority !== "none") {
-          lines.push(`**Priority:** ${item.priority}`);
-          labelNames.add(item.priority);
-        }
+        lines.push(`**Annotation:** \`${item.element.name}\`${priorityTag(item.priority)}`);
         if (item.note) lines.push(`> ${item.note}`);
-        lines.push(`**Selector:** \`${item.element.selector}\``);
         lines.push("");
+        if (item.priority !== "none") labelNames.add(item.priority);
         break;
       case "textNote":
-        lines.push(`### Note`);
+        lines.push(`**Note**${priorityTag(item.priority)}`);
         lines.push(item.text);
         lines.push("");
         break;
       case "voiceNote": {
         const placeholder = `{{voice-${item.id}}}`;
-        lines.push(`### Voice Note (${item.duration}s)`);
+        lines.push(`**Voice Note** (${item.duration}s)${priorityTag(item.priority)}`);
         lines.push(`*Attached: ${placeholder}*`);
+        if (item.additionalText) lines.push(`> ${item.additionalText}`);
         lines.push("");
 
         const voiceFile = getFileForItem(feedback, item);
@@ -106,15 +103,14 @@ export function toLinearIssue(feedback: ParsedFeedback): LinearIssuePayload {
     }
   }
 
-  // Custom metadata
-  if (submission.metadata && Object.keys(submission.metadata).length > 0) {
-    lines.push("---");
-    lines.push(`**Metadata:** \`${JSON.stringify(submission.metadata)}\``);
-  }
+  // Environment
+  lines.push("---");
+  lines.push(...renderEnvironmentMarkdown(submission.environment));
 
   return {
     title,
     description: lines.join("\n"),
+    priority: toLinearPriority(highest),
     labelNames: Array.from(labelNames),
     files,
   };

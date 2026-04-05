@@ -1,6 +1,6 @@
 import type { ParsedFeedback } from "../server/parse";
 import type { AnnotationPriority } from "../types";
-import { deriveFeedbackTitle } from "./shared";
+import { deriveFeedbackTitle, renderEnvironmentText, priorityTag } from "./shared";
 
 export interface EmailAttachment {
   filename: string;
@@ -48,84 +48,96 @@ export function toEmail(feedback: ParsedFeedback): EmailPayload {
   const env = submission.environment;
   const attachments: EmailAttachment[] = [];
 
-  // Subject
-  const derived = deriveFeedbackTitle(submission.items, 60);
-  const subject = derived === "User Feedback"
+  const title = deriveFeedbackTitle(submission.items, 60);
+  const subject = title === "User Feedback"
     ? `Feedback from ${new URL(submission.url).pathname}`
-    : derived;
+    : title;
 
-  // Plain text
+  // --- Plain text ---
   const textLines: string[] = [];
-  textLines.push(`Feedback from: ${submission.url}`);
-  textLines.push(`Time: ${submission.timestamp}`);
-  textLines.push(`Browser: ${env.browser.name} ${env.browser.version}`);
-  textLines.push(`OS: ${env.os.name} ${env.os.version}`);
-  textLines.push(`Viewport: ${env.viewport.width}x${env.viewport.height}`);
+  textLines.push(title);
+  textLines.push("");
+  textLines.push(`Page: ${submission.url}`);
   textLines.push("");
 
   for (const item of submission.items) {
     switch (item.type) {
       case "photo":
-        textLines.push(`[Screenshot: ${Math.round(item.area.width)}x${Math.round(item.area.height)}]`);
+        textLines.push(`Screenshot${priorityTag(item.priority)}`);
         if (item.additionalText) textLines.push(`  ${item.additionalText}`);
+        textLines.push(`  See attachment: screenshot-${item.id}.png`);
         break;
       case "video":
-        textLines.push(`[Screen Recording: ${item.duration}s]`);
+        textLines.push(`Screen Recording (${item.duration}s)${priorityTag(item.priority)}`);
         if (item.additionalText) textLines.push(`  ${item.additionalText}`);
+        textLines.push(`  See attachment: recording-${item.id}.webm`);
         break;
       case "annotation":
-        textLines.push(`[Annotation: ${item.element.name}]${item.priority !== "none" ? ` [${item.priority}]` : ""}`);
+        textLines.push(`Annotation: ${item.element.name}${priorityTag(item.priority)}`);
         if (item.note) textLines.push(`  ${item.note}`);
         break;
       case "textNote":
-        textLines.push(item.text);
+        textLines.push(`Note${priorityTag(item.priority)}`);
+        textLines.push(`  ${item.text}`);
         break;
       case "voiceNote":
-        textLines.push(`[Voice Note: ${item.duration}s]`);
+        textLines.push(`Voice Note (${item.duration}s)${priorityTag(item.priority)}`);
+        if (item.additionalText) textLines.push(`  ${item.additionalText}`);
+        textLines.push(`  See attachment: voice-${item.id}.webm`);
         break;
     }
     textLines.push("");
   }
 
-  // HTML
-  const htmlParts: string[] = [];
-  htmlParts.push(`<div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; max-width: 600px; margin: 0 auto;">`);
-  htmlParts.push(`<h2 style="margin: 0 0 16px;">New Feedback</h2>`);
-  htmlParts.push(`<p style="color: #666; margin: 4px 0;"><strong>Page:</strong> <a href="${escapeHtml(submission.url)}">${escapeHtml(submission.url)}</a></p>`);
-  htmlParts.push(`<p style="color: #666; margin: 4px 0;"><strong>Time:</strong> ${escapeHtml(submission.timestamp)}</p>`);
-  htmlParts.push(`<p style="color: #666; margin: 4px 0;"><strong>Browser:</strong> ${escapeHtml(env.browser.name)} ${escapeHtml(env.browser.version)} · ${escapeHtml(env.os.name)} ${escapeHtml(env.os.version)}</p>`);
-  htmlParts.push(`<p style="color: #666; margin: 4px 0;"><strong>Viewport:</strong> ${env.viewport.width}×${env.viewport.height}</p>`);
-  htmlParts.push(`<hr style="border: none; border-top: 1px solid #eee; margin: 16px 0;" />`);
+  textLines.push("---");
+  textLines.push(...renderEnvironmentText(env));
+
+  // --- HTML ---
+  const h: string[] = [];
+  h.push(`<div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; max-width: 600px; margin: 0 auto;">`);
+  h.push(`<h2 style="margin: 0 0 4px;">${esc(title)}</h2>`);
+  h.push(`<p style="color: #666; margin: 0 0 16px;"><a href="${esc(submission.url)}" style="color: #666;">${esc(submission.url)}</a></p>`);
 
   for (const item of submission.items) {
     switch (item.type) {
       case "photo":
-        htmlParts.push(`<div style="margin: 12px 0;"><strong>Screenshot</strong> (${Math.round(item.area.width)}×${Math.round(item.area.height)})`);
-        if (item.additionalText) htmlParts.push(`<p style="color: #666; margin: 4px 0;">${escapeHtml(item.additionalText)}</p>`);
-        htmlParts.push(`<p style="color: #999; font-size: 13px;">See attachment: screenshot-${escapeHtml(item.id)}.png</p></div>`);
+        h.push(`<div style="margin: 12px 0;">`);
+        h.push(`<strong>Screenshot</strong>${priorityHtml(item.priority)}`);
+        if (item.additionalText) h.push(`<p style="color: #333; margin: 4px 0;">${esc(item.additionalText)}</p>`);
+        h.push(`<p style="color: #999; font-size: 13px; margin: 4px 0;">See attachment: screenshot-${esc(item.id)}.png</p>`);
+        h.push(`</div>`);
         break;
       case "video":
-        htmlParts.push(`<div style="margin: 12px 0;"><strong>Screen Recording</strong> (${item.duration}s)`);
-        if (item.additionalText) htmlParts.push(`<p style="color: #666; margin: 4px 0;">${escapeHtml(item.additionalText)}</p>`);
-        htmlParts.push(`<p style="color: #999; font-size: 13px;">See attachment: recording-${escapeHtml(item.id)}.webm</p></div>`);
+        h.push(`<div style="margin: 12px 0;">`);
+        h.push(`<strong>Screen Recording</strong> (${item.duration}s)${priorityHtml(item.priority)}`);
+        if (item.additionalText) h.push(`<p style="color: #333; margin: 4px 0;">${esc(item.additionalText)}</p>`);
+        h.push(`<p style="color: #999; font-size: 13px; margin: 4px 0;">See attachment: recording-${esc(item.id)}.webm</p>`);
+        h.push(`</div>`);
         break;
       case "annotation":
-        htmlParts.push(`<div style="margin: 12px 0;"><strong>Annotation:</strong> <code>${escapeHtml(item.element.name)}</code>`);
-        if (item.priority !== "none") htmlParts.push(` <span style="color: ${priorityColor(item.priority)}; font-weight: 600;">[${escapeHtml(item.priority)}]</span>`);
-        if (item.note) htmlParts.push(`<p style="color: #666; margin: 4px 0; padding-left: 12px; border-left: 3px solid #ddd;">${escapeHtml(item.note)}</p>`);
-        htmlParts.push(`</div>`);
+        h.push(`<div style="margin: 12px 0;">`);
+        h.push(`<strong>Annotation:</strong> <code>${esc(item.element.name)}</code>${priorityHtml(item.priority)}`);
+        if (item.note) h.push(`<p style="color: #333; margin: 4px 0; padding-left: 12px; border-left: 3px solid #ddd;">${esc(item.note)}</p>`);
+        h.push(`</div>`);
         break;
       case "textNote":
-        htmlParts.push(`<div style="margin: 12px 0; padding: 12px; background: #f9f9f9; border-radius: 8px;">${escapeHtml(item.text)}</div>`);
+        h.push(`<div style="margin: 12px 0; padding: 12px; background: #f9f9f9; border-radius: 8px;">`);
+        h.push(`${esc(item.text)}`);
+        h.push(`</div>`);
         break;
       case "voiceNote":
-        htmlParts.push(`<div style="margin: 12px 0;"><strong>Voice Note</strong> (${item.duration}s)`);
-        htmlParts.push(`<p style="color: #999; font-size: 13px;">See attachment: voice-${escapeHtml(item.id)}.webm</p></div>`);
+        h.push(`<div style="margin: 12px 0;">`);
+        h.push(`<strong>Voice Note</strong> (${item.duration}s)${priorityHtml(item.priority)}`);
+        if (item.additionalText) h.push(`<p style="color: #333; margin: 4px 0;">${esc(item.additionalText)}</p>`);
+        h.push(`<p style="color: #999; font-size: 13px; margin: 4px 0;">See attachment: voice-${esc(item.id)}.webm</p>`);
+        h.push(`</div>`);
         break;
     }
   }
 
-  htmlParts.push(`</div>`);
+  h.push(`<hr style="border: none; border-top: 1px solid #eee; margin: 16px 0;" />`);
+  h.push(`<p style="color: #999; font-size: 13px; margin: 0;">${esc(env.browser.name)} ${esc(env.browser.version)} · ${esc(env.os.name)} ${esc(env.os.version)} · ${env.viewport.width}×${env.viewport.height} · ${env.devicePixelRatio}x DPR · ${esc(env.language)} · ${esc(env.timezone)} · ${esc(env.colorScheme)}</p>`);
+  h.push(`</div>`);
 
   // Collect attachments
   for (const [, file] of feedback.files) {
@@ -138,13 +150,13 @@ export function toEmail(feedback: ParsedFeedback): EmailPayload {
 
   return {
     subject,
-    html: htmlParts.join("\n"),
+    html: h.join("\n"),
     text: textLines.join("\n"),
     attachments,
   };
 }
 
-function escapeHtml(str: string): string {
+function esc(str: string): string {
   return str
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
@@ -160,4 +172,9 @@ function priorityColor(priority: AnnotationPriority): string {
     case "low": return "#65a30d";
     default: return "#666";
   }
+}
+
+function priorityHtml(priority: AnnotationPriority): string {
+  if (priority === "none") return "";
+  return ` <span style="color: ${priorityColor(priority)}; font-weight: 600;">[${priority}]</span>`;
 }

@@ -1,4 +1,5 @@
 import type { ParsedFeedback, ParsedFile } from "../server/parse";
+import { deriveFeedbackTitle, priorityTag } from "./shared";
 
 export interface SlackBlock {
   type: string;
@@ -49,71 +50,68 @@ export function toSlackMessage(feedback: ParsedFeedback): SlackMessagePayload {
   const { submission } = feedback;
   const blocks: SlackBlock[] = [];
   const files: SlackFileUpload[] = [];
+  const env = submission.environment;
 
-  // Header
+  const title = deriveFeedbackTitle(submission.items);
+
+  // Title
   blocks.push({
     type: "header",
-    text: { type: "plain_text", text: "New Feedback", emoji: true },
+    text: { type: "plain_text", text: title, emoji: true },
   });
 
-  // Page info
+  // Page
   blocks.push({
     type: "section",
-    fields: [
-      { type: "mrkdwn", text: `*Page:*\n${submission.url}` },
-      { type: "mrkdwn", text: `*Time:*\n${submission.timestamp}` },
-    ],
-  });
-
-  // Environment
-  const env = submission.environment;
-  blocks.push({
-    type: "section",
-    fields: [
-      { type: "mrkdwn", text: `*Browser:*\n${env.browser.name} ${env.browser.version}` },
-      { type: "mrkdwn", text: `*OS:*\n${env.os.name} ${env.os.version}` },
-      { type: "mrkdwn", text: `*Viewport:*\n${env.viewport.width}×${env.viewport.height}` },
-      { type: "mrkdwn", text: `*Device Pixel Ratio:*\n${env.devicePixelRatio}x` },
-    ],
+    text: { type: "mrkdwn", text: `*Page:* ${submission.url}` },
   });
 
   blocks.push({ type: "divider" });
 
-  // Items summary
+  // Items
   for (const item of submission.items) {
     switch (item.type) {
       case "photo":
         blocks.push({
           type: "section",
-          text: { type: "mrkdwn", text: `*Screenshot* — ${Math.round(item.area.width)}×${Math.round(item.area.height)}${item.additionalText ? `\n> ${item.additionalText}` : ""}` },
+          text: { type: "mrkdwn", text: `*Screenshot*${priorityTag(item.priority)}${item.additionalText ? `\n${item.additionalText}` : ""}` },
         });
         break;
       case "video":
         blocks.push({
           type: "section",
-          text: { type: "mrkdwn", text: `*Screen Recording* — ${item.duration}s${item.additionalText ? `\n> ${item.additionalText}` : ""}` },
+          text: { type: "mrkdwn", text: `*Screen Recording* (${item.duration}s)${priorityTag(item.priority)}${item.additionalText ? `\n${item.additionalText}` : ""}` },
         });
         break;
       case "annotation":
         blocks.push({
           type: "section",
-          text: { type: "mrkdwn", text: `*Annotation* — \`${item.element.name}\`${item.priority !== "none" ? ` [${item.priority}]` : ""}${item.note ? `\n> ${item.note}` : ""}` },
+          text: { type: "mrkdwn", text: `*Annotation:* \`${item.element.name}\`${priorityTag(item.priority)}${item.note ? `\n${item.note}` : ""}` },
         });
         break;
       case "textNote":
         blocks.push({
           type: "section",
-          text: { type: "mrkdwn", text: `*Text Note:*\n> ${item.text}` },
+          text: { type: "mrkdwn", text: `*Note*${priorityTag(item.priority)}\n${item.text}` },
         });
         break;
       case "voiceNote":
         blocks.push({
           type: "section",
-          text: { type: "mrkdwn", text: `*Voice Note* — ${item.duration}s` },
+          text: { type: "mrkdwn", text: `*Voice Note* (${item.duration}s)${priorityTag(item.priority)}${item.additionalText ? `\n${item.additionalText}` : ""}` },
         });
         break;
     }
   }
+
+  // Environment
+  blocks.push({ type: "divider" });
+  blocks.push({
+    type: "context",
+    elements: [
+      { type: "mrkdwn", text: `${env.browser.name} ${env.browser.version} · ${env.os.name} ${env.os.version} · ${env.viewport.width}×${env.viewport.height} · ${env.devicePixelRatio}x DPR · ${env.language} · ${env.timezone} · ${env.colorScheme}` },
+    ],
+  });
 
   // Collect file uploads
   for (const [, file] of feedback.files) {
@@ -124,20 +122,9 @@ export function toSlackMessage(feedback: ParsedFeedback): SlackMessagePayload {
     });
   }
 
-  // Custom metadata
-  if (submission.metadata && Object.keys(submission.metadata).length > 0) {
-    blocks.push({ type: "divider" });
-    blocks.push({
-      type: "context",
-      elements: [
-        { type: "mrkdwn", text: `*Metadata:* ${JSON.stringify(submission.metadata)}` },
-      ],
-    });
-  }
-
   // Fallback text
   const itemCount = submission.items.length;
-  const text = `New feedback from ${submission.url} — ${itemCount} item${itemCount !== 1 ? "s" : ""}`;
+  const text = `${title} — ${submission.url} (${itemCount} item${itemCount !== 1 ? "s" : ""})`;
 
   return { blocks, text, files };
 }

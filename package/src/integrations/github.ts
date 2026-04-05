@@ -1,5 +1,5 @@
 import type { ParsedFeedback } from "../server/parse";
-import { deriveFeedbackTitle, renderEnvironmentMarkdown, getFileForItem } from "./shared";
+import { deriveFeedbackTitle, renderEnvironmentMarkdown, getFileForItem, priorityTag } from "./shared";
 
 export interface GithubIssuePayload {
   /** Auto-generated issue title. */
@@ -31,24 +31,16 @@ export function toGithubIssue(feedback: ParsedFeedback): GithubIssuePayload {
   const labels = ["feedback"];
   const title = deriveFeedbackTitle(submission.items);
 
-  // Page info
+  // Page
   lines.push(`**Page:** ${submission.url}`);
-  lines.push(`**Time:** ${submission.timestamp}`);
-  lines.push("");
-
-  // Environment (collapsed)
-  lines.push(...renderEnvironmentMarkdown(submission.environment));
   lines.push("");
 
   // Items
-  lines.push("## Feedback");
-  lines.push("");
-
   for (const item of submission.items) {
     switch (item.type) {
       case "photo": {
         const placeholder = `{{screenshot-${item.id}}}`;
-        lines.push(`### Screenshot (${Math.round(item.area.width)}×${Math.round(item.area.height)})`);
+        lines.push(`**Screenshot**${priorityTag(item.priority)}`);
         lines.push(`![screenshot](${placeholder})`);
         if (item.additionalText) lines.push(`> ${item.additionalText}`);
         lines.push("");
@@ -61,7 +53,7 @@ export function toGithubIssue(feedback: ParsedFeedback): GithubIssuePayload {
       }
       case "video": {
         const placeholder = `{{recording-${item.id}}}`;
-        lines.push(`### Screen Recording (${item.duration}s)`);
+        lines.push(`**Screen Recording** (${item.duration}s)${priorityTag(item.priority)}`);
         lines.push(`[Download recording](${placeholder})`);
         if (item.additionalText) lines.push(`> ${item.additionalText}`);
         lines.push("");
@@ -73,30 +65,21 @@ export function toGithubIssue(feedback: ParsedFeedback): GithubIssuePayload {
         break;
       }
       case "annotation":
-        lines.push(`### Annotation: \`${item.element.name}\``);
-        if (item.priority !== "none") {
-          lines.push(`**Priority:** ${item.priority}`);
-          labels.push(item.priority);
-        }
+        lines.push(`**Annotation:** \`${item.element.name}\`${priorityTag(item.priority)}`);
         if (item.note) lines.push(`> ${item.note}`);
         lines.push("");
-        lines.push("<details><summary>Element details</summary>");
-        lines.push("");
-        lines.push(`- **Selector:** \`${item.element.selector}\``);
-        lines.push(`- **Path:** \`${item.element.elementPath}\``);
-        lines.push("");
-        lines.push("</details>");
-        lines.push("");
+        if (item.priority !== "none") labels.push(item.priority);
         break;
       case "textNote":
-        lines.push(`### Note`);
+        lines.push(`**Note**${priorityTag(item.priority)}`);
         lines.push(item.text);
         lines.push("");
         break;
       case "voiceNote": {
         const placeholder = `{{voice-${item.id}}}`;
-        lines.push(`### Voice Note (${item.duration}s)`);
+        lines.push(`**Voice Note** (${item.duration}s)${priorityTag(item.priority)}`);
         lines.push(`[Download voice note](${placeholder})`);
+        if (item.additionalText) lines.push(`> ${item.additionalText}`);
         lines.push("");
 
         const voiceFile = getFileForItem(feedback, item);
@@ -107,6 +90,10 @@ export function toGithubIssue(feedback: ParsedFeedback): GithubIssuePayload {
       }
     }
   }
+
+  // Environment
+  lines.push("---");
+  lines.push(...renderEnvironmentMarkdown(submission.environment));
 
   return {
     title,
