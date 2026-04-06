@@ -41,3 +41,4 @@ next-env.d.ts
 # test files
 test.html
 test-debug.html
+test-measure.html
