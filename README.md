@@ -1,36 +1,93 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# remediate
 
-## Getting Started
+feedback widget for react. screenshots, screen recordings, voice notes, element annotations. one component on the client, one helper on the server. no accounts, no saas, no storage.
 
-First, run the development server:
+## install
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install remediate
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## add the component
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```tsx
+import { Remediate } from "remediate";
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+export default function App() {
+  return (
+    <>
+      <YourApp />
+      <Remediate endpoint="/api/feedback" />
+    </>
+  );
+}
+```
 
-## Learn More
+a floating button appears in the corner. click it, capture, submit. styles inject themselves.
 
-To learn more about Next.js, take a look at the following resources:
+## add the server route
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```ts
+import { parseFeedback } from "remediate/server";
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+export async function POST(req: Request) {
+  const { submission, files } = await parseFeedback(req);
+  console.log(submission);
+  return Response.json({ ok: true, id: submission.id });
+}
+```
 
-## Deploy on Vercel
+`submission` is the structured json. `files` is a `Map<string, File>` of screenshots, recordings, and voice notes.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+works anywhere you have a web `Request`: next.js, remix, hono, bun, deno, cloudflare workers.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## try it without a backend
+
+```tsx
+<Remediate onSubmit={(payload) => console.log(payload)} />
+```
+
+open devtools, capture something, watch the payload.
+
+## props
+
+| prop | type | description |
+|---|---|---|
+| `endpoint` | `string` | url to POST feedback as FormData |
+| `onSubmit` | `(payload: FeedbackSubmission) => void` | called on submit with the full payload |
+| `metadata` | `Record<string, unknown>` | extra data merged into the submission |
+| `onError` | `(error: Error) => void` | called if the POST fails |
+
+## claude code
+
+```bash
+npx skills add remediate
+```
+
+then run `/remediate`. detects your framework, installs the package, creates the server route, wires it into your layout.
+
+## what gets captured
+
+- screenshots: png from the dom. no permission prompt.
+- screen recordings: real video via getDisplayMedia. desktop only. requires https.
+- voice notes: microphone audio via getUserMedia. requires https.
+- annotations: css selector, dom path, computed styles, bounding rect, nearby text.
+- text notes: whatever the user types.
+- environment: browser, os, viewport, screen, language, timezone, color scheme.
+
+cross-origin images and iframes render blank in screenshots. video recording is not available on mobile safari.
+
+## docs
+
+[remediate.dev/docs](https://remediate.dev/docs)
+
+- [getting started](https://remediate.dev/docs/getting-started)
+- [recipes](https://remediate.dev/docs/recipes): slack, discord, github issues, linear, email, postgres, vercel blob
+- [payload](https://remediate.dev/docs/payload): what's in the json
+- [privacy](https://remediate.dev/docs/privacy): what gets captured, masking, server-side handling
+- [reference](https://remediate.dev/docs/reference): every prop, runtime support, cors, csp, bundle size
+- [faq](https://remediate.dev/docs/faq)
+
+## license
+
+mit
