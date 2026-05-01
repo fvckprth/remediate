@@ -11,9 +11,6 @@ const navLinks = [
   { label: "payload", href: "/docs/payload" },
   { label: "privacy", href: "/docs/privacy" },
   { label: "reference", href: "/docs/reference" },
-];
-
-const secondaryNavLinks = [
   { label: "faq", href: "/docs/faq" },
 ];
 
@@ -66,24 +63,6 @@ export function DocsNav() {
               const isActive = link.href === "/"
                 ? pathname === "/"
                 : pathname.startsWith(link.href);
-              return (
-                <Link
-                  key={link.href}
-                  href={link.href}
-                  className={`transition-colors duration-150 ${
-                    isActive
-                      ? "text-foreground"
-                      : "text-foreground/25 hover:text-foreground/50"
-                  }`}
-                >
-                  {link.label}
-                </Link>
-              );
-            })}
-          </div>
-          <div className="flex flex-col gap-3 mt-6">
-            {secondaryNavLinks.map((link) => {
-              const isActive = pathname.startsWith(link.href);
               return (
                 <Link
                   key={link.href}
