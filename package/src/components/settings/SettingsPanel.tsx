@@ -1,39 +1,24 @@
-import { useState } from "react";
 import { MARKER_COLORS } from "../../types";
-import { CheckLine } from "../icons";
-
-const STORAGE_KEY_NAME = "rm_reporter_name";
-const STORAGE_KEY_EMAIL = "rm_reporter_email";
+import { CheckLine, SunLine, MoonLine } from "../icons";
 
 interface SettingsPanelProps {
   markerColor: string;
   blockInteractions: boolean;
+  widgetTheme: "light" | "dark";
   onSetColor: (color: string) => void;
   onSetBlock: (blocked: boolean) => void;
+  onSetTheme: (theme: "light" | "dark") => void;
 }
 
 export function SettingsPanel({
   markerColor,
   blockInteractions,
+  widgetTheme,
   onSetColor,
   onSetBlock,
+  onSetTheme,
 }: SettingsPanelProps) {
-  const [name, setName] = useState(
-    () => (typeof window !== "undefined" ? localStorage.getItem(STORAGE_KEY_NAME) : null) ?? "",
-  );
-  const [email, setEmail] = useState(
-    () => (typeof window !== "undefined" ? localStorage.getItem(STORAGE_KEY_EMAIL) : null) ?? "",
-  );
-
-  function handleNameChange(value: string) {
-    setName(value);
-    localStorage.setItem(STORAGE_KEY_NAME, value);
-  }
-
-  function handleEmailChange(value: string) {
-    setEmail(value);
-    localStorage.setItem(STORAGE_KEY_EMAIL, value);
-  }
+  const isDark = widgetTheme === "dark";
 
   return (
     <div className="rm-settings" data-remediate-widget="">
@@ -41,26 +26,17 @@ export function SettingsPanel({
       <div className="rm-settings__header">
         <span className="rm-settings__title">/remediate</span>
         <span className="rm-settings__version">v0.1.0</span>
-      </div>
-
-      {/* Reporter */}
-      <div className="rm-settings__input-group">
-        <input
-          className="rm-settings__input"
-          type="text"
-          placeholder="Name"
-          value={name}
-          onChange={(e) => handleNameChange(e.target.value)}
-          autoComplete="off"
-        />
-        <input
-          className="rm-settings__input"
-          type="email"
-          placeholder="Email"
-          value={email}
-          onChange={(e) => handleEmailChange(e.target.value)}
-          autoComplete="off"
-        />
+        <button
+          className="rm-theme-toggle"
+          onClick={() => onSetTheme(isDark ? "light" : "dark")}
+          title={isDark ? "Switch to light mode" : "Switch to dark mode"}
+        >
+          <span className="rm-theme-icon-wrapper">
+            <span className="rm-theme-icon" key={isDark ? "sun" : "moon"}>
+              {isDark ? <SunLine size={16} /> : <MoonLine size={16} />}
+            </span>
+          </span>
+        </button>
       </div>
 
       {/* Theme */}

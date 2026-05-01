@@ -115,6 +115,7 @@ export interface WidgetState {
   items: FeedbackItem[];
   markerColor: string;
   blockInteractions: boolean;
+  widgetTheme: "light" | "dark";
   clearAfterSend: boolean;
   outputDetail: OutputDetail;
   settingsOpen: boolean;
@@ -135,6 +136,7 @@ export type WidgetAction =
   | { type: "SET_PENDING_CAPTURE"; capture: PendingCapture | null }
   | { type: "SET_MARKER_COLOR"; color: string }
   | { type: "SET_BLOCK_INTERACTIONS"; blocked: boolean }
+  | { type: "SET_THEME"; theme: "light" | "dark" }
   | { type: "SET_CLEAR_AFTER_SEND"; enabled: boolean }
   | { type: "SET_OUTPUT_DETAIL"; level: OutputDetail }
   | { type: "UPDATE_ANNOTATION"; id: string; note: string; priority: AnnotationPriority }
@@ -198,10 +200,6 @@ export interface RemediateProps {
   onSubmit?: (payload: FeedbackSubmission) => void | Promise<void>;
   /** URL to POST feedback as FormData. If set, the widget auto-submits to this endpoint. */
   endpoint?: string;
-  /** Project key for Remediate hosted service (e.g. "pk_xxx"). Auto-sends feedback to the API. */
-  projectKey?: string;
-  /** Base URL for the Remediate API when using projectKey (e.g. "https://your-dashboard.com"). Defaults to api.remediate.dev. */
-  apiUrl?: string;
   /** Extra metadata merged into the submission (e.g. project ID, user info). */
   metadata?: Record<string, unknown>;
   /** Called if the endpoint POST fails. */

@@ -1,5 +1,6 @@
 import type { FeedbackItem, AnnotationPriority } from "../types";
 import type { ParsedFeedback, ParsedFile } from "../server/parse";
+import { fileKey, filePrefixForType } from "../utils/file-keys";
 
 /**
  * Derive a short title from feedback items.
@@ -106,12 +107,40 @@ export function getFileForItem(
   feedback: ParsedFeedback,
   item: FeedbackItem,
 ): ParsedFile | undefined {
-  const prefixes: Record<string, string> = {
-    photo: "screenshot",
-    video: "recording",
-    voiceNote: "voice",
-  };
-  const prefix = prefixes[item.type];
-  if (!prefix) return undefined;
-  return feedback.files.get(`${prefix}-${item.id}`);
+  const key = fileKey(item);
+  if (!key) return undefined;
+  return feedback.files.get(key);
+}
+
+/**
+ * Summarize a feedback item into format-agnostic parts.
+ * Eliminates per-item switch statements in each integration.
+ */
+export interface ItemSummary {
+  /** Plain label: "Screenshot", "Screen Recording (5s)", "Note", "Voice Note (3s)" */
+  label: string;
+  /** Element name for annotations, null otherwise */
+  elementName: string | null;
+  /** Note, text, or additionalText content */
+  text: string | null;
+  priority: AnnotationPriority;
+  /** File key prefix: "screenshot" | "recording" | "voice" | null */
+  filePrefix: string | null;
+  itemId: string;
+}
+
+export function summarizeItem(item: FeedbackItem): ItemSummary {
+  const prefix = filePrefixForType(item.type);
+  switch (item.type) {
+    case "photo":
+      return { label: "Screenshot", elementName: null, text: item.additionalText || null, priority: item.priority, filePrefix: prefix, itemId: item.id };
+    case "video":
+      return { label: `Screen Recording (${item.duration}s)`, elementName: null, text: item.additionalText || null, priority: item.priority, filePrefix: prefix, itemId: item.id };
+    case "annotation":
+      return { label: "Annotation", elementName: item.element.name, text: item.note || null, priority: item.priority, filePrefix: prefix, itemId: item.id };
+    case "textNote":
+      return { label: "Note", elementName: null, text: item.text, priority: item.priority, filePrefix: prefix, itemId: item.id };
+    case "voiceNote":
+      return { label: `Voice Note (${item.duration}s)`, elementName: null, text: item.additionalText || null, priority: item.priority, filePrefix: prefix, itemId: item.id };
+  }
 }

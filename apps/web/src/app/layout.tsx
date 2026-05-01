@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import localFont from "next/font/local";
 import { Providers } from "@/components/providers";
+import { GlobalWidgets } from "@/components/global-widgets";
 import "./globals.css";
 
 const openRunde = localFont({
@@ -12,9 +13,17 @@ const openRunde = localFont({
   display: "swap",
 });
 
+const berkeleyMono = localFont({
+  src: [
+    { path: "../fonts/BerkeleyMono-Regular.otf", weight: "400", style: "normal" },
+  ],
+  variable: "--font-berkeley-mono",
+  display: "swap",
+});
+
 export const metadata: Metadata = {
   title: "Remediate",
-  description: "Feedback dashboard",
+  description: "Visual feedback widget for web apps",
 };
 
 export default function RootLayout({
@@ -24,8 +33,11 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={`${openRunde.variable} antialiased`}>
-        <Providers>{children}</Providers>
+      <body className={`${openRunde.variable} ${berkeleyMono.variable} antialiased`}>
+        <Providers>
+          {children}
+          <GlobalWidgets />
+        </Providers>
       </body>
     </html>
   );

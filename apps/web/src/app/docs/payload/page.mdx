@@ -1,0 +1,278 @@
+<article>
+
+<PageHeader
+  title="payload"
+  description="every submission has the same shape, whether it lands in onSubmit or your endpoint."
+/>
+
+```
+FeedbackSubmission
+├── id, url, timestamp
+├── environment      browser, os, viewport, screen, locale, timezone, color scheme
+├── metadata         your custom data (userId, branch, tester, anything)
+└── items[]          mixed array, in the order the user added them
+    ├── photo        screenshot of a region
+    ├── video        screen recording
+    ├── annotation   pin on a dom element
+    ├── textNote     plain text
+    └── voiceNote    microphone recording
+```
+
+## envelope
+
+```ts
+interface FeedbackSubmission {
+  id: string;                    // "fb_a1b2c3d4e5f6"
+  url: string;                   // "https://yourapp.com/dashboard"
+  timestamp: string;             // iso-8601
+  environment: Environment;
+  items: FeedbackItem[];
+  metadata: Record<string, unknown>;
+}
+
+interface Environment {
+  userAgent: string;
+  browser: { name: string; version: string };
+  os: { name: string; version: string };
+  viewport: { width: number; height: number };
+  screen: { width: number; height: number };
+  devicePixelRatio: number;
+  language: string;
+  timezone: string;
+  colorScheme: "light" | "dark";
+}
+```
+
+`metadata` is whatever you passed to the `metadata` prop, verbatim. nothing's added or removed.
+
+every item shares this base:
+
+```ts
+interface FeedbackItemBase {
+  id: string;
+  index: number;                                                // 1-based
+  timestamp: number;                                            // Date.now()
+  additionalText: string;                                       // optional caption
+  priority: "none" | "low" | "medium" | "high" | "urgent";
+}
+```
+
+narrow on `item.type` to get the rest.
+
+## photo
+
+a screenshot of a selected region of the page, rendered client-side from the dom.
+
+```json
+{
+  "type": "photo",
+  "id": "itm_abc123",
+  "index": 1,
+  "timestamp": 1714486981000,
+  "additionalText": "this button is misaligned",
+  "priority": "high",
+  "area": { "x": 200, "y": 100, "width": 400, "height": 300 }
+}
+```
+
+```ts
+interface PhotoCapture extends FeedbackItemBase {
+  type: "photo";
+  area: SelectionArea;          // css pixels, viewport-relative
+  blob?: Blob;                  // PNG, only present in onSubmit
+}
+```
+
+cross-origin images and iframes render blank.
+
+## video
+
+a screen recording via `getDisplayMedia`. desktop only. requires https.
+
+```json
+{
+  "type": "video",
+  "id": "itm_xyz789",
+  "index": 2,
+  "timestamp": 1714486990000,
+  "additionalText": "",
+  "priority": "none",
+  "duration": 12,
+  "area": { "x": 0, "y": 0, "width": 1440, "height": 900 }
+}
+```
+
+```ts
+interface VideoCapture extends FeedbackItemBase {
+  type: "video";
+  duration: number;             // seconds
+  area: SelectionArea;
+  blob?: Blob;                  // WebM (chrome/firefox) or MP4 (safari)
+}
+```
+
+mime type varies by browser. the blob is valid either way; just expect different file extensions on the server.
+
+## annotation
+
+a pin on a dom element. captures a fingerprint of what was clicked: selector, path, computed styles, bounding rect, attributes, and the text near it.
+
+```json
+{
+  "type": "annotation",
+  "id": "itm_def456",
+  "index": 3,
+  "timestamp": 1714487000000,
+  "additionalText": "",
+  "priority": "medium",
+  "note": "wrong color on hover",
+  "clickOffset": { "x": 60, "y": 20 },
+  "element": {
+    "selector": "button.primary",
+    "name": "button.primary",
+    "elementPath": "html > body > main > button",
+    "boundingRect": { "x": 320, "y": 240, "width": 120, "height": 40 },
+    "nearbyText": "Submit Order",
+    "cssClasses": "primary btn-lg",
+    "attributes": { "type": "submit" },
+    "computedStyles": { "background-color": "rgb(64, 109, 255)" }
+  }
+}
+```
+
+```ts
+interface AnnotationItem extends FeedbackItemBase {
+  type: "annotation";
+  note: string;
+  clickOffset: { x: number; y: number };
+  element: ElementCapture;
+}
+
+interface ElementCapture {
+  selector: string;
+  name: string;
+  elementPath: string;
+  boundingRect: { x: number; y: number; width: number; height: number };
+  nearbyText: string;                                  // visible text within ~200px
+  cssClasses: string;
+  attributes: Record<string, string>;
+  computedStyles: Record<string, string>;
+}
+```
+
+> **`nearbyText` captures visible page content.** if the annotated element sits next to an email, account number, or any other sensitive value, that text ends up in the payload.
+
+## textNote
+
+```json
+{
+  "type": "textNote",
+  "id": "itm_ghi789",
+  "index": 4,
+  "timestamp": 1714487010000,
+  "additionalText": "",
+  "priority": "none",
+  "text": "the checkout flow feels slow after adding items"
+}
+```
+
+```ts
+interface TextNoteItem extends FeedbackItemBase {
+  type: "textNote";
+  text: string;
+}
+```
+
+## voiceNote
+
+a microphone recording via `getUserMedia`. requires https. mic permission prompt on first use.
+
+```json
+{
+  "type": "voiceNote",
+  "id": "itm_jkl012",
+  "index": 5,
+  "timestamp": 1714487020000,
+  "additionalText": "follow up on the checkout note",
+  "priority": "low",
+  "duration": 18
+}
+```
+
+```ts
+interface VoiceNoteItem extends FeedbackItemBase {
+  type: "voiceNote";
+  duration: number;             // seconds
+  blob?: Blob;                  // WebM audio
+}
+```
+
+## blobs on the wire
+
+`blob` is only populated in the `onSubmit` path. with `endpoint`, blobs are stripped from the json and uploaded as separate FormData parts. on the server, `parseFeedback(req)` returns:
+
+```ts
+interface ParsedFeedback {
+  submission: FeedbackSubmission;       // blobs not present
+  files: Map<string, File>;             // blobs here, keyed by filename
+}
+```
+
+filenames look like `screenshot-${item.id}`, `recording-${item.id}`, `voice-${item.id}`.
+
+## working with the payload
+
+### narrow on type
+
+```ts
+for (const item of submission.items) {
+  switch (item.type) {
+    case "photo":      /* item.area available */ break;
+    case "video":      /* item.duration, item.area */ break;
+    case "annotation": /* item.element, item.note */ break;
+    case "textNote":   /* item.text */ break;
+    case "voiceNote":  /* item.duration */ break;
+  }
+}
+```
+
+### grab just the text
+
+```ts
+const notes = submission.items
+  .filter((i): i is TextNoteItem => i.type === "textNote")
+  .map((i) => i.text);
+```
+
+### upload all files to your storage
+
+```ts
+const { submission, files } = await parseFeedback(req);
+
+const urls: Record<string, string> = {};
+for (const [name, file] of files) {
+  urls[name] = await uploadSomewhere(name, file);
+}
+```
+
+### get the file for a specific item
+
+```ts
+const photoFile = files.get(`screenshot-${itemId}`);
+const videoFile = files.get(`recording-${itemId}`);
+const voiceFile = files.get(`voice-${itemId}`);
+```
+
+### derive a title from first text-like item
+
+```ts
+const first = submission.items.find(
+  (i) => i.type === "textNote" || (i.type === "annotation" && i.note),
+);
+const title =
+  first?.type === "textNote" ? first.text :
+  first?.type === "annotation" ? first.note :
+  `feedback from ${submission.url}`;
+```
+
+</article>

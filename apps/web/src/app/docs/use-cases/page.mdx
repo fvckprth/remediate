@@ -1,0 +1,49 @@
+<article>
+
+<PageHeader
+  eyebrow="docs"
+  title="use cases"
+  description="how teams use remediate to capture and route feedback."
+/>
+
+## bug reports from real users
+
+drop the widget into production. when a user hits something broken, they capture a screenshot, annotate the exact element, and add a voice note — all without leaving the page. you get a structured payload instead of a vague email.
+
+```tsx
+<Remediate
+  endpoint="/api/feedback"
+  metadata={{ userId: user.id, plan: user.plan }}
+/>
+```
+
+## internal qa and staging review
+
+add remediate to staging. your team pins annotations on specific elements, records walkthroughs, and flags issues with priority levels. wire the endpoint to slack or linear and feedback flows straight into your backlog.
+
+## client review
+
+embed the widget on preview deployments. clients capture exactly what they want changed instead of writing "the button on that page looks weird." screenshots and element annotations remove the ambiguity.
+
+## design review
+
+designers review implementations in the browser. they annotate spacing issues, color mismatches, or interaction bugs directly on the rendered page. every annotation captures computed styles, bounding rects, and selectors — enough to reproduce exactly what they saw.
+
+## accessibility audits
+
+auditors walk through your app and flag issues as they find them. each annotation captures the target element's attributes, computed styles, and selector path. the structured payload makes it easy to batch-process findings into tickets.
+
+## user research
+
+add the widget during usability sessions. participants record voice notes as they navigate, screenshot confusing flows, and annotate elements they expected to behave differently. you get timestamped, structured artifacts instead of session notes.
+
+---
+
+## what remediate can't do
+
+- **no storage** — remediate doesn't store anything. it formats and posts feedback; you bring your own backend, database, and file storage.
+- **no video on mobile safari** — screen capture (`getDisplayMedia`) isn't available on ios. the video button is a no-op on mobile safari.
+- **no cross-origin capture** — dom-based screenshots can't render cross-origin images or iframes. they appear blank in the capture.
+- **no transport control** — remediate captures and formats. it never calls external apis on your behalf — you own the sdk calls, tokens, and error handling.
+
+</article>

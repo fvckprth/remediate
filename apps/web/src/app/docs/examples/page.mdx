@@ -1,0 +1,228 @@
+<article>
+
+<PageHeader
+  eyebrow="docs"
+  title="examples"
+  description="complete setups you can copy. each one shows the widget config and the server route together."
+/>
+
+## beta testers
+
+show the widget to beta users. store submissions and upload blobs to vercel blob.
+
+```tsx
+{user.isBetaTester && (
+  <Remediate
+    endpoint="/api/feedback"
+    metadata={{ userId: user.id, email: user.email }}
+  />
+)}
+```
+
+```ts
+// .env
+// BLOB_READ_WRITE_TOKEN=vercel_blob_...
+
+// app/api/feedback/route.ts
+import { parseFeedback } from "remediate/server";
+import { put } from "@vercel/blob";
+
+export async function POST(req: Request) {
+  try {
+    const feedback = await parseFeedback(req);
+    const { submission } = feedback;
+
+    // upload screenshots, recordings, voice notes
+    const fileUrls: Record<string, string> = {};
+    for (const [filename, file] of feedback.files) {
+      const blob = await put(
+        `feedback/${submission.id}/${filename}`,
+        file.blob,
+        { access: "public" },
+      );
+      fileUrls[filename] = blob.url;
+    }
+
+    await db.feedbackSubmissions.create({
+      data: {
+        id: submission.id,
+        url: submission.url,
+        userId: String(submission.metadata.userId),
+        payload: JSON.stringify(submission),
+        fileUrls: JSON.stringify(fileUrls),
+        createdAt: new Date(),
+      },
+    });
+
+    return Response.json({ ok: true });
+  } catch (err) {
+    console.error("[feedback] failed", err);
+    return Response.json({ ok: false, error: String(err) }, { status: 400 });
+  }
+}
+```
+
+## client review on preview deploys
+
+embed the widget on vercel preview deployments. post formatted feedback to slack with item-type-aware messages.
+
+```tsx
+{process.env.NEXT_PUBLIC_VERCEL_ENV === "preview" && (
+  <Remediate
+    endpoint="/api/feedback"
+    metadata={{ branch: process.env.NEXT_PUBLIC_VERCEL_GIT_COMMIT_REF }}
+  />
+)}
+```
+
+```ts
+// .env
+// SLACK_WEBHOOK_URL=https://hooks.slack.com/services/...
+
+// app/api/feedback/route.ts
+import { parseFeedback } from "remediate/server";
+
+export async function POST(req: Request) {
+  try {
+    const feedback = await parseFeedback(req);
+    const { submission } = feedback;
+
+    const lines = submission.items.map((item) => {
+      const tag = item.priority !== "none" ? ` [${item.priority}]` : "";
+      switch (item.type) {
+        case "photo":
+          return `:camera: Screenshot${tag}${item.additionalText ? ` — ${item.additionalText}` : ""}`;
+        case "video":
+          return `:movie_camera: Recording (${item.duration}s)${tag}${item.additionalText ? ` — ${item.additionalText}` : ""}`;
+        case "annotation":
+          return `:pushpin: \`${item.element.name}\`${tag} — ${item.note}`;
+        case "textNote":
+          return `:memo: ${item.text}${tag}`;
+        case "voiceNote":
+          return `:microphone: Voice note (${item.duration}s)${tag}${item.additionalText ? ` — ${item.additionalText}` : ""}`;
+      }
+    });
+
+    const text = [
+      `*Feedback on ${submission.url}*`,
+      `Branch: \`${submission.metadata.branch || "unknown"}\``,
+      "",
+      ...lines,
+    ].join("\n");
+
+    await fetch(process.env.SLACK_WEBHOOK_URL!, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text }),
+    });
+
+    return Response.json({ ok: true });
+  } catch (err) {
+    console.error("[feedback] failed", err);
+    return Response.json({ ok: false, error: String(err) }, { status: 400 });
+  }
+}
+```
+
+## internal qa on staging
+
+add the widget to staging. upload blobs, then create a github issue that links to them.
+
+```tsx
+{process.env.NEXT_PUBLIC_ENV === "staging" && (
+  <Remediate
+    endpoint="/api/feedback"
+    metadata={{ tester: user.name }}
+  />
+)}
+```
+
+```ts
+// .env
+// GITHUB_TOKEN=ghp_...
+// GITHUB_OWNER=your-org
+// GITHUB_REPO=your-repo
+// BLOB_READ_WRITE_TOKEN=vercel_blob_...
+
+// app/api/feedback/route.ts
+import { parseFeedback } from "remediate/server";
+import { put } from "@vercel/blob";
+
+export async function POST(req: Request) {
+  try {
+    const feedback = await parseFeedback(req);
+    const { submission } = feedback;
+
+    // upload blobs and collect public urls
+    const fileUrls = new Map<string, string>();
+    for (const [filename, file] of feedback.files) {
+      const blob = await put(
+        `feedback/${submission.id}/${filename}`,
+        file.blob,
+        { access: "public" },
+      );
+      fileUrls.set(filename, blob.url);
+    }
+
+    // derive a title from the first text or annotation
+    const firstText = submission.items.find(
+      (i) => i.type === "textNote" || (i.type === "annotation" && i.note),
+    );
+    const title = firstText?.type === "textNote"
+      ? firstText.text.slice(0, 70)
+      : firstText?.type === "annotation"
+        ? firstText.note.slice(0, 70)
+        : `feedback from ${submission.url}`;
+
+    // build the issue body with links to uploaded files
+    const body = [
+      `**page:** ${submission.url}`,
+      `**tester:** ${submission.metadata.tester || "unknown"}`,
+      `**browser:** ${submission.environment.browser.name} ${submission.environment.browser.version}`,
+      "",
+      ...submission.items.map((item) => {
+        const tag = item.priority !== "none" ? ` \`${item.priority}\`` : "";
+        switch (item.type) {
+          case "photo": {
+            const url = fileUrls.get(`screenshot-${item.id}`);
+            return url
+              ? `- **Screenshot**${tag}\n  ![screenshot](${url})${item.additionalText ? `\n  > ${item.additionalText}` : ""}`
+              : `- Screenshot${tag}`;
+          }
+          case "video": {
+            const url = fileUrls.get(`recording-${item.id}`);
+            return `- **Recording** (${item.duration}s)${tag}${url ? ` — [download](${url})` : ""}${item.additionalText ? `\n  > ${item.additionalText}` : ""}`;
+          }
+          case "voiceNote": {
+            const url = fileUrls.get(`voice-${item.id}`);
+            return `- **Voice note** (${item.duration}s)${tag}${url ? ` — [listen](${url})` : ""}${item.additionalText ? `\n  > ${item.additionalText}` : ""}`;
+          }
+          case "annotation":
+            return `- **\`${item.element.name}\`**${tag} — ${item.note}`;
+          case "textNote":
+            return `- ${item.text}${tag}`;
+        }
+      }),
+    ].join("\n");
+
+    await fetch(
+      `https://api.github.com/repos/${process.env.GITHUB_OWNER}/${process.env.GITHUB_REPO}/issues`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${process.env.GITHUB_TOKEN}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ title, body, labels: ["feedback"] }),
+      },
+    );
+
+    return Response.json({ ok: true });
+  } catch (err) {
+    console.error("[feedback] failed", err);
+    return Response.json({ ok: false, error: String(err) }, { status: 400 });
+  }
+}
+```
+
+</article>

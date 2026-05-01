@@ -1,0 +1,234 @@
+<article>
+
+<PageHeader
+  eyebrow="docs"
+  title="schema"
+  description="every feedback submission — whether handed to onSubmit or POSTed to your endpoint — has the same shape."
+/>
+
+the root object is a `FeedbackSubmission`. here's the shape at a glance:
+
+```
+FeedbackSubmission
+├── id, url, timestamp
+├── environment { browser, os, viewport, screen, dpr, language, timezone, colorScheme }
+├── items[]
+│   ├── photo — screenshot blob + selection area
+│   ├── video — recording blob + duration
+│   ├── annotation — element fingerprint + note
+│   ├── textNote — plain text
+│   └── voiceNote — audio blob + duration
+└── metadata — your custom data
+```
+
+## example payload
+
+```json
+{
+  "id": "fb_a1b2c3d4e5f6",
+  "url": "https://yourapp.com/dashboard",
+  "timestamp": "2026-04-30T14:23:01.000Z",
+  "environment": {
+    "userAgent": "Mozilla/5.0 ...",
+    "browser": { "name": "Chrome", "version": "130" },
+    "os": { "name": "macOS", "version": "15.4" },
+    "viewport": { "width": 1440, "height": 900 },
+    "screen": { "width": 2560, "height": 1440 },
+    "devicePixelRatio": 2,
+    "language": "en-US",
+    "timezone": "America/New_York",
+    "colorScheme": "dark"
+  },
+  "items": [
+    {
+      "type": "photo",
+      "id": "itm_abc123",
+      "index": 1,
+      "timestamp": 1714486981000,
+      "additionalText": "this button is misaligned",
+      "priority": "high",
+      "area": { "x": 200, "y": 100, "width": 400, "height": 300 }
+    },
+    {
+      "type": "annotation",
+      "id": "itm_def456",
+      "index": 2,
+      "timestamp": 1714486990000,
+      "additionalText": "",
+      "priority": "medium",
+      "note": "wrong color on hover",
+      "element": {
+        "selector": "button.primary",
+        "name": "button.primary",
+        "elementPath": "html > body > main > button",
+        "boundingRect": { "x": 320, "y": 240, "width": 120, "height": 40 },
+        "nearbyText": "Submit Order",
+        "cssClasses": "primary btn-lg",
+        "attributes": { "type": "submit" },
+        "computedStyles": { "background-color": "rgb(64, 109, 255)" }
+      },
+      "clickOffset": { "x": 60, "y": 20 }
+    },
+    {
+      "type": "textNote",
+      "id": "itm_ghi789",
+      "index": 3,
+      "timestamp": 1714487000000,
+      "additionalText": "",
+      "priority": "none",
+      "text": "the checkout flow feels slow after adding items"
+    }
+  ],
+  "metadata": { "userId": "usr_42" }
+}
+```
+
+## FeedbackSubmission
+
+```ts
+interface FeedbackSubmission {
+  id: string;
+  url: string;
+  timestamp: string;
+  environment: {
+    userAgent: string;
+    browser: { name: string; version: string };
+    os: { name: string; version: string };
+    viewport: { width: number; height: number };
+    screen: { width: number; height: number };
+    devicePixelRatio: number;
+    language: string;
+    timezone: string;
+    colorScheme: "light" | "dark";
+  };
+  items: FeedbackItem[];
+  metadata: Record<string, unknown>;
+}
+```
+
+- `id` — uuid generated at submission time
+- `url` — full page url where the widget was used
+- `timestamp` — iso-8601 string
+- `environment` — browser, os, viewport, screen, dpr, language, timezone, and color scheme, sniffed at submission time
+- `items` — a mixed array of `FeedbackItem` variants, in the order the user added them
+- `metadata` — whatever you passed via the widget's `metadata` prop, verbatim
+
+## FeedbackItem
+
+every item is a tagged union on `type` and shares a common base.
+
+```ts
+type FeedbackItem =
+  | PhotoCapture
+  | VideoCapture
+  | AnnotationItem
+  | TextNoteItem
+  | VoiceNoteItem;
+```
+
+```ts
+interface FeedbackItemBase {
+  id: string;
+  index: number;              // 1-based order in the submission
+  timestamp: number;          // Date.now()
+  additionalText: string;     // optional caption
+  priority: "none" | "low" | "medium" | "high" | "urgent";
+}
+```
+
+### photo
+
+a screenshot of a selected region of the page, rendered client-side from the dom.
+
+```ts
+interface PhotoCapture extends FeedbackItemBase {
+  type: "photo";
+  area: SelectionArea;
+  blob?: Blob;                // PNG
+}
+```
+
+### video
+
+a screen recording via `getDisplayMedia`. the blob is a webm file. requires https.
+
+```ts
+interface VideoCapture extends FeedbackItemBase {
+  type: "video";
+  duration: number;           // seconds
+  area: SelectionArea;
+  blob?: Blob;                // WebM
+}
+```
+
+### annotation
+
+a pin dropped on a specific dom element. `element` is a full fingerprint: selector, xpath-style path, computed styles, bounding rect, nearby text, and every attribute on the element.
+
+```ts
+interface AnnotationItem extends FeedbackItemBase {
+  type: "annotation";
+  element: ElementCapture;
+  note: string;
+  clickOffset: { x: number; y: number };
+}
+```
+
+### textNote
+
+a plain text note from the user.
+
+```ts
+interface TextNoteItem extends FeedbackItemBase {
+  type: "textNote";
+  text: string;
+}
+```
+
+### voiceNote
+
+a microphone recording via `getUserMedia`. the blob is a webm audio file. requires https.
+
+```ts
+interface VoiceNoteItem extends FeedbackItemBase {
+  type: "voiceNote";
+  duration: number;           // seconds
+  blob?: Blob;                // WebM audio
+}
+```
+
+## ElementCapture
+
+embedded inside every annotation item. note that `nearbyText` captures visible text around the annotated element — if your page displays sensitive data, it may appear in the payload.
+
+```ts
+interface ElementCapture {
+  selector: string;
+  name: string;
+  elementPath: string;
+  boundingRect: { x: number; y: number; width: number; height: number };
+  nearbyText: string;
+  cssClasses: string;
+  attributes: Record<string, string>;
+  computedStyles: Record<string, string>;
+}
+```
+
+## SelectionArea
+
+embedded inside photo and video items. coordinates are in css pixels, relative to the page viewport at capture time.
+
+```ts
+interface SelectionArea {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+```
+
+## blobs on the wire
+
+the `blob` property is only populated in the `onSubmit` path. when using `endpoint` mode, blobs are stripped from the json and uploaded as separate `FormData` parts. on the server, call `parseFeedback(req)` from `remediate/server` to get a `ParsedFeedback` with a `submission` and a `files` map.
+
+</article>

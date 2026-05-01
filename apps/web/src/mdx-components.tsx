@@ -5,6 +5,10 @@ import Link from "next/link";
 import { Prose } from "@/components/docs/prose";
 import { CodeBlock } from "@/components/docs/code-block";
 import { PageHeader } from "@/components/docs/page-header";
+import { PropsTable } from "@/components/docs/props-table";
+import { AltInstall } from "@/components/docs/alt-install";
+import { FaqItem } from "@/components/docs/faq-item";
+import { Checklist, ChecklistItem } from "@/components/docs/checklist";
 
 type CodeElementProps = ComponentProps<"code"> & { className?: string };
 
@@ -32,10 +36,8 @@ function Pre({ children, ...props }: ComponentProps<"pre">) {
     const element = children as ReactElement<CodeElementProps>;
     const codeProps = element.props;
     const language = extractLanguage(codeProps.className);
-    if (language) {
-      const content = flattenToString(codeProps.children).replace(/\n$/, "");
-      return <CodeBlock language={language}>{content}</CodeBlock>;
-    }
+    const content = flattenToString(codeProps.children).replace(/\n$/, "");
+    return <CodeBlock language={language}>{content}</CodeBlock>;
   }
   return <pre {...props}>{children}</pre>;
 }
@@ -97,6 +99,11 @@ export function useMDXComponents(components: MDXComponents): MDXComponents {
     code: Code,
     PageHeader,
     CodeBlock,
+    PropsTable,
+    AltInstall,
+    FaqItem,
+    Checklist,
+    ChecklistItem,
     // `Prose` is an object namespace (Prose.H2, Prose.InlineCode, etc.),
     // not a component — MDXComponents' strict typing doesn't allow it,
     // but MDX accepts it at runtime for inline `<Prose.X>` usage in .mdx files.

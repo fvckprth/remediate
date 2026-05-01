@@ -4,13 +4,13 @@
  * Bundles React + ReactDOM + widget + CSS + fonts into a single
  * self-initializing IIFE. Usage:
  *
- *   <script src="https://cdn.remediate.dev/widget.js"
- *           data-project-key="pk_xxx"></script>
+ *   <script src="https://cdn.jsdelivr.net/npm/remediate/dist/widget.js"
+ *           data-endpoint="/api/feedback"></script>
  *
  * Or with window config:
  *
  *   <script>
- *     window.remediateConfig = { projectKey: 'pk_xxx' };
+ *     window.remediateConfig = { endpoint: '/api/feedback' };
  *   </script>
  *   <script src="/widget.js" async></script>
  */
@@ -22,9 +22,7 @@ import type { RemediateProps } from "./types";
 import "./styles/widget.css";
 
 interface EmbedConfig {
-  projectKey?: string;
   endpoint?: string;
-  apiUrl?: string;
   metadata?: Record<string, unknown>;
 }
 
@@ -40,15 +38,13 @@ function getConfig(): EmbedConfig {
 
   const script =
     document.currentScript ||
-    document.querySelector("script[data-project-key]") ||
+    document.querySelector("script[data-endpoint]") ||
     document.querySelector('script[src*="widget"]');
 
   if (!script) return {};
 
   return {
-    projectKey: script.getAttribute("data-project-key") || undefined,
     endpoint: script.getAttribute("data-endpoint") || undefined,
-    apiUrl: script.getAttribute("data-api-url") || undefined,
     metadata: script.hasAttribute("data-metadata")
       ? JSON.parse(script.getAttribute("data-metadata")!)
       : undefined,
@@ -64,9 +60,7 @@ function init() {
 
   const root = ReactDOM.createRoot(container);
   const props: RemediateProps = {};
-  if (config.projectKey) props.projectKey = config.projectKey;
   if (config.endpoint) props.endpoint = config.endpoint;
-  if (config.apiUrl) props.apiUrl = config.apiUrl;
   if (config.metadata) props.metadata = config.metadata;
 
   root.render(React.createElement(Remediate, props));

@@ -1,4 +1,5 @@
 import type { FeedbackSubmission, FeedbackItem } from "../types";
+import { fileKey, fileName } from "./file-keys";
 
 /**
  * Serialize a FeedbackSubmission into FormData for network transfer.
@@ -29,17 +30,10 @@ export function serializeToFormData(submission: FeedbackSubmission): FormData {
     if (!("blob" in item) || !(item as FeedbackItem & { blob?: Blob }).blob) continue;
 
     const blob = (item as FeedbackItem & { blob?: Blob }).blob!;
-
-    switch (item.type) {
-      case "photo":
-        form.append(`screenshot-${item.id}`, blob, `screenshot-${item.id}.png`);
-        break;
-      case "video":
-        form.append(`recording-${item.id}`, blob, `recording-${item.id}.webm`);
-        break;
-      case "voiceNote":
-        form.append(`voice-${item.id}`, blob, `voice-${item.id}.webm`);
-        break;
+    const key = fileKey(item);
+    const name = fileName(item);
+    if (key && name) {
+      form.append(key, blob, name);
     }
   }
 

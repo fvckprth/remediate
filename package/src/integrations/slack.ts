@@ -1,5 +1,5 @@
-import type { ParsedFeedback, ParsedFile } from "../server/parse";
-import { deriveFeedbackTitle, priorityTag } from "./shared";
+import type { ParsedFeedback } from "../server/parse";
+import { deriveFeedbackTitle, priorityTag, summarizeItem } from "./shared";
 
 export interface SlackBlock {
   type: string;
@@ -54,13 +54,11 @@ export function toSlackMessage(feedback: ParsedFeedback): SlackMessagePayload {
 
   const title = deriveFeedbackTitle(submission.items);
 
-  // Title
   blocks.push({
     type: "header",
     text: { type: "plain_text", text: title, emoji: true },
   });
 
-  // Page
   blocks.push({
     type: "section",
     text: { type: "mrkdwn", text: `*Page:* ${submission.url}` },
@@ -68,43 +66,17 @@ export function toSlackMessage(feedback: ParsedFeedback): SlackMessagePayload {
 
   blocks.push({ type: "divider" });
 
-  // Items
   for (const item of submission.items) {
-    switch (item.type) {
-      case "photo":
-        blocks.push({
-          type: "section",
-          text: { type: "mrkdwn", text: `*Screenshot*${priorityTag(item.priority)}${item.additionalText ? `\n${item.additionalText}` : ""}` },
-        });
-        break;
-      case "video":
-        blocks.push({
-          type: "section",
-          text: { type: "mrkdwn", text: `*Screen Recording* (${item.duration}s)${priorityTag(item.priority)}${item.additionalText ? `\n${item.additionalText}` : ""}` },
-        });
-        break;
-      case "annotation":
-        blocks.push({
-          type: "section",
-          text: { type: "mrkdwn", text: `*Annotation:* \`${item.element.name}\`${priorityTag(item.priority)}${item.note ? `\n${item.note}` : ""}` },
-        });
-        break;
-      case "textNote":
-        blocks.push({
-          type: "section",
-          text: { type: "mrkdwn", text: `*Note*${priorityTag(item.priority)}\n${item.text}` },
-        });
-        break;
-      case "voiceNote":
-        blocks.push({
-          type: "section",
-          text: { type: "mrkdwn", text: `*Voice Note* (${item.duration}s)${priorityTag(item.priority)}${item.additionalText ? `\n${item.additionalText}` : ""}` },
-        });
-        break;
-    }
+    const s = summarizeItem(item);
+    const heading = s.elementName ? `*${s.label}:* \`${s.elementName}\`` : `*${s.label}*`;
+    const body = `${heading}${priorityTag(s.priority)}${s.text ? `\n${s.text}` : ""}`;
+
+    blocks.push({
+      type: "section",
+      text: { type: "mrkdwn", text: body },
+    });
   }
 
-  // Environment
   blocks.push({ type: "divider" });
   blocks.push({
     type: "context",
@@ -113,7 +85,6 @@ export function toSlackMessage(feedback: ParsedFeedback): SlackMessagePayload {
     ],
   });
 
-  // Collect file uploads
   for (const [, file] of feedback.files) {
     files.push({
       filename: file.filename,
@@ -122,7 +93,6 @@ export function toSlackMessage(feedback: ParsedFeedback): SlackMessagePayload {
     });
   }
 
-  // Fallback text
   const itemCount = submission.items.length;
   const text = `${title} — ${submission.url} (${itemCount} item${itemCount !== 1 ? "s" : ""})`;
 

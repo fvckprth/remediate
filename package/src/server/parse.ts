@@ -1,4 +1,5 @@
 import type { FeedbackSubmission } from "../types";
+import { parseFileKey, type FileCategory } from "../utils/file-keys";
 
 export interface ParsedFile {
   blob: Blob;
@@ -7,7 +8,7 @@ export interface ParsedFile {
   /** The feedback item ID this file belongs to */
   itemId: string;
   /** "screenshot" | "recording" | "voice" */
-  category: "screenshot" | "recording" | "voice";
+  category: FileCategory;
 }
 
 export interface ParsedFeedback {
@@ -48,29 +49,16 @@ export async function parseFeedback(req: Request): Promise<ParsedFeedback> {
     if (key === "metadata") continue;
     if (!(value instanceof Blob)) continue;
 
-    let category: ParsedFile["category"];
-    let itemId: string;
-
-    if (key.startsWith("screenshot-")) {
-      category = "screenshot";
-      itemId = key.slice("screenshot-".length);
-    } else if (key.startsWith("recording-")) {
-      category = "recording";
-      itemId = key.slice("recording-".length);
-    } else if (key.startsWith("voice-")) {
-      category = "voice";
-      itemId = key.slice("voice-".length);
-    } else {
-      continue;
-    }
+    const parsed = parseFileKey(key);
+    if (!parsed) continue;
 
     const file = value as File;
     files.set(key, {
       blob: value,
-      filename: file.name || `${key}`,
+      filename: file.name || key,
       type: file.type || "application/octet-stream",
-      itemId,
-      category,
+      itemId: parsed.itemId,
+      category: parsed.category,
     });
   }
 

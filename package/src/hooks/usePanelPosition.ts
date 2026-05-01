@@ -6,22 +6,15 @@ const PADDING = 20;
 
 export function usePanelPosition({
   panelKey,
+  panelWidth,
   barPosition,
   anchorX,
 }: {
   panelKey: string | null;
+  panelWidth: number;
   barPosition: { x: number; y: number } | null;
   anchorX: number | null;
 }) {
-  // Calculate panel width based on type
-  let panelWidth = 176; // default (submenu)
-  if (panelKey === "settings") panelWidth = 240;
-  else if (panelKey === "textNote") panelWidth = 280;
-  else if (panelKey === "capturePhoto" || panelKey === "captureVideo") panelWidth = 280;
-  else if (panelKey === "voicePanel") panelWidth = 240;
-  else if (panelKey === "review") panelWidth = 280;
-  else if (panelKey === "success") panelWidth = 200;
-
   // Calculate position centered on the triggering button, clamped to viewport
   const isBrowser = typeof window !== "undefined";
   let panelLeft = barPosition ? barPosition.x : (isBrowser ? window.innerWidth - 20 - panelWidth : 0);

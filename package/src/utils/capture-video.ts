@@ -26,7 +26,7 @@ export async function startVideoRecording({
   // Acquire tab capture stream — triggers one-time browser permission prompt
   const displayStream = await navigator.mediaDevices.getDisplayMedia({
     video: { displaySurface: "browser" } as MediaTrackConstraints,
-    audio: false,
+    audio: true,
     // @ts-expect-error -- preferCurrentTab is Chrome 109+, not yet in all TS lib types
     preferCurrentTab: true,
   });
@@ -73,11 +73,15 @@ export async function startVideoRecording({
   }
   drawFrame();
 
-  // Record the cropped canvas stream
+  // Record the cropped canvas stream + tab audio (if available)
   const croppedStream = canvas.captureStream(CANVAS_FPS);
+  const combinedStream = new MediaStream([
+    ...croppedStream.getVideoTracks(),
+    ...displayStream.getAudioTracks(),
+  ]);
   const chunks: Blob[] = [];
   const mimeType = getSupportedMimeType();
-  const recorder = new MediaRecorder(croppedStream, { mimeType });
+  const recorder = new MediaRecorder(combinedStream, { mimeType });
   recorder.ondataavailable = (e) => {
     if (e.data.size > 0) chunks.push(e.data);
   };
@@ -93,6 +97,7 @@ export async function startVideoRecording({
     cancelAnimationFrame(frameId);
     displayStream.getTracks().forEach((t) => t.stop());
     croppedStream.getTracks().forEach((t) => t.stop());
+    combinedStream.getTracks().forEach((t) => t.stop());
     video.srcObject = null;
     video.remove();
   }
@@ -132,6 +137,8 @@ export async function startVideoRecording({
 
 function getSupportedMimeType(): string {
   const types = [
+    "video/webm;codecs=vp9,opus",
+    "video/webm;codecs=vp8,opus",
     "video/webm;codecs=vp9",
     "video/webm;codecs=vp8",
     "video/webm",

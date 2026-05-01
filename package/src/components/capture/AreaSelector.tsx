@@ -22,7 +22,6 @@ function toRect(drag: DragState) {
 
 export function AreaSelector({ onSelect, onCancel }: AreaSelectorProps) {
   const [drag, setDrag] = useState<DragState | null>(null);
-  const [flash, setFlash] = useState<{ x: number; y: number; width: number; height: number } | null>(null);
   const overlayRef = useRef<HTMLDivElement>(null);
 
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
@@ -41,12 +40,8 @@ export function AreaSelector({ onSelect, onCancel }: AreaSelectorProps) {
       setDrag(null);
       return;
     }
-    setFlash(rect);
     setDrag(null);
-    setTimeout(() => {
-      setFlash(null);
-      onSelect(rect);
-    }, 140);
+    onSelect(rect);
   }, [drag, onSelect]);
 
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
@@ -103,18 +98,6 @@ export function AreaSelector({ onSelect, onCancel }: AreaSelectorProps) {
         </div>
       )}
 
-      {/* Capture flash */}
-      {flash && (
-        <div
-          className="rm-capture-flash"
-          style={{
-            left: flash.x,
-            top: flash.y,
-            width: flash.width,
-            height: flash.height,
-          }}
-        />
-      )}
     </div>
   );
 }

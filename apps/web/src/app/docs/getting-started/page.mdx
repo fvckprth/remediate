@@ -1,0 +1,96 @@
+<article>
+
+<PageHeader
+  title="getting started"
+  description="remediate is a feedback widget for react. one component on the client, one helper on the server. screenshots, screen recordings, voice notes, element pins. straight to your endpoint as a structured payload."
+/>
+
+no accounts, no saas, no storage.
+
+## install
+
+```bash
+npm install remediate
+```
+
+<AltInstall />
+
+### or set up with claude code
+
+```bash
+npx skills add remediate
+```
+
+then run `/remediate`. detects your framework, installs the package, creates the server route, wires it into your layout.
+
+## add the server route
+
+the widget POSTs FormData. parse it with `parseFeedback`.
+
+```ts
+// app/api/feedback/route.ts (next.js app router)
+import { parseFeedback } from "remediate/server";
+
+export async function POST(req: Request) {
+  const { submission, files } = await parseFeedback(req);
+  console.log(submission);
+  return Response.json({ ok: true, id: submission.id });
+}
+```
+
+`submission` is the json. `files` is a `Map<string, File>` of screenshots, recordings, and voice notes.
+
+works anywhere you have a web `Request`: app router, remix, hono, bun, deno, cloudflare workers.
+
+## add the component
+
+```tsx
+import { Remediate } from "remediate";
+
+export default function App() {
+  return (
+    <>
+      <YourApp />
+      <Remediate endpoint="/api/feedback" />
+    </>
+  );
+}
+```
+
+a floating button appears in the corner. click it, capture, submit. styles inject themselves.
+
+## try it without a backend
+
+skip the route. log to the console.
+
+```tsx
+<Remediate onSubmit={(payload) => console.log(payload)} />
+```
+
+open devtools, capture something, watch the payload. when you're ready, add `endpoint`. both can coexist. the POST runs first, then `onSubmit` on success.
+
+## props
+
+all props are optional.
+
+<PropsTable rows={[
+  { name: "endpoint", description: "url to POST feedback as FormData. the widget auto-submits to this endpoint." },
+  { name: "onSubmit", description: "called when the user submits. receives the full payload including captured blobs." },
+  { name: "metadata", description: "extra data merged into the submission (e.g. user id, tenant, feature flags)." },
+  { name: "onError", description: "called if the endpoint POST fails." },
+]} />
+
+## what to do next
+
+- [recipes](/docs/recipes): slack, github issues, vercel blob, postgres
+- [payload](/docs/payload): what's in the json
+- [faq](/docs/faq): common questions
+
+## requirements
+
+- react 18+
+- https for video and voice. localhost is fine in dev.
+- video recording is desktop-only. mobile safari has no screen-capture api.
+- cross-origin images and iframes render blank in screenshots.
+
+</article>

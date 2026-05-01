@@ -1,6 +1,6 @@
 import type { ParsedFeedback } from "../server/parse";
 import type { AnnotationPriority } from "../types";
-import { deriveFeedbackTitle, renderEnvironmentText, priorityTag } from "./shared";
+import { deriveFeedbackTitle, renderEnvironmentText, priorityTag, summarizeItem } from "./shared";
 
 export interface EmailAttachment {
   filename: string;
@@ -61,31 +61,11 @@ export function toEmail(feedback: ParsedFeedback): EmailPayload {
   textLines.push("");
 
   for (const item of submission.items) {
-    switch (item.type) {
-      case "photo":
-        textLines.push(`Screenshot${priorityTag(item.priority)}`);
-        if (item.additionalText) textLines.push(`  ${item.additionalText}`);
-        textLines.push(`  See attachment: screenshot-${item.id}.png`);
-        break;
-      case "video":
-        textLines.push(`Screen Recording (${item.duration}s)${priorityTag(item.priority)}`);
-        if (item.additionalText) textLines.push(`  ${item.additionalText}`);
-        textLines.push(`  See attachment: recording-${item.id}.webm`);
-        break;
-      case "annotation":
-        textLines.push(`Annotation: ${item.element.name}${priorityTag(item.priority)}`);
-        if (item.note) textLines.push(`  ${item.note}`);
-        break;
-      case "textNote":
-        textLines.push(`Note${priorityTag(item.priority)}`);
-        textLines.push(`  ${item.text}`);
-        break;
-      case "voiceNote":
-        textLines.push(`Voice Note (${item.duration}s)${priorityTag(item.priority)}`);
-        if (item.additionalText) textLines.push(`  ${item.additionalText}`);
-        textLines.push(`  See attachment: voice-${item.id}.webm`);
-        break;
-    }
+    const s = summarizeItem(item);
+    const heading = s.elementName ? `${s.label}: ${s.elementName}` : s.label;
+    textLines.push(`${heading}${priorityTag(s.priority)}`);
+    if (s.text) textLines.push(`  ${s.text}`);
+    if (s.filePrefix) textLines.push(`  See attachment: ${s.filePrefix}-${s.itemId}.${s.filePrefix === "screenshot" ? "png" : "webm"}`);
     textLines.push("");
   }
 
@@ -99,47 +79,36 @@ export function toEmail(feedback: ParsedFeedback): EmailPayload {
   h.push(`<p style="color: #666; margin: 0 0 16px;"><a href="${esc(submission.url)}" style="color: #666;">${esc(submission.url)}</a></p>`);
 
   for (const item of submission.items) {
-    switch (item.type) {
-      case "photo":
-        h.push(`<div style="margin: 12px 0;">`);
-        h.push(`<strong>Screenshot</strong>${priorityHtml(item.priority)}`);
-        if (item.additionalText) h.push(`<p style="color: #333; margin: 4px 0;">${esc(item.additionalText)}</p>`);
-        h.push(`<p style="color: #999; font-size: 13px; margin: 4px 0;">See attachment: screenshot-${esc(item.id)}.png</p>`);
-        h.push(`</div>`);
-        break;
-      case "video":
-        h.push(`<div style="margin: 12px 0;">`);
-        h.push(`<strong>Screen Recording</strong> (${item.duration}s)${priorityHtml(item.priority)}`);
-        if (item.additionalText) h.push(`<p style="color: #333; margin: 4px 0;">${esc(item.additionalText)}</p>`);
-        h.push(`<p style="color: #999; font-size: 13px; margin: 4px 0;">See attachment: recording-${esc(item.id)}.webm</p>`);
-        h.push(`</div>`);
-        break;
-      case "annotation":
-        h.push(`<div style="margin: 12px 0;">`);
-        h.push(`<strong>Annotation:</strong> <code>${esc(item.element.name)}</code>${priorityHtml(item.priority)}`);
-        if (item.note) h.push(`<p style="color: #333; margin: 4px 0; padding-left: 12px; border-left: 3px solid #ddd;">${esc(item.note)}</p>`);
-        h.push(`</div>`);
-        break;
-      case "textNote":
-        h.push(`<div style="margin: 12px 0; padding: 12px; background: #f9f9f9; border-radius: 8px;">`);
-        h.push(`${esc(item.text)}`);
-        h.push(`</div>`);
-        break;
-      case "voiceNote":
-        h.push(`<div style="margin: 12px 0;">`);
-        h.push(`<strong>Voice Note</strong> (${item.duration}s)${priorityHtml(item.priority)}`);
-        if (item.additionalText) h.push(`<p style="color: #333; margin: 4px 0;">${esc(item.additionalText)}</p>`);
-        h.push(`<p style="color: #999; font-size: 13px; margin: 4px 0;">See attachment: voice-${esc(item.id)}.webm</p>`);
-        h.push(`</div>`);
-        break;
+    const s = summarizeItem(item);
+    const heading = s.elementName
+      ? `<strong>${s.label}:</strong> <code>${esc(s.elementName)}</code>`
+      : `<strong>${esc(s.label)}</strong>`;
+
+    h.push(`<div style="margin: 12px 0;">`);
+
+    if (s.label === "Note" && !s.filePrefix) {
+      h.push(`<div style="padding: 12px; background: #f9f9f9; border-radius: 8px;">${esc(s.text ?? "")}</div>`);
+    } else {
+      h.push(`${heading}${priorityHtml(s.priority)}`);
+      if (s.text) {
+        const style = s.elementName
+          ? `style="color: #333; margin: 4px 0; padding-left: 12px; border-left: 3px solid #ddd;"`
+          : `style="color: #333; margin: 4px 0;"`;
+        h.push(`<p ${style}>${esc(s.text)}</p>`);
+      }
+      if (s.filePrefix) {
+        const ext = s.filePrefix === "screenshot" ? "png" : "webm";
+        h.push(`<p style="color: #999; font-size: 13px; margin: 4px 0;">See attachment: ${s.filePrefix}-${esc(s.itemId)}.${ext}</p>`);
+      }
     }
+
+    h.push(`</div>`);
   }
 
   h.push(`<hr style="border: none; border-top: 1px solid #eee; margin: 16px 0;" />`);
   h.push(`<p style="color: #999; font-size: 13px; margin: 0;">${esc(env.browser.name)} ${esc(env.browser.version)} · ${esc(env.os.name)} ${esc(env.os.version)} · ${env.viewport.width}×${env.viewport.height} · ${env.devicePixelRatio}x DPR · ${esc(env.language)} · ${esc(env.timezone)} · ${esc(env.colorScheme)}</p>`);
   h.push(`</div>`);
 
-  // Collect attachments
   for (const [, file] of feedback.files) {
     attachments.push({
       filename: file.filename,

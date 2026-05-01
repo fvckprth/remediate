@@ -1,0 +1,267 @@
+<article>
+
+<PageHeader
+  title="recipes"
+  description={<>short, copy-pasteable backends for <code>/api/feedback</code>. each one assumes the getting started route shape. <code>parseFeedback(req)</code> returns <code>{"{ submission, files }"}</code>.</>}
+/>
+
+pick whichever matches your team.
+
+## discord webhook
+
+for indie projects and small teams. one fetch, no sdk.
+
+```ts
+// app/api/feedback/route.ts
+import { parseFeedback } from "remediate/server";
+
+export async function POST(req: Request) {
+  const { submission } = await parseFeedback(req);
+
+  await fetch(process.env.DISCORD_WEBHOOK_URL!, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      content: `feedback on \`${submission.url}\` - ${submission.items.length} items`,
+      embeds: submission.items.slice(0, 5).map((item) => ({
+        description: summarize(item),
+      })),
+    }),
+  });
+
+  return Response.json({ ok: true });
+}
+```
+
+`summarize` is yours. see [schema](/docs/payload) for item shapes.
+
+## email me
+
+for solo devs. uses [resend](https://resend.com).
+
+```ts
+import { parseFeedback } from "remediate/server";
+import { Resend } from "resend";
+
+const resend = new Resend(process.env.RESEND_API_KEY);
+
+export async function POST(req: Request) {
+  const { submission } = await parseFeedback(req);
+
+  await resend.emails.send({
+    from: "feedback@yourdomain.com",
+    to: "you@yourdomain.com",
+    subject: `feedback on ${submission.url}`,
+    text: JSON.stringify(submission, null, 2),
+  });
+
+  return Response.json({ ok: true });
+}
+```
+
+attachments are optional. add them from `files` if you want screenshots inline.
+
+## slack channel
+
+for teams already living in slack. paste in a webhook url, pick a channel.
+
+```ts
+import { parseFeedback } from "remediate/server";
+
+export async function POST(req: Request) {
+  const { submission } = await parseFeedback(req);
+
+  const lines = submission.items.map((item) => {
+    const tag = item.priority !== "none" ? ` *[${item.priority}]*` : "";
+    return `• ${item.type}${tag} - ${item.additionalText || item.note || item.text || ""}`;
+  });
+
+  await fetch(process.env.SLACK_WEBHOOK_URL!, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      text: [`*feedback on ${submission.url}*`, "", ...lines].join("\n"),
+    }),
+  });
+
+  return Response.json({ ok: true });
+}
+```
+
+want item-type-specific formatting (cameras for screenshots, mics for voice notes)? narrow on `item.type`. see [payload](/docs/payload).
+
+## github issues
+
+for internal qa. uploads blobs to vercel blob, links them in the issue body.
+
+```ts
+// .env: GITHUB_TOKEN, GITHUB_OWNER, GITHUB_REPO, BLOB_READ_WRITE_TOKEN
+import { parseFeedback } from "remediate/server";
+import { put } from "@vercel/blob";
+
+export async function POST(req: Request) {
+  const { submission, files } = await parseFeedback(req);
+
+  const urls: Record<string, string> = {};
+  for (const [name, file] of files) {
+    const blob = await put(`feedback/${submission.id}/${name}`, file, { access: "public" });
+    urls[name] = blob.url;
+  }
+
+  const title = pickTitle(submission) ?? `feedback from ${submission.url}`;
+  const body = renderMarkdown(submission, urls);
+
+  await fetch(
+    `https://api.github.com/repos/${process.env.GITHUB_OWNER}/${process.env.GITHUB_REPO}/issues`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${process.env.GITHUB_TOKEN}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ title, body, labels: ["feedback"] }),
+    },
+  );
+
+  return Response.json({ ok: true });
+}
+```
+
+`pickTitle` and `renderMarkdown` are yours.
+
+mount conditionally so it only shows on staging:
+
+```tsx
+{process.env.NEXT_PUBLIC_ENV === "staging" && (
+  <Remediate endpoint="/api/feedback" metadata={{ tester: user.name }} />
+)}
+```
+
+## linear ticket
+
+```ts
+import { parseFeedback } from "remediate/server";
+
+export async function POST(req: Request) {
+  const { submission } = await parseFeedback(req);
+
+  await fetch("https://api.linear.app/graphql", {
+    method: "POST",
+    headers: {
+      Authorization: process.env.LINEAR_API_KEY!,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      query: `mutation($input: IssueCreateInput!) { issueCreate(input: $input) { issue { id } } }`,
+      variables: {
+        input: {
+          teamId: process.env.LINEAR_TEAM_ID,
+          title: `feedback on ${submission.url}`,
+          description: "```json\n" + JSON.stringify(submission, null, 2) + "\n```",
+        },
+      },
+    }),
+  });
+
+  return Response.json({ ok: true });
+}
+```
+
+## vercel blob + database
+
+for beta programs. store the payload, store the files, query later.
+
+```tsx
+{user.isBetaTester && (
+  <Remediate
+    endpoint="/api/feedback"
+    metadata={{ userId: user.id, email: user.email }}
+  />
+)}
+```
+
+```ts
+// .env: BLOB_READ_WRITE_TOKEN
+import { parseFeedback } from "remediate/server";
+import { put } from "@vercel/blob";
+
+export async function POST(req: Request) {
+  const { submission, files } = await parseFeedback(req);
+
+  const urls: Record<string, string> = {};
+  for (const [name, file] of files) {
+    const blob = await put(`feedback/${submission.id}/${name}`, file, { access: "public" });
+    urls[name] = blob.url;
+  }
+
+  await db.feedback.create({
+    data: {
+      id: submission.id,
+      url: submission.url,
+      userId: String(submission.metadata.userId),
+      payload: submission,
+      fileUrls: urls,
+    },
+  });
+
+  return Response.json({ ok: true });
+}
+```
+
+watch the 4.5mb body limit on serverless if recordings run long.
+
+## postgres + drizzle
+
+for self-hosters. nothing leaves your stack.
+
+```ts
+import { parseFeedback } from "remediate/server";
+import { db } from "./db";
+import { feedback } from "./schema";
+import { writeFile, mkdir } from "node:fs/promises";
+import { join } from "node:path";
+
+export async function POST(req: Request) {
+  const { submission, files } = await parseFeedback(req);
+
+  const dir = join(process.cwd(), "uploads", submission.id);
+  await mkdir(dir, { recursive: true });
+  for (const [name, file] of files) {
+    await writeFile(join(dir, name), Buffer.from(await file.arrayBuffer()));
+  }
+
+  await db.insert(feedback).values({
+    id: submission.id,
+    url: submission.url,
+    payload: submission,
+    createdAt: new Date(),
+  });
+
+  return Response.json({ ok: true });
+}
+```
+
+## local dev: write to disk
+
+simplest possible backend. useful when evaluating the library.
+
+```ts
+import { parseFeedback } from "remediate/server";
+import { writeFile, mkdir } from "node:fs/promises";
+import { join } from "node:path";
+
+export async function POST(req: Request) {
+  const { submission, files } = await parseFeedback(req);
+  const dir = join(process.cwd(), ".feedback", submission.id);
+  await mkdir(dir, { recursive: true });
+  await writeFile(join(dir, "submission.json"), JSON.stringify(submission, null, 2));
+  for (const [name, file] of files) {
+    await writeFile(join(dir, name), Buffer.from(await file.arrayBuffer()));
+  }
+  return Response.json({ ok: true });
+}
+```
+
+missing something? [open an issue](https://github.com/prtk-s/remediate/issues).
+
+</article>

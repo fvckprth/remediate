@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import type { SelectionArea, AnnotationPriority } from "../../types";
-import { DownFill, StopLine, PlayFill, PauseFill } from "../icons";
+import { StopLine, PlayFill, PauseFill } from "../icons";
 import { PriorityButton } from "../shared/PriorityButton";
 
 interface CapturePanelProps {
@@ -40,7 +40,7 @@ export function CapturePanel({
   const [priority, setPriority] = useState<AnnotationPriority>(initialPriority ?? "none");
   const [recordingTime, setRecordingTime] = useState(0);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-  const [showPreview, setShowPreview] = useState(true);
+  const showPreview = true;
   const [isPlaying, setIsPlaying] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -105,13 +105,7 @@ export function CapturePanel({
       className="rm-capture-panel"
       data-remediate-widget=""
     >
-      <div
-        className="rm-popover__header"
-        onClick={() => setShowPreview(!showPreview)}
-      >
-        <span className={`rm-chevron ${showPreview ? "rm-chevron--open" : ""}`}>
-          <DownFill size={16} />
-        </span>
+      <div className="rm-popover__header">
         <span className="rm-popover__header-meta">
           {areaLabel}
         </span>
@@ -132,6 +126,7 @@ export function CapturePanel({
                   ref={videoRef}
                   src={previewUrl}
                   className="rm-capture-panel__preview-img"
+                  playsInline
                   onEnded={() => setIsPlaying(false)}
                 />
                 <button

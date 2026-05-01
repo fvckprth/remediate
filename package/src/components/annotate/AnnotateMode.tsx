@@ -49,23 +49,16 @@ interface AnnotateModeProps {
   annotations: AnnotationItem[];
   markerColor: string;
   blockInteractions: boolean;
-  activePopoverAnnotationId: string | null;
   nextIndex: number;
   onAddAnnotation: (annotation: AnnotationItem) => void;
-  onUpdateAnnotation: (id: string, note: string, priority: AnnotationPriority) => void;
-  onRemoveAnnotation: (id: string) => void;
-  onSetActivePopover: (id: string | null) => void;
 }
 
 export function AnnotateMode({
   annotations,
   markerColor,
   blockInteractions,
-  activePopoverAnnotationId,
   nextIndex,
   onAddAnnotation,
-  onUpdateAnnotation,
-  onSetActivePopover,
 }: AnnotateModeProps) {
   const [hoverInfo, setHoverInfo] = useState<{ rect: DOMRect; name: string; domElement: HTMLElement } | null>(null);
   const [hoverPos, setHoverPos] = useState({ x: 0, y: 0 });
@@ -348,24 +341,6 @@ export function AnnotateMode({
     setShowPopover(false);
   }, []);
 
-  // Active (editing) annotation
-  const activeAnnotation = activePopoverAnnotationId
-    ? annotations.find((a) => a.id === activePopoverAnnotationId)
-    : null;
-  const activeAnnotationRect = activeAnnotation
-    ? (() => {
-        try {
-          const el = document.querySelector(activeAnnotation.element.selector);
-          if (!el) return null;
-          const rect = el.getBoundingClientRect();
-          const offset = activeAnnotation.clickOffset;
-          const cx = rect.left + offset.x;
-          const cy = rect.top + offset.y;
-          return new DOMRect(cx - 1, cy - 1, 2, 2);
-        } catch { return null; }
-      })()
-    : null;
-
   // Compute anchor rect for popover — anchor to last element's click point
   const lastPending = pendingElements[pendingElements.length - 1] ?? null;
   const popoverAnchorRect = lastPending
@@ -464,20 +439,6 @@ export function AnnotateMode({
         />
       )}
 
-      {/* Active annotation popover (editing existing) */}
-      {activeAnnotation && activeAnnotationRect && (
-        <AnnotationPopover
-          elementName={activeAnnotation.element.name}
-          selector={activeAnnotation.element.selector}
-          computedStyles={activeAnnotation.element.computedStyles}
-          initialNote={activeAnnotation.note}
-          initialPriority={activeAnnotation.priority}
-          annotationIndex={activeAnnotation.index}
-          anchorRect={activeAnnotationRect}
-          onSave={(note, priority) => onUpdateAnnotation(activeAnnotation.id, note, priority)}
-          onCancel={() => onSetActivePopover(null)}
-        />
-      )}
     </div>
   );
 }

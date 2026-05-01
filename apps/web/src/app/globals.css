@@ -2,10 +2,11 @@
 
 @theme inline {
   --font-sans: var(--font-open-runde), system-ui, sans-serif;
+  --font-mono: var(--font-berkeley-mono), ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 }
 
 @theme {
-  --color-background: #1c1c1c;
+  --color-background: #000000;
   --color-foreground: #e7e7e7;
   --color-muted: #737373;
   --color-border: #2e2e2e;
@@ -24,14 +25,17 @@ body {
   background: var(--color-background);
   color: var(--color-foreground);
   font-family: var(--font-open-runde), system-ui, sans-serif;
-}
 
-.bullet {
-  color: color-mix(in srgb, var(--color-foreground) 10%, transparent);
-  transition: color 300ms;
-}
-.section-active .bullet {
-  color: color-mix(in srgb, var(--color-foreground) 25%, transparent);
+  /* sugar-high syntax highlighting */
+  --sh-class: #e7e7e7;
+  --sh-identifier: rgba(231, 231, 231, 0.7);
+  --sh-keyword: #c678dd;
+  --sh-string: #98c379;
+  --sh-property: #61afef;
+  --sh-entity: #e06c75;
+  --sh-jsxliterals: #56b6c2;
+  --sh-sign: rgba(231, 231, 231, 0.4);
+  --sh-comment: rgba(231, 231, 231, 0.25);
 }
 
 .landing-scroll::-webkit-scrollbar {
@@ -42,11 +46,53 @@ body {
   scrollbar-width: none;
 }
 
-/* Scope the Remediate widget inside browser mockups */
-.builtin-feedback-scope .rm-bar {
-  position: absolute;
-  z-index: 10;
+/* Docs article — vertical rhythm */
+article > * + * {
+  margin-top: 20px;
 }
-.builtin-feedback-scope [data-remediate-widget] {
-  position: static;
+article > * + h2 {
+  margin-top: 32px;
+}
+article > h2 + *,
+article > h3 + * {
+  margin-top: 12px;
+}
+article > p + p {
+  margin-top: 20px;
+}
+article > * + div:has(> pre),
+article > div:has(> pre) + * {
+  margin-top: 24px;
+}
+
+/* Docs scroll fade — bottom mask that disappears at scroll end */
+.docs-scroll-mask {
+  mask-image: linear-gradient(to bottom, black calc(100% - 80px), transparent 100%);
+  -webkit-mask-image: linear-gradient(to bottom, black calc(100% - 80px), transparent 100%);
+}
+.docs-scroll-mask.at-bottom {
+  mask-image: none;
+  -webkit-mask-image: none;
+}
+
+/* staggered blur fade-in */
+@keyframes fade-in-blur {
+  0% {
+    opacity: 0;
+    filter: blur(8px);
+    transform: translateY(4px);
+  }
+  100% {
+    opacity: 1;
+    filter: blur(0px);
+    transform: translateY(0px);
+  }
+}
+.animate-fade-in-blur {
+  animation: fade-in-blur 500ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* Agentation above Remediate widget */
+.agentation-top {
+  z-index: 9999999 !important;
 }

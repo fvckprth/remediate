@@ -1,5 +1,4 @@
 import { useState, useRef, useEffect, useLayoutEffect, useCallback, forwardRef, useImperativeHandle } from "react";
-import { DownFill } from "../icons";
 import { PriorityButton } from "../shared/PriorityButton";
 import type { AnnotationPriority } from "../../types";
 
@@ -34,11 +33,10 @@ export const AnnotationPopover = forwardRef<AnnotationPopoverRef, AnnotationPopo
 }, ref) {
   const [note, setNote] = useState(initialNote);
   const [priority, setPriority] = useState<AnnotationPriority>(initialPriority);
-  const [showDetails, setShowDetails] = useState(false);
   const [isShaking, setIsShaking] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const popoverRef = useRef<HTMLDivElement>(null);
-  const shakeTimerRef = useRef<ReturnType<typeof setTimeout>>();
+  const shakeTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const [position, setPosition] = useState({ top: undefined as number | undefined, bottom: undefined as number | undefined, left: 0 });
   const placementRef = useRef<"above" | "below" | null>(null);
 
@@ -122,35 +120,10 @@ export const AnnotationPopover = forwardRef<AnnotationPopoverRef, AnnotationPopo
       onClick={(e) => e.stopPropagation()}
       onKeyDown={handleKeyDown}
     >
-      {/* Header row */}
-      <div
-        className="rm-popover__header"
-        onClick={() => setShowDetails(!showDetails)}
-      >
-        <span className={`rm-chevron ${showDetails ? "rm-chevron--open" : ""}`}>
-          <DownFill size={16} />
-        </span>
+      <div className="rm-popover__header">
         <span className="rm-popover__header-meta">
           {elementName}
         </span>
-      </div>
-
-      {/* CSS Details panel (animated) */}
-      <div className={`rm-popover__details-wrapper${showDetails ? " rm-popover__details-wrapper--open" : ""}`}>
-        <div className="rm-popover__details-inner">
-          <div className="rm-popover__details">
-            <div>
-              <span className="rm-popover__details-label">selector</span>
-              {` ${selector}`}
-            </div>
-            {Object.entries(computedStyles).map(([key, value]) => (
-              <div key={key}>
-                <span className="rm-popover__details-label">{key}</span>
-                {` ${value}`}
-              </div>
-            ))}
-          </div>
-        </div>
       </div>
 
       {/* Textarea + priority group */}

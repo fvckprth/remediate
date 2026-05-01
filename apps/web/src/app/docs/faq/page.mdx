@@ -1,0 +1,128 @@
+<article>
+
+<PageHeader
+  title="faq"
+  description="short answers. if something here points at a bigger problem, link follows."
+/>
+
+<FaqItem question="widget not showing?">
+check that `<Remediate />` is mounted (not gated behind a `false`), no parent has `display: none`, and no global `z-index` rule is overriding `[data-remediate-widget]`.
+</FaqItem>
+
+<FaqItem question="works in dev, broken in prod?">
+check that your endpoint exists in production and isn't caught by a redirect. log the response status from the network tab.
+</FaqItem>
+
+<FaqItem question="ssr / 'use client'?">
+the package emits `"use client"` on entry points. import it from a client or server component, both work.
+</FaqItem>
+
+<FaqItem question="hydration mismatch?">
+check that you're not rendering `<Remediate />` conditionally on something that differs between server and client (e.g. `window.innerWidth`). the widget itself is hydration-safe.
+</FaqItem>
+
+<FaqItem question="react 19?">
+yes.
+</FaqItem>
+
+<FaqItem question="react server components?">
+the widget is a client component. the server helper (`parseFeedback`) is server-only.
+</FaqItem>
+
+<FaqItem question="strict mode?">
+safe.
+</FaqItem>
+
+<FaqItem question="typescript?">
+types ship with the package.
+</FaqItem>
+
+<FaqItem question="works without https?">
+screenshots and text notes work over plain http. video and voice require https or localhost.
+</FaqItem>
+
+<FaqItem question="voice permission denied?">
+the user denied mic access. tell them to click the lock icon in the address bar and re-enable. there's no way to re-prompt programmatically.
+</FaqItem>
+
+<FaqItem question="safari video weirdness?">
+desktop safari uses `video/mp4`; chrome and firefox use `video/webm`. the blob is valid either way. key your file extensions off the mime type. mobile safari has no `getDisplayMedia` at all; the video button is hidden there.
+</FaqItem>
+
+<FaqItem question="cors errors on the endpoint?">
+see [reference > cors](/docs/reference#cors).
+</FaqItem>
+
+<FaqItem question="500 errors on submit?">
+the failure is server-side. log inside your route handler. the most common causes are missing env vars, malformed payloads, and oversized request bodies.
+</FaqItem>
+
+<FaqItem question="'request body too large'?">
+vercel serverless functions cap bodies at 4.5mb. a 30-second screen recording will exceed this. options: switch to edge runtime, upload blobs to storage from the client, or compress recordings before sending.
+</FaqItem>
+
+<FaqItem question="timeout on long submissions?">
+vercel functions time out at 10s on hobby, 60s on pro. for big uploads, stream blobs to storage from the client and POST only the json envelope to your route.
+</FaqItem>
+
+<FaqItem question="csp blocks something?">
+see [reference > csp](/docs/reference#csp) for required directives.
+</FaqItem>
+
+<FaqItem question="multiple <Remediate /> on one page?">
+don't. the widget assumes a single instance per app. mount once at the root.
+</FaqItem>
+
+<FaqItem question="custom trigger button?">
+use `<RemediateTrigger asChild>`. see [reference](/docs/reference).
+</FaqItem>
+
+<FaqItem question="open it from somewhere else in the app?">
+`remediate.open()` from the imperative api. or use controlled `open` / `onOpenChange` props.
+</FaqItem>
+
+<FaqItem question="testing the server route?">
+post a multipart body with a `submission` field and zero or more file parts.
+</FaqItem>
+
+<FaqItem question="iframe embedding?">
+add `allow="display-capture; microphone"` on the iframe. without it, video and voice silently fail.
+</FaqItem>
+
+<FaqItem question="csrf protection?">
+add a header via the `headers` prop, validate it server-side.
+</FaqItem>
+
+<FaqItem question="rate limit the endpoint?">
+yes. nothing in the widget prevents abuse. use your platform's rate limiter on the route.
+</FaqItem>
+
+<FaqItem question="self-hosted?">
+remediate is the client + server helper. you bring the storage. the [postgres + drizzle recipe](/docs/recipes#postgres--drizzle) is the all-yours stack.
+</FaqItem>
+
+<FaqItem question="license?">
+mit.
+</FaqItem>
+
+<FaqItem question="how do i report a bug?">
+[github issues](https://github.com/prtk-s/remediate/issues). include browser, os, and a minimal repro.
+</FaqItem>
+
+<FaqItem question="bundle size?">
+~14kb gzipped core, +8kb for video, +2kb for voice. video and voice are lazy-loaded on first open.
+</FaqItem>
+
+<FaqItem question="accessibility?">
+keyboard accessible. focus traps inside the widget when open. screen reader labels overrideable via the `messages` prop.
+</FaqItem>
+
+<FaqItem question="i18n?">
+yes. pass a `messages` object. all user-visible strings are keys.
+</FaqItem>
+
+<FaqItem question="data ownership?">
+you own everything. remediate has no servers, no telemetry, no phone-home. see [privacy](/docs/privacy).
+</FaqItem>
+
+</article>

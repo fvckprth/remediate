@@ -1,5 +1,5 @@
 import type { ParsedFeedback } from "../server/parse";
-import { deriveFeedbackTitle, renderEnvironmentMarkdown, getFileForItem, getHighestPriority, toLinearPriority, priorityTag } from "./shared";
+import { deriveFeedbackTitle, renderEnvironmentMarkdown, getFileForItem, getHighestPriority, toLinearPriority, priorityTag, summarizeItem } from "./shared";
 
 export interface LinearIssuePayload {
   /** Auto-generated issue title. */
@@ -43,67 +43,32 @@ export function toLinearIssue(feedback: ParsedFeedback): LinearIssuePayload {
   const title = deriveFeedbackTitle(submission.items);
   const highest = getHighestPriority(submission.items);
 
-  // Page
   lines.push(`**Page:** ${submission.url}`);
   lines.push("");
 
-  // Items
   for (const item of submission.items) {
-    switch (item.type) {
-      case "photo": {
-        const placeholder = `{{screenshot-${item.id}}}`;
-        lines.push(`**Screenshot**${priorityTag(item.priority)}`);
-        lines.push(placeholder);
-        if (item.additionalText) lines.push(`> ${item.additionalText}`);
-        lines.push("");
+    const s = summarizeItem(item);
+    const heading = s.elementName ? `**${s.label}:** \`${s.elementName}\`` : `**${s.label}**`;
 
-        const photoFile = getFileForItem(feedback, item);
-        if (photoFile) {
-          files.push({ filename: photoFile.filename, content: photoFile.blob, placeholder });
-        }
-        break;
-      }
-      case "video": {
-        const placeholder = `{{recording-${item.id}}}`;
-        lines.push(`**Screen Recording** (${item.duration}s)${priorityTag(item.priority)}`);
-        lines.push(`*Attached: ${placeholder}*`);
-        if (item.additionalText) lines.push(`> ${item.additionalText}`);
-        lines.push("");
+    lines.push(`${heading}${priorityTag(s.priority)}`);
 
-        const videoFile = getFileForItem(feedback, item);
-        if (videoFile) {
-          files.push({ filename: videoFile.filename, content: videoFile.blob, placeholder });
-        }
-        break;
-      }
-      case "annotation":
-        lines.push(`**Annotation:** \`${item.element.name}\`${priorityTag(item.priority)}`);
-        if (item.note) lines.push(`> ${item.note}`);
-        lines.push("");
-        if (item.priority !== "none") labelNames.add(item.priority);
-        break;
-      case "textNote":
-        lines.push(`**Note**${priorityTag(item.priority)}`);
-        lines.push(item.text);
-        lines.push("");
-        break;
-      case "voiceNote": {
-        const placeholder = `{{voice-${item.id}}}`;
-        lines.push(`**Voice Note** (${item.duration}s)${priorityTag(item.priority)}`);
-        lines.push(`*Attached: ${placeholder}*`);
-        if (item.additionalText) lines.push(`> ${item.additionalText}`);
-        lines.push("");
+    if (s.filePrefix) {
+      const placeholder = `{{${s.filePrefix}-${s.itemId}}}`;
+      if (s.filePrefix === "screenshot") lines.push(placeholder);
+      else lines.push(`*Attached: ${placeholder}*`);
 
-        const voiceFile = getFileForItem(feedback, item);
-        if (voiceFile) {
-          files.push({ filename: voiceFile.filename, content: voiceFile.blob, placeholder });
-        }
-        break;
-      }
+      const file = getFileForItem(feedback, item);
+      if (file) files.push({ filename: file.filename, content: file.blob, placeholder });
     }
+
+    if (s.text) {
+      lines.push(s.filePrefix ? `> ${s.text}` : s.text);
+    }
+
+    lines.push("");
+    if (s.priority !== "none" && s.elementName) labelNames.add(s.priority);
   }
 
-  // Environment
   lines.push("---");
   lines.push(...renderEnvironmentMarkdown(submission.environment));
 

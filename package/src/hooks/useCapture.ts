@@ -1,7 +1,7 @@
 import { useState, useRef, useCallback } from "react";
 import type { WidgetMode, WidgetAction, FeedbackItem, AnnotationPriority, PendingCapture, SelectionArea } from "../types";
 import { captureScreenshot } from "../utils/capture-screenshot";
-import { startVideoRecording, type VideoRecorder } from "../utils/capture-video";
+import { useVideoRecorder } from "./useVideoRecorder";
 import { nanoid } from "../utils/nanoid";
 
 export function useCapture({
@@ -14,19 +14,15 @@ export function useCapture({
   dispatch: React.Dispatch<WidgetAction>;
 }) {
   const [screenshotBlob, setScreenshotBlob] = useState<Blob | null>(null);
-  const [videoBlob, setVideoBlob] = useState<Blob | null>(null);
-  const [isVideoReady, setIsVideoReady] = useState(false);
-  const videoRecorderRef = useRef<VideoRecorder | null>(null);
   const pendingAreaRef = useRef<SelectionArea | null>(null);
+  const video = useVideoRecorder();
 
   const cancelVideoRecording = useCallback(() => {
-    videoRecorderRef.current?.cancel();
-    videoRecorderRef.current = null;
+    video.cancel();
     pendingAreaRef.current = null;
-    setIsVideoReady(false);
     dispatch({ type: "SET_PENDING_CAPTURE", capture: null });
     dispatch({ type: "SET_MODE", mode: "active" });
-  }, [dispatch]);
+  }, [dispatch, video]);
 
   const handleAreaSelected = useCallback(async (area: { x: number; y: number; width: number; height: number }) => {
     const isPhoto = mode === "capturePhoto" || mode === "captureDragging";
@@ -44,40 +40,23 @@ export function useCapture({
       dispatch({ type: "SET_MODE", mode: "videoRecording" });
 
       try {
-        const recorder = await startVideoRecording({
-          area,
-          onEnded: () => {
-            const rec = videoRecorderRef.current;
-            if (!rec) return;
-            setIsVideoReady(false);
-            rec.stop().then((blob) => {
-              videoRecorderRef.current = null;
-              setVideoBlob(blob);
-              const saved = pendingAreaRef.current;
-              if (saved) {
-                dispatch({ type: "SET_PENDING_CAPTURE", capture: { area: saved, variant: "video" } });
-              }
-              dispatch({ type: "SET_MODE", mode: "capturePreview" });
-            });
-          },
+        await video.start(area, () => {
+          const saved = pendingAreaRef.current;
+          if (saved) {
+            dispatch({ type: "SET_PENDING_CAPTURE", capture: { area: saved, variant: "video" } });
+          }
+          dispatch({ type: "SET_MODE", mode: "capturePreview" });
         });
-        videoRecorderRef.current = recorder;
-        setIsVideoReady(true);
       } catch (err) {
         console.warn("[Remediate] Video recording failed:", err);
         cancelVideoRecording();
       }
     }
-  }, [mode, dispatch, cancelVideoRecording]);
+  }, [mode, dispatch, cancelVideoRecording, video]);
 
   const handleStopVideoRecording = useCallback(async (duration: number) => {
-    const recorder = videoRecorderRef.current;
-    if (!recorder) return;
-
-    setIsVideoReady(false);
-    const blob = await recorder.stop();
-    videoRecorderRef.current = null;
-    setVideoBlob(blob);
+    const blob = await video.stop();
+    if (!blob) return;
 
     const area = pendingAreaRef.current;
     if (area) {
@@ -88,7 +67,7 @@ export function useCapture({
       }});
     }
     dispatch({ type: "SET_MODE", mode: "capturePreview" });
-  }, [dispatch]);
+  }, [dispatch, video]);
 
   const handleAddCapture = useCallback((additionalText: string, priority: AnnotationPriority) => {
     if (!pendingCapture) return;
@@ -112,19 +91,19 @@ export function useCapture({
           timestamp: Date.now(),
           additionalText,
           priority,
-          blob: videoBlob ?? undefined,
+          blob: video.blob ?? undefined,
         };
     dispatch({ type: "ADD_ITEM", item });
     setScreenshotBlob(null);
-    setVideoBlob(null);
-  }, [pendingCapture, screenshotBlob, videoBlob, dispatch]);
+    video.setBlob(null);
+  }, [pendingCapture, screenshotBlob, video, dispatch]);
 
   return {
     screenshotBlob,
     setScreenshotBlob,
-    videoBlob,
-    setVideoBlob,
-    isVideoReady,
+    videoBlob: video.blob,
+    setVideoBlob: video.setBlob,
+    isVideoReady: video.isReady,
     cancelVideoRecording,
     handleAreaSelected,
     handleStopVideoRecording,

@@ -1,69 +1,93 @@
 # remediate
 
-Drop-in feedback widget for React apps. Screenshot, video, voice, text, and element annotation.
+feedback widget for react. screenshots, screen recordings, voice notes, element annotations. one component on the client, one helper on the server. no accounts, no saas, no storage.
 
-## Install
+## install
 
 ```bash
 npm install remediate
 ```
 
-## Usage
+## add the component
 
 ```tsx
-import { Remediate } from 'remediate'
-import 'remediate/styles.css'
+import { Remediate } from "remediate";
 
-function App() {
+export default function App() {
   return (
     <>
       <YourApp />
-      <Remediate
-        onSubmit={(payload) => {
-          // payload.items contains screenshots, recordings, annotations, notes
-          console.log(payload)
-        }}
-      />
+      <Remediate endpoint="/api/feedback" />
     </>
-  )
+  );
 }
 ```
 
-## Props
+a floating button appears in the corner. click it, capture, submit. styles inject themselves.
 
-| Prop | Type | Description |
-|------|------|-------------|
-| `onSubmit` | `(payload: FeedbackSubmission) => void` | Called when the user submits feedback. Falls back to `console.log` if omitted. |
-
-## What's in the payload
-
-Each submission includes:
-
-- **Screenshots** — PNG Blob captured from the DOM
-- **Video recordings** — WebM Blob via screen share (`getDisplayMedia`)
-- **Voice notes** — WebM audio Blob via microphone (`getUserMedia`)
-- **Text notes** — Plain text string
-- **Element annotations** — CSS selector, XPath, computed styles, bounding rect, tag attributes
-- **Environment** — Browser, OS, viewport, screen dimensions, DPI, language, timezone, color scheme
-
-## Feedback item types
+## add the server route
 
 ```ts
-type FeedbackItem =
-  | PhotoCapture    // { type: 'photo', area, blob?, additionalText }
-  | VideoCapture    // { type: 'video', area, duration, blob?, additionalText }
-  | AnnotationItem  // { type: 'annotation', element, note }
-  | TextNoteItem    // { type: 'textNote', text }
-  | VoiceNoteItem   // { type: 'voiceNote', duration, blob? }
+import { parseFeedback } from "remediate/server";
+
+export async function POST(req: Request) {
+  const { submission, files } = await parseFeedback(req);
+  console.log(submission);
+  return Response.json({ ok: true, id: submission.id });
+}
 ```
 
-## Browser requirements
+`submission` is the structured json. `files` is a `Map<string, File>` of screenshots, recordings, and voice notes.
 
-- **Screenshots**: Works in all modern browsers (uses DOM rendering)
-- **Video recording**: Requires HTTPS. Shows a native screen-share permission prompt.
-- **Voice recording**: Requires HTTPS. Shows a native microphone permission prompt.
-- **Cross-origin note**: DOM-based screenshot capture cannot render cross-origin images or iframes (they appear blank).
+works anywhere you have a web `Request`: next.js, remix, hono, bun, deno, cloudflare workers.
 
-## License
+## try it without a backend
 
-MIT
+```tsx
+<Remediate onSubmit={(payload) => console.log(payload)} />
+```
+
+open devtools, capture something, watch the payload.
+
+## props
+
+| prop | type | description |
+|---|---|---|
+| `endpoint` | `string` | url to POST feedback as FormData |
+| `onSubmit` | `(payload: FeedbackSubmission) => void` | called on submit with the full payload |
+| `metadata` | `Record<string, unknown>` | extra data merged into the submission |
+| `onError` | `(error: Error) => void` | called if the POST fails |
+
+## claude code
+
+```bash
+npx skills add remediate
+```
+
+then run `/remediate`. detects your framework, installs the package, creates the server route, wires it into your layout.
+
+## what gets captured
+
+- screenshots: png from the dom. no permission prompt.
+- screen recordings: real video via getDisplayMedia. desktop only. requires https.
+- voice notes: microphone audio via getUserMedia. requires https.
+- annotations: css selector, dom path, computed styles, bounding rect, nearby text.
+- text notes: whatever the user types.
+- environment: browser, os, viewport, screen, language, timezone, color scheme.
+
+cross-origin images and iframes render blank in screenshots. video recording is not available on mobile safari.
+
+## docs
+
+[remediate.dev/docs](https://remediate.dev/docs)
+
+- [getting started](https://remediate.dev/docs/getting-started)
+- [recipes](https://remediate.dev/docs/recipes): slack, discord, github issues, linear, email, postgres, vercel blob
+- [payload](https://remediate.dev/docs/payload): what's in the json
+- [privacy](https://remediate.dev/docs/privacy): what gets captured, masking, server-side handling
+- [reference](https://remediate.dev/docs/reference): every prop, runtime support, cors, csp, bundle size
+- [faq](https://remediate.dev/docs/faq)
+
+## license
+
+mit

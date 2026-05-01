@@ -17,7 +17,7 @@ function slugify(children: ReactNode): string {
 function H1({ children, className = "", ...props }: ComponentProps<"h1">) {
   return (
     <h1
-      className={`text-[32px] font-bold tracking-[-1.28px] leading-tight text-foreground ${className}`}
+      className={`text-[16px] font-bold tracking-[-0.42px] leading-[1.35] text-foreground ${className}`}
       {...props}
     >
       {children}
@@ -30,7 +30,7 @@ function H2({ children, className = "", id, ...props }: ComponentProps<"h2">) {
   return (
     <h2
       id={resolvedId}
-      className={`text-[24px] font-bold tracking-[-0.96px] leading-tight text-foreground mt-12 mb-4 scroll-mt-8 ${className}`}
+      className={`text-base font-bold tracking-tight leading-tight text-foreground scroll-mt-6 ${className}`}
       {...props}
     >
       {children}
@@ -41,7 +41,7 @@ function H2({ children, className = "", id, ...props }: ComponentProps<"h2">) {
 function H3({ children, className = "", ...props }: ComponentProps<"h3">) {
   return (
     <h3
-      className={`text-[20px] font-bold tracking-[-0.8px] leading-tight text-foreground mt-8 mb-3 ${className}`}
+      className={`text-[14px] font-bold tracking-[-0.28px] leading-snug text-foreground/75 ${className}`}
       {...props}
     >
       {children}
@@ -52,7 +52,7 @@ function H3({ children, className = "", ...props }: ComponentProps<"h3">) {
 function P({ children, className = "", ...props }: ComponentProps<"p">) {
   return (
     <p
-      className={`text-[18px] font-medium tracking-[-0.72px] leading-[1.5] text-foreground/75 my-4 ${className}`}
+      className={`text-[14px] font-medium tracking-[-0.28px] leading-[1.5] text-foreground/50 ${className}`}
       {...props}
     >
       {children}
@@ -63,7 +63,7 @@ function P({ children, className = "", ...props }: ComponentProps<"p">) {
 function Lead({ children, className = "", ...props }: ComponentProps<"p">) {
   return (
     <p
-      className={`text-[20px] font-medium tracking-[-0.8px] leading-[1.45] text-foreground/50 my-4 ${className}`}
+      className={`text-[14px] font-medium tracking-[-0.28px] leading-[1.5] text-foreground/50 ${className}`}
       {...props}
     >
       {children}
@@ -74,7 +74,7 @@ function Lead({ children, className = "", ...props }: ComponentProps<"p">) {
 function Ul({ children, className = "", ...props }: ComponentProps<"ul">) {
   return (
     <ul
-      className={`list-disc pl-6 my-4 space-y-2 text-[18px] font-medium tracking-[-0.72px] leading-[1.5] text-foreground/75 marker:text-foreground/25 ${className}`}
+      className={`list-disc pl-6 text-[14px] font-medium tracking-[-0.28px] leading-[1.5] text-foreground/50 ${className}`}
       {...props}
     >
       {children}
@@ -85,7 +85,7 @@ function Ul({ children, className = "", ...props }: ComponentProps<"ul">) {
 function Ol({ children, className = "", ...props }: ComponentProps<"ol">) {
   return (
     <ol
-      className={`list-decimal pl-6 my-4 space-y-2 text-[18px] font-medium tracking-[-0.72px] leading-[1.5] text-foreground/75 marker:text-foreground/25 ${className}`}
+      className={`list-decimal pl-6 text-[14px] font-medium tracking-[-0.28px] leading-[1.5] text-foreground/50 ${className}`}
       {...props}
     >
       {children}
@@ -95,7 +95,7 @@ function Ol({ children, className = "", ...props }: ComponentProps<"ol">) {
 
 function Li({ children, className = "", ...props }: ComponentProps<"li">) {
   return (
-    <li className={`pl-1 ${className}`} {...props}>
+    <li className={`mt-1.5 first:mt-0 ${className}`} {...props}>
       {children}
     </li>
   );
@@ -104,7 +104,7 @@ function Li({ children, className = "", ...props }: ComponentProps<"li">) {
 function InlineCode({ children, className = "", ...props }: ComponentProps<"code">) {
   return (
     <code
-      className={`inline rounded bg-surface border border-border px-1.5 py-0.5 text-[0.9em] font-mono text-foreground ${className}`}
+      className={`inline-flex items-center h-6 px-2 bg-foreground/5 border border-foreground/5 rounded-lg font-mono text-xs tracking-[-0.48px] text-foreground ${className}`}
       {...props}
     >
       {children}
@@ -113,7 +113,7 @@ function InlineCode({ children, className = "", ...props }: ComponentProps<"code
 }
 
 const LINK_CLASS =
-  "text-foreground underline decoration-foreground/30 decoration-2 underline-offset-4 transition-colors hover:decoration-foreground";
+  "text-[#406DFF] underline decoration-[#406DFF]/30 decoration-1 underline-offset-4 transition-colors hover:decoration-[#406DFF]";
 
 function A({ children, className = "", ...props }: ComponentProps<"a">) {
   return (
@@ -125,9 +125,9 @@ function A({ children, className = "", ...props }: ComponentProps<"a">) {
 
 function Table({ children, className = "", ...props }: ComponentProps<"table">) {
   return (
-    <div className="my-6 overflow-x-auto rounded-xl border border-border">
+    <div className="overflow-x-auto">
       <table
-        className={`w-full text-[16px] font-medium tracking-[-0.64px] ${className}`}
+        className={`w-full text-[14px] tracking-[-0.28px] ${className}`}
         {...props}
       >
         {children}
@@ -138,7 +138,7 @@ function Table({ children, className = "", ...props }: ComponentProps<"table">) 
 
 function Thead({ children, className = "", ...props }: ComponentProps<"thead">) {
   return (
-    <thead className={`bg-surface ${className}`} {...props}>
+    <thead className={`${className}`} {...props}>
       {children}
     </thead>
   );
@@ -146,7 +146,7 @@ function Thead({ children, className = "", ...props }: ComponentProps<"thead">) 
 
 function Tr({ children, className = "", ...props }: ComponentProps<"tr">) {
   return (
-    <tr className={`border-b border-border last:border-b-0 ${className}`} {...props}>
+    <tr className={`border-b border-foreground/5 last:border-b-0 ${className}`} {...props}>
       {children}
     </tr>
   );
@@ -155,7 +155,7 @@ function Tr({ children, className = "", ...props }: ComponentProps<"tr">) {
 function Th({ children, className = "", ...props }: ComponentProps<"th">) {
   return (
     <th
-      className={`text-left px-4 py-3 font-bold text-foreground ${className}`}
+      className={`text-left px-3 py-2 font-medium text-foreground/25 text-[14px] bg-foreground/5 first:rounded-tl-xl last:rounded-tr-xl ${className}`}
       {...props}
     >
       {children}
@@ -165,20 +165,20 @@ function Th({ children, className = "", ...props }: ComponentProps<"th">) {
 
 function Td({ children, className = "", ...props }: ComponentProps<"td">) {
   return (
-    <td className={`px-4 py-3 align-top text-foreground/75 ${className}`} {...props}>
+    <td className={`px-3 py-3 align-top text-foreground/50 text-[14px] bg-foreground/5 ${className}`} {...props}>
       {children}
     </td>
   );
 }
 
 function Hr({ className = "", ...props }: ComponentProps<"hr">) {
-  return <hr className={`my-10 border-t border-border ${className}`} {...props} />;
+  return <hr className={`border-t border-foreground/5 ${className}`} {...props} />;
 }
 
 function Blockquote({ children, className = "", ...props }: ComponentProps<"blockquote">) {
   return (
     <blockquote
-      className={`my-6 border-l-2 border-foreground/20 pl-4 text-[18px] font-medium tracking-[-0.72px] leading-[1.5] text-foreground/50 ${className}`}
+      className={`border-l-2 border-foreground/10 pl-4 text-[14px] font-medium tracking-[-0.28px] leading-[1.5] text-foreground/50 ${className}`}
       {...props}
     >
       {children}

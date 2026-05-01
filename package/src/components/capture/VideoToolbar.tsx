@@ -68,29 +68,33 @@ export function VideoToolbar({
         zIndex: 999999,
       };
 
+  if (!isReady) return null;
+
   return (
     <div data-remediate-widget="" style={{ pointerEvents: "none" }}>
       {area && (
         <div
-          className="rm-video-area-highlight"
+          className="rm-video-area-dim"
           style={{
-            left: area.x,
-            top: area.y,
-            width: area.width,
-            height: area.height,
+            clipPath: `polygon(
+              0% 0%, 100% 0%, 100% 100%, 0% 100%, 0% 0%,
+              ${area.x}px ${area.y}px,
+              ${area.x}px ${area.y + area.height}px,
+              ${area.x + area.width}px ${area.y + area.height}px,
+              ${area.x + area.width}px ${area.y}px,
+              ${area.x}px ${area.y}px
+            )`,
           }}
         />
       )}
 
       <div className="rm-video-recording-bar" style={{ ...barStyle, pointerEvents: "auto" }}>
         <span className="rm-video-recording-bar__timer">
-          {isReady ? formatDuration(recordingTime) : "Waiting\u2026"}
+          {formatDuration(recordingTime)}
         </span>
-        <span className="rm-video-recording-bar__divider" />
         <button
           className="rm-video-recording-bar__stop"
           aria-label="Stop recording"
-          disabled={!isReady}
           onClick={() => onStopRecording(recordingTime)}
         >
           <StopLine size={20} />

@@ -1,10 +1,5 @@
-import { auth } from "@/auth";
-import { redirect } from "next/navigation";
-import { LandingPage } from "@/components/landing/landing-page";
+import { LandingPage } from "@/components/landing-page";
 
-export default async function Home() {
-  const session = await auth();
-  if (session) redirect("/dashboard");
-
+export default function Home() {
   return <LandingPage />;
 }
