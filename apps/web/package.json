@@ -20,7 +20,7 @@
     "react": "19.2.3",
     "react-dom": "19.2.3",
     "remark-gfm": "^4.0.1",
-    "remediate": "workspace:*",
+    "remediate": "^0.1.0",
     "sugar-high": "^1.1.0"
   },
   "devDependencies": {
