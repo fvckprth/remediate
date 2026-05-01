@@ -6,7 +6,7 @@ import { Logo } from "@/components/logo";
 
 const navLinks = [
   { label: "overview", href: "/" },
-  { label: "getting started", href: "/docs/getting-started" },
+  { label: "install", href: "/docs/install" },
   { label: "recipes", href: "/docs/recipes" },
   { label: "payload", href: "/docs/payload" },
   { label: "privacy", href: "/docs/privacy" },

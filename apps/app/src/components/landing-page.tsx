@@ -68,7 +68,7 @@ export function LandingPage() {
                 href="/docs/install"
                 className="inline-flex items-center gap-1 bg-[#406dff] text-foreground text-base font-medium tracking-tight h-8 pl-3 pr-2 rounded-full w-fit transition-transform duration-200 hover:scale-105"
               >
-                Install
+                Get started
                 <ArrowRight className="size-6" />
               </Link>
             </FadeIn>
