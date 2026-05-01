@@ -369,24 +369,6 @@
   position: relative;
 }
 
-.rm-icon-swap {
-  position: absolute;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  transition: opacity 0.2s ease, transform 0.2s ease;
-}
-
-.rm-icon-swap--in {
-  opacity: 1;
-  transform: scale(1);
-}
-
-.rm-icon-swap--out {
-  opacity: 0;
-  transform: scale(0.8);
-}
-
 /* Tooltip (portal-based, rendered outside overflow:hidden bar) */
 .rm-tooltip {
   position: fixed;
@@ -824,20 +806,6 @@
   overflow: hidden;
 }
 
-/* Shared chevron (DownFill-based) */
-.rm-chevron {
-  transition: transform 300ms cubic-bezier(0.16, 1, 0.3, 1);
-  color: var(--rm-fg-50);
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transform: rotate(-90deg);
-}
-
-.rm-chevron--open {
-  transform: rotate(0deg);
-}
 
 .rm-popover__header-meta {
   font-size: 13px;
@@ -895,10 +863,6 @@
   line-height: 1.6;
   letter-spacing: -0.32px;
   overflow: hidden;
-}
-
-.rm-popover__details-label {
-  color: #c084fc;
 }
 
 /* Shared textarea + priority wrapper */

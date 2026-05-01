@@ -1,30 +1,8 @@
 import { useState, useCallback } from "react";
 import type { WidgetState, WidgetAction, FeedbackSubmission } from "../types";
 import type { ConsoleCapture } from "../utils/console-capture";
-import { collectEnvironment } from "../utils/metadata";
+import { buildPayload } from "../utils/build-payload";
 import { serializeToFormData } from "../utils/serialize";
-import { nanoid } from "../utils/nanoid";
-
-function buildPayload(
-  state: WidgetState,
-  extraMetadata?: Record<string, unknown>,
-  consoleCaptureRef?: React.RefObject<ConsoleCapture | null>,
-) {
-  const metadata: Record<string, unknown> = { ...extraMetadata };
-
-  if (consoleCaptureRef?.current) {
-    metadata.consoleLog = [...consoleCaptureRef.current.entries];
-  }
-
-  return {
-    id: `fb_${nanoid(12)}`,
-    url: window.location.href,
-    timestamp: new Date().toISOString(),
-    environment: collectEnvironment(),
-    items: state.items,
-    metadata,
-  };
-}
 
 export function useSubmission({
   state,

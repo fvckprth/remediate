@@ -46,24 +46,28 @@ function getConfig(): EmbedConfig {
   return {
     endpoint: script.getAttribute("data-endpoint") || undefined,
     metadata: script.hasAttribute("data-metadata")
-      ? JSON.parse(script.getAttribute("data-metadata")!)
+      ? (() => { try { return JSON.parse(script.getAttribute("data-metadata")!); } catch { console.warn("[Remediate] Invalid data-metadata JSON"); return undefined; } })()
       : undefined,
   };
 }
 
 function init() {
-  const config = getConfig();
+  try {
+    const config = getConfig();
 
-  const container = document.createElement("div");
-  container.id = "remediate-embed-root";
-  document.body.appendChild(container);
+    const container = document.createElement("div");
+    container.id = "remediate-embed-root";
+    document.body.appendChild(container);
 
-  const root = ReactDOM.createRoot(container);
-  const props: RemediateProps = {};
-  if (config.endpoint) props.endpoint = config.endpoint;
-  if (config.metadata) props.metadata = config.metadata;
+    const root = ReactDOM.createRoot(container);
+    const props: RemediateProps = {};
+    if (config.endpoint) props.endpoint = config.endpoint;
+    if (config.metadata) props.metadata = config.metadata;
 
-  root.render(React.createElement(Remediate, props));
+    root.render(React.createElement(Remediate, props));
+  } catch (err) {
+    console.warn("[Remediate] Failed to initialize widget:", err);
+  }
 }
 
 if (document.readyState === "loading") {
