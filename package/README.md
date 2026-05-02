@@ -61,7 +61,7 @@ open devtools, capture something, watch the payload.
 ## claude code
 
 ```bash
-npx skills add remediate
+claude install-skill fvckprth/remediate
 ```
 
 then run `/remediate`. detects your framework, installs the package, creates the server route, wires it into your layout.
@@ -81,7 +81,7 @@ cross-origin images and iframes render blank in screenshots. video recording is 
 
 [remediate.dev/docs](https://remediate.dev/docs)
 
-- [getting started](https://remediate.dev/docs/getting-started)
+- [getting started](https://remediate.dev/docs/install)
 - [recipes](https://remediate.dev/docs/recipes): slack, discord, github issues, linear, email, postgres, vercel blob
 - [payload](https://remediate.dev/docs/payload): what's in the json
 - [privacy](https://remediate.dev/docs/privacy): what gets captured, masking, server-side handling

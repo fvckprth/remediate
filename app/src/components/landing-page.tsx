@@ -46,21 +46,19 @@ export function LandingPage() {
         <div className="flex gap-20 w-full max-w-3xl h-full">
           <div className="shrink-0 w-[120px]" />
 
-          <div className="flex flex-col flex-1 min-w-0 h-full gap-6">
+          <div className="flex flex-col flex-1 min-w-0 h-full justify-between">
             {/* Hero — top */}
             <FadeIn delay={0}>
               <HeroSection />
             </FadeIn>
 
-            {/* Mockup — vertically centered here, horizontally centered on viewport */}
-            <div className="flex-1 flex items-center min-h-0">
-              <div className="fixed left-0 w-screen flex justify-center pointer-events-none px-10">
-                <FadeIn delay={200} className="pointer-events-auto">
-                  <div className="w-[min(840px,calc(100vw-80px))]">
-                    <BrowserMockup />
-                  </div>
-                </FadeIn>
-              </div>
+            {/* Mockup — scales to fit remaining space */}
+            <div className="flex-1 min-h-0 flex items-center justify-center py-6">
+              <FadeIn delay={200} className="h-full flex justify-center">
+                <div className="h-full max-w-[840px]" style={{ aspectRatio: "16 / 10" }}>
+                  <BrowserMockup />
+                </div>
+              </FadeIn>
             </div>
 
             {/* Footer — bottom */}

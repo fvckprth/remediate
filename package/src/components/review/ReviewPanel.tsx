@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { FeedbackItem } from "../../types";
 import {
   CameraFill, CamcorderFill, Cursor3Fill, Message4Fill, VoiceFill,
-  CloseLine, EyeLine, Copy2Fill,
+  CloseLine, EyeLine,
 } from "../icons";
 import { PriorityIcon } from "../shared/PriorityButton";
 
@@ -42,37 +42,7 @@ function itemLabel(item: FeedbackItem) {
   }
 }
 
-async function copyItem(item: FeedbackItem) {
-  try {
-    switch (item.type) {
-      case "photo":
-        if (item.blob) {
-          await navigator.clipboard.write([
-            new ClipboardItem({ [item.blob.type]: item.blob }),
-          ]);
-        }
-        break;
-      case "video":
-      case "voiceNote":
-        if (item.blob) {
-          const url = URL.createObjectURL(item.blob);
-          await navigator.clipboard.writeText(url);
-        }
-        break;
-      case "annotation":
-        await navigator.clipboard.writeText(item.note);
-        break;
-      case "textNote":
-        await navigator.clipboard.writeText(item.text);
-        break;
-    }
-  } catch {
-    // Clipboard API may not be available in all contexts
-  }
-}
-
 export function ReviewPanel({ items, isSubmitting, onRemoveItem, onPreviewItem, onBack, onSubmit }: ReviewPanelProps) {
-  const [copiedId, setCopiedId] = useState<string | null>(null);
   const listRef = useRef<HTMLDivElement>(null);
   const [scrollMask, setScrollMask] = useState({ top: false, bottom: false });
 
@@ -88,13 +58,6 @@ export function ReviewPanel({ items, isSubmitting, onRemoveItem, onPreviewItem, 
   useEffect(() => {
     updateScrollMask();
   }, [items.length, updateScrollMask]);
-
-  const handleCopy = useCallback((item: FeedbackItem) => {
-    copyItem(item).then(() => {
-      setCopiedId(item.id);
-      setTimeout(() => setCopiedId(null), 1500);
-    });
-  }, []);
 
   return (
     <div
@@ -132,17 +95,6 @@ export function ReviewPanel({ items, isSubmitting, onRemoveItem, onPreviewItem, 
                 aria-label={`Preview item ${item.index}`}
               >
                 <EyeLine size={16} />
-              </button>
-              <button
-                className="rm-review-item__action-btn"
-                onClick={() => handleCopy(item)}
-                aria-label={`Copy item ${item.index}`}
-              >
-                {copiedId === item.id ? (
-                  <span className="rm-copied-check" style={{ fontSize: 14 }}>&#10003;</span>
-                ) : (
-                  <Copy2Fill size={16} />
-                )}
               </button>
               <button
                 className="rm-review-item__action-btn rm-review-item__action-btn--danger"

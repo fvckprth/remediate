@@ -19,7 +19,7 @@ export default function DocsLayout({ children }: { children: React.ReactNode }) 
                 href="https://withparth.com"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="underline decoration-dotted underline-offset-2 transition-colors hover:text-foreground/50"
+                className="text-foreground/50 underline decoration-dotted underline-offset-2 transition-colors hover:text-foreground/70"
               >
                 Parth Patel
               </a>

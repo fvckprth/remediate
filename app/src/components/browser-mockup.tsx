@@ -357,7 +357,8 @@ function PearSite() {
             key={tab}
             className="px-3 py-[5px] text-[10px] font-medium text-white/90 border-l border-white/15"
             style={{
-              background: i === 0 ? "linear-gradient(to bottom, #7ca3d4, #4778b0)" : "transparent",
+              background: i === 0 ? "linear-gradient(to bottom, #7ec47e, #4a9a4a)" : "transparent",
+              boxShadow: i === 0 ? "inset 0 1px 0 rgba(255,255,255,0.25), 0 1px 2px rgba(0,0,0,0.15)" : "none",
               textShadow: "0 -1px 0 rgba(0,0,0,0.3)",
             }}
           >
@@ -377,7 +378,7 @@ function PearSite() {
       {/* Hero */}
       <div className="text-center py-6 px-6" style={{ background: "linear-gradient(to bottom, #f5f5f5, #e8e8e8)" }}>
         <p className="text-[10px] text-[#666] tracking-wide uppercase mb-1">Introducing</p>
-        <h1 className="text-[32px] font-light text-black tracking-[-0.5px] leading-[1.1]" style={{ fontFamily: "Georgia, 'Times New Roman', serif" }}>
+        <h1 className="text-[32px] font-light text-black tracking-[-0.5px] leading-[1.1]" style={{ fontFamily: "'Apple Garamond', Georgia, serif" }}>
           Pear OS X Nectar
         </h1>
         <p className="text-[12px] text-[#555] mt-2 leading-relaxed max-w-[80%] mx-auto">
@@ -405,7 +406,7 @@ function PearSite() {
                 {icon && <span className={`text-[20px] ${i === 1 ? "text-white" : ""}`}>{icon}</span>}
               </div>
             )}
-            <h3 className="text-[13px] font-bold text-black">{title}</h3>
+            <h3 className="text-[16px] text-black" style={{ fontFamily: "'Apple Garamond', Georgia, serif" }}>{title}</h3>
             <p className="text-[10px] text-[#555] mt-0.5">{desc}</p>
             <span className="text-[10px] text-[#06c] underline mt-1 inline-block">{link} &gt;</span>
           </div>
@@ -620,9 +621,9 @@ export function BrowserMockup() {
   const step = ANIM_STEPS[stepIndex];
 
   return (
-    <div className="w-full relative rounded-[12px] border-4 border-foreground/25">
+    <div className="w-full h-full relative rounded-[12px] border-4 border-foreground/25">
       {/* Desktop background */}
-      <div className="w-full aspect-[16/10] relative overflow-hidden rounded-[8px] bg-cover bg-center" style={{ backgroundImage: "url('/mockup-bg.png')" }}>
+      <div className="w-full h-full relative overflow-hidden rounded-[8px] bg-cover bg-center" style={{ backgroundImage: "url('/mockup-bg.png')" }}>
         {/* Aqua menu bar */}
         <AquaMenuBar />
 

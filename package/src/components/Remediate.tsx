@@ -305,7 +305,7 @@ export function Remediate({ onSubmit, endpoint, metadata: extraMetadata, onError
 
   const hasContent = state.items.length > 0;
 
-  const { panelWidth, panelPosition, panelBelow } = usePanelPosition({
+  const { panelPosition, panelBelow } = usePanelPosition({
     panelKey, panelWidth: PANEL_CONFIG[panelKey ?? ""] ?? 176, barPosition, anchorX,
   });
 
@@ -393,7 +393,7 @@ export function Remediate({ onSubmit, endpoint, metadata: extraMetadata, onError
         />
       )}
 
-      <PanelHost panelKey={panelKey} position={panelPosition} below={panelBelow} maxWidth={panelWidth} pill={state.mode === "voiceRecording"}>
+      <PanelHost panelKey={panelKey} position={panelPosition} below={panelBelow} pill={state.mode === "voiceRecording"}>
         {panelKey === "settings" && (
           <SettingsPanel
             blockInteractions={state.blockInteractions}

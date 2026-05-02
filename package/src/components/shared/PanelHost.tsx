@@ -7,7 +7,6 @@ interface PanelHostProps {
   panelKey: string | null;
   position?: { bottom?: number; top?: number; left?: number; right?: number };
   below?: boolean;
-  maxWidth?: number;
   pill?: boolean;
   children: ReactNode;
 }
@@ -59,7 +58,7 @@ function PanelMeasurer({
   );
 }
 
-export function PanelHost({ panelKey, position, below, maxWidth, pill, children }: PanelHostProps) {
+export function PanelHost({ panelKey, position, below, pill, children }: PanelHostProps) {
   const [panels, setPanels] = useState<PanelItem[]>([]);
   const idCounter = useRef(0);
   const contentRef = useRef(children);
@@ -183,7 +182,6 @@ export function PanelHost({ panelKey, position, below, maxWidth, pill, children 
         right: activePosition?.right,
         width: hostBounds.width > 0 ? hostBounds.width : undefined,
         height: hostBounds.height > 0 ? hostBounds.height : undefined,
-        maxWidth: maxWidth,
       }}
     >
       {panels.map((panel) => (
