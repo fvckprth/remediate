@@ -1,12 +1,9 @@
 import type { ParsedFeedback } from "../server/parse";
 import type { AnnotationPriority } from "../types";
-import { deriveFeedbackTitle, renderEnvironmentText, priorityTag, summarizeItem } from "./shared";
+import { deriveFeedbackTitle, renderEnvironmentText, priorityTag, summarizeItem, type FeedbackFile } from "./shared";
 
-export interface EmailAttachment {
-  filename: string;
-  content: Blob;
-  contentType: string;
-}
+/** @deprecated Use FeedbackFile from remediate/integrations/shared instead. */
+export type EmailAttachment = FeedbackFile;
 
 export interface EmailPayload {
   /** Email subject line. */
@@ -16,7 +13,7 @@ export interface EmailPayload {
   /** Plain text email body. */
   text: string;
   /** File attachments (screenshots, videos, voice notes). */
-  attachments: EmailAttachment[];
+  attachments: FeedbackFile[];
 }
 
 /**
@@ -46,7 +43,7 @@ export interface EmailPayload {
 export function toEmail(feedback: ParsedFeedback): EmailPayload {
   const { submission } = feedback;
   const env = submission.environment;
-  const attachments: EmailAttachment[] = [];
+  const attachments: FeedbackFile[] = [];
 
   const title = deriveFeedbackTitle(submission.items, 60);
   const subject = title === "User Feedback"
@@ -114,6 +111,8 @@ export function toEmail(feedback: ParsedFeedback): EmailPayload {
       filename: file.filename,
       content: file.blob,
       contentType: file.type,
+      placeholder: null,
+      title: file.filename,
     });
   }
 

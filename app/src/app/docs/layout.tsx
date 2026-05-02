@@ -1,10 +1,12 @@
 import { SiteShell } from "@/components/site-shell";
 import { DocsScrollArea } from "@/components/docs/docs-scroll-area";
 import { DocsFadeIn } from "@/components/docs/docs-fade-in";
+import { DocsBreadcrumbJsonLd } from "@/components/docs/docs-breadcrumb-jsonld";
 
 export default function DocsLayout({ children }: { children: React.ReactNode }) {
   return (
     <SiteShell>
+      <DocsBreadcrumbJsonLd />
       <DocsScrollArea>
         <div className="max-w-[480px] min-h-full flex flex-col">
           <DocsFadeIn>
@@ -12,7 +14,7 @@ export default function DocsLayout({ children }: { children: React.ReactNode }) 
           </DocsFadeIn>
 
           {/* Footer — always at the bottom */}
-          <div className="flex items-center text-sm font-medium tracking-tight leading-none text-foreground/25 mt-20">
+          <footer className="flex items-center text-sm font-medium tracking-tight leading-none text-foreground/25 mt-20">
             <p>
               Made by{" "}
               <a
@@ -24,7 +26,7 @@ export default function DocsLayout({ children }: { children: React.ReactNode }) 
                 Parth Patel
               </a>
             </p>
-          </div>
+          </footer>
         </div>
       </DocsScrollArea>
     </SiteShell>

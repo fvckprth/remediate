@@ -1,3 +1,26 @@
+export const metadata = {
+  title: "Getting Started",
+  description:
+    "Install remediate and add a feedback widget to your React app in under 5 minutes. One npm install, one component, one server route.",
+  alternates: { canonical: "https://remediate.ski/docs/install" },
+}
+
+import { JsonLd } from "@/components/json-ld"
+
+export const howToJsonLd = {
+  "@context": "https://schema.org",
+  "@type": "HowTo",
+  name: "How to add a feedback widget to a React app",
+  description: "Install remediate and add in-app feedback capture (screenshots, video, voice notes, annotations) to any React app in three steps.",
+  step: [
+    { "@type": "HowToStep", position: 1, name: "Install the package", text: "Run npm install remediate to add the package to your project." },
+    { "@type": "HowToStep", position: 2, name: "Add the server route", text: "Create an API route that imports parseFeedback from remediate/server and exports a POST handler that parses the incoming FormData." },
+    { "@type": "HowToStep", position: 3, name: "Add the component", text: "Import Remediate from remediate and render <Remediate endpoint=\"/api/feedback\" /> in your app layout. A floating button appears in the corner." },
+  ],
+}
+
+<JsonLd data={howToJsonLd} />
+
 <article>
 
 <PageHeader

@@ -4,8 +4,7 @@ import type { SelectionArea } from "../types";
 
 export interface VideoRecorderHandle {
   isReady: boolean;
-  blob: Blob | null;
-  setBlob: (blob: Blob | null) => void;
+  blobRef: React.RefObject<Blob | null>;
   start: (area: SelectionArea, onEnded: (blob: Blob) => void) => Promise<void>;
   stop: () => Promise<Blob | null>;
   cancel: () => void;
@@ -13,7 +12,7 @@ export interface VideoRecorderHandle {
 
 export function useVideoRecorder(): VideoRecorderHandle {
   const [isReady, setIsReady] = useState(false);
-  const [blob, setBlob] = useState<Blob | null>(null);
+  const blobRef = useRef<Blob | null>(null);
   const recorderRef = useRef<VideoRecorder | null>(null);
 
   const start = useCallback(async (area: SelectionArea, onEnded: (blob: Blob) => void) => {
@@ -25,7 +24,7 @@ export function useVideoRecorder(): VideoRecorderHandle {
         setIsReady(false);
         rec.stop().then((b) => {
           recorderRef.current = null;
-          setBlob(b);
+          blobRef.current = b;
           onEnded(b);
         });
       },
@@ -40,7 +39,7 @@ export function useVideoRecorder(): VideoRecorderHandle {
     setIsReady(false);
     const b = await recorder.stop();
     recorderRef.current = null;
-    setBlob(b);
+    blobRef.current = b;
     return b;
   }, []);
 
@@ -50,5 +49,5 @@ export function useVideoRecorder(): VideoRecorderHandle {
     setIsReady(false);
   }, []);
 
-  return { isReady, blob, setBlob, start, stop, cancel };
+  return { isReady, blobRef, start, stop, cancel };
 }

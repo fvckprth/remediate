@@ -113,6 +113,20 @@ export function getFileForItem(
 }
 
 /**
+ * Unified file type for all integration formatters.
+ * Each integration can ignore fields it doesn't need.
+ */
+export interface FeedbackFile {
+  filename: string;
+  content: Blob;
+  contentType: string;
+  /** Placeholder token for URL substitution (Linear, GitHub). Null if not applicable. */
+  placeholder: string | null;
+  /** Human-readable title for display (Slack). Defaults to filename. */
+  title: string;
+}
+
+/**
  * Summarize a feedback item into format-agnostic parts.
  * Eliminates per-item switch statements in each integration.
  */

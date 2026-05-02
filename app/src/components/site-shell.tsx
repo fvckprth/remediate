@@ -9,12 +9,12 @@ export function SiteShell({ children }: { children: React.ReactNode }) {
       </div>
 
       {/* Content — same position as before */}
-      <div className="h-full flex items-center justify-center p-10">
+      <main className="h-full flex items-center justify-center p-10">
         <div className="flex gap-20 w-full max-w-3xl h-full">
           <div className="shrink-0 w-[120px]" />
           {children}
         </div>
-      </div>
+      </main>
     </div>
   );
 }

@@ -17,7 +17,7 @@ function FadeIn({ children, delay = 0, className = "" }: { children: React.React
 
 function Footer() {
   return (
-    <div className="flex items-center text-sm font-medium tracking-tight leading-none text-foreground/25">
+    <footer className="flex items-center text-sm font-medium tracking-tight leading-none text-foreground/25">
       <p>
         Made by{" "}
         <a
@@ -29,7 +29,7 @@ function Footer() {
           Parth Patel
         </a>
       </p>
-    </div>
+    </footer>
   );
 }
 
@@ -42,7 +42,7 @@ export function LandingPage() {
       </div>
 
       {/* Content */}
-      <div className="h-full flex items-center justify-center p-10">
+      <main className="h-full flex items-center justify-center p-10">
         <div className="flex gap-20 w-full max-w-3xl h-full">
           <div className="shrink-0 w-[120px]" />
 
@@ -67,7 +67,7 @@ export function LandingPage() {
             </FadeIn>
           </div>
         </div>
-      </div>
+      </main>
     </div>
   );
 }

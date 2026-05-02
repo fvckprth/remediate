@@ -37,11 +37,8 @@ export function TextNotePanel({ initialText, initialPriority, submitLabel = "Add
         e.preventDefault();
         handleSubmit();
       }
-      if (e.key === "Escape") {
-        onCancel();
-      }
     },
-    [handleSubmit, onCancel]
+    [handleSubmit]
   );
 
   return (

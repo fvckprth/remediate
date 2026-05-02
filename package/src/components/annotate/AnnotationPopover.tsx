@@ -102,10 +102,6 @@ export const AnnotationPopover = forwardRef<AnnotationPopoverRef, AnnotationPopo
       e.preventDefault();
       handleSubmit();
     }
-    if (e.key === "Escape") {
-      e.preventDefault();
-      onCancel();
-    }
   };
 
   const hasContent = note.trim().length > 0;

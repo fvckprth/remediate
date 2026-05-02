@@ -1,5 +1,5 @@
 import type { ParsedFeedback } from "../server/parse";
-import { deriveFeedbackTitle, renderEnvironmentMarkdown, getFileForItem, getHighestPriority, toLinearPriority, priorityTag, summarizeItem } from "./shared";
+import { deriveFeedbackTitle, renderEnvironmentMarkdown, getFileForItem, getHighestPriority, toLinearPriority, priorityTag, summarizeItem, type FeedbackFile } from "./shared";
 
 export interface LinearIssuePayload {
   /** Auto-generated issue title. */
@@ -11,7 +11,7 @@ export interface LinearIssuePayload {
   /** Suggested label names based on annotation priorities. */
   labelNames: string[];
   /** Files to upload and embed in the description. */
-  files: Array<{ filename: string; content: Blob; placeholder: string }>;
+  files: FeedbackFile[];
 }
 
 /**
@@ -58,7 +58,7 @@ export function toLinearIssue(feedback: ParsedFeedback): LinearIssuePayload {
       else lines.push(`*Attached: ${placeholder}*`);
 
       const file = getFileForItem(feedback, item);
-      if (file) files.push({ filename: file.filename, content: file.blob, placeholder });
+      if (file) files.push({ filename: file.filename, content: file.blob, contentType: file.type, placeholder, title: file.filename });
     }
 
     if (s.text) {

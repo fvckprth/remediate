@@ -1,5 +1,5 @@
 import type { ParsedFeedback } from "../server/parse";
-import { deriveFeedbackTitle, priorityTag, summarizeItem } from "./shared";
+import { deriveFeedbackTitle, priorityTag, summarizeItem, type FeedbackFile } from "./shared";
 
 export interface SlackBlock {
   type: string;
@@ -11,11 +11,8 @@ export interface SlackBlock {
   title?: { type: string; text: string };
 }
 
-export interface SlackFileUpload {
-  filename: string;
-  content: Blob;
-  title: string;
-}
+/** @deprecated Use FeedbackFile from remediate/integrations/shared instead. */
+export type SlackFileUpload = FeedbackFile;
 
 export interface SlackMessagePayload {
   /** Slack Block Kit blocks for the message. */
@@ -23,7 +20,7 @@ export interface SlackMessagePayload {
   /** Plain text fallback for notifications. */
   text: string;
   /** Files to upload alongside the message (screenshots, videos, voice notes). */
-  files: SlackFileUpload[];
+  files: FeedbackFile[];
 }
 
 /**
@@ -49,7 +46,7 @@ export interface SlackMessagePayload {
 export function toSlackMessage(feedback: ParsedFeedback): SlackMessagePayload {
   const { submission } = feedback;
   const blocks: SlackBlock[] = [];
-  const files: SlackFileUpload[] = [];
+  const files: FeedbackFile[] = [];
   const env = submission.environment;
 
   const title = deriveFeedbackTitle(submission.items);
@@ -89,6 +86,8 @@ export function toSlackMessage(feedback: ParsedFeedback): SlackMessagePayload {
     files.push({
       filename: file.filename,
       content: file.blob,
+      contentType: file.type,
+      placeholder: null,
       title: `${file.category} — ${file.itemId}`,
     });
   }

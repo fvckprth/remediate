@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from "react";
+import { useRef, useCallback } from "react";
 import type { WidgetMode, WidgetAction, FeedbackItem, AnnotationPriority, PendingCapture, SelectionArea } from "../types";
 import { captureScreenshot } from "../utils/capture-screenshot";
 import { useVideoRecorder } from "./useVideoRecorder";
@@ -13,7 +13,7 @@ export function useCapture({
   pendingCapture: PendingCapture | null;
   dispatch: React.Dispatch<WidgetAction>;
 }) {
-  const [screenshotBlob, setScreenshotBlob] = useState<Blob | null>(null);
+  const screenshotBlobRef = useRef<Blob | null>(null);
   const pendingAreaRef = useRef<SelectionArea | null>(null);
   const video = useVideoRecorder();
 
@@ -29,7 +29,7 @@ export function useCapture({
 
     if (isPhoto) {
       const blob = await captureScreenshot(area);
-      setScreenshotBlob(blob);
+      screenshotBlobRef.current = blob;
       const capture: PendingCapture = { area, variant: "photo" };
       dispatch({ type: "SET_PENDING_CAPTURE", capture });
       dispatch({ type: "SET_MODE", mode: "capturePreview" });
@@ -80,7 +80,7 @@ export function useCapture({
           timestamp: Date.now(),
           additionalText,
           priority,
-          blob: screenshotBlob ?? undefined,
+          blob: screenshotBlobRef.current ?? undefined,
         }
       : {
           id: `cap_${nanoid(8)}`,
@@ -91,22 +91,34 @@ export function useCapture({
           timestamp: Date.now(),
           additionalText,
           priority,
-          blob: video.blob ?? undefined,
+          blob: video.blobRef.current ?? undefined,
         };
     dispatch({ type: "ADD_ITEM", item });
-    setScreenshotBlob(null);
-    video.setBlob(null);
-  }, [pendingCapture, screenshotBlob, video, dispatch]);
+    screenshotBlobRef.current = null;
+    video.blobRef.current = null;
+  }, [pendingCapture, video, dispatch]);
+
+  /** Set the appropriate blob ref for previewing an existing item from review. */
+  const preparePreview = useCallback((item: FeedbackItem) => {
+    if (item.type === "photo") screenshotBlobRef.current = item.blob ?? null;
+    if (item.type === "video") video.blobRef.current = item.blob ?? null;
+  }, [video]);
+
+  /** Clear all blob refs (used when cancelling a capture). */
+  const clearBlobs = useCallback(() => {
+    screenshotBlobRef.current = null;
+    video.blobRef.current = null;
+  }, [video]);
 
   return {
-    screenshotBlob,
-    setScreenshotBlob,
-    videoBlob: video.blob,
-    setVideoBlob: video.setBlob,
+    screenshotBlobRef,
+    videoBlobRef: video.blobRef,
     isVideoReady: video.isReady,
     cancelVideoRecording,
     handleAreaSelected,
     handleStopVideoRecording,
     handleAddCapture,
+    preparePreview,
+    clearBlobs,
   };
 }

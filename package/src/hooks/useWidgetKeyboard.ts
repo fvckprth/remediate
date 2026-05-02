@@ -26,6 +26,9 @@ export function useWidgetKeyboard({
           dispatch({ type: "SET_MODE", mode: "active" });
         } else if (isCaptureMode(mode) || isNoteMode(mode) || mode === "reviewing") {
           dispatch({ type: "SET_MODE", mode: previewingItemId ? "reviewing" : "active" });
+        } else if (mode === "annotating") {
+          dispatch({ type: "SET_ACTIVE_POPOVER", id: null });
+          dispatch({ type: "SET_MODE", mode: previewingItemId ? "reviewing" : "active" });
         } else {
           dispatch({ type: "CLOSE" });
         }

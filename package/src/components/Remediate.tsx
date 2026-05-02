@@ -1,13 +1,13 @@
 import { useReducer, useCallback, useState, useEffect } from "react";
 import type {
-  WidgetState, WidgetAction, WidgetMode, FeedbackItem,
+  WidgetMode, FeedbackItem,
   AnnotationItem, AnnotationPriority, RemediateProps,
   TextNoteItem, VoiceNoteItem,
 } from "../types";
-import { DEFAULT_MARKER_COLOR } from "../types";
-import type { OutputDetail } from "../types";
 import { nanoid } from "../utils/nanoid";
 import { isVideoRecordingSupported } from "../utils/capture-video";
+import { widgetReducer, getInitialState } from "../state/widget-reducer";
+import { derivePanelKey, PANEL_WIDTHS } from "../state/widget-machine";
 import { useCapture } from "../hooks/useCapture";
 import { useVoiceRecording } from "../hooks/useVoiceRecording";
 import { useSubmission } from "../hooks/useSubmission";
@@ -30,189 +30,6 @@ import { PanelHost } from "./shared/PanelHost";
 import { CheckLine, CameraFill, CamcorderFill, Message4Fill, VoiceFill } from "./icons";
 import "../styles/widget.css";
 
-const STORAGE_KEY_BLOCK = "rm_block_interactions";
-const STORAGE_KEY_CLEAR = "rm_clear_after_send";
-const STORAGE_KEY_OUTPUT = "rm_output_detail";
-const STORAGE_KEY_THEME = "rm_theme";
-
-function getInitialState(): WidgetState {
-  const markerColor = DEFAULT_MARKER_COLOR;
-  let blockInteractions = false;
-  let clearAfterSend = false;
-  let outputDetail: OutputDetail = "standard";
-  let widgetTheme: "light" | "dark" = "dark";
-
-  if (typeof window !== "undefined") {
-    const savedBlock = localStorage.getItem(STORAGE_KEY_BLOCK);
-    if (savedBlock === "true") blockInteractions = true;
-    const savedClear = localStorage.getItem(STORAGE_KEY_CLEAR);
-    if (savedClear === "true") clearAfterSend = true;
-    const savedOutput = localStorage.getItem(STORAGE_KEY_OUTPUT);
-    if (savedOutput === "detailed") outputDetail = "detailed";
-    const savedTheme = localStorage.getItem(STORAGE_KEY_THEME);
-    if (savedTheme === "light" || savedTheme === "dark") widgetTheme = savedTheme;
-  }
-
-  return {
-    mode: "idle",
-    items: [],
-    markerColor,
-    blockInteractions,
-    clearAfterSend,
-    outputDetail,
-    widgetTheme,
-    settingsOpen: false,
-    activePopoverAnnotationId: null,
-    pendingCapture: null,
-    previewingItemId: null,
-  };
-}
-
-function widgetReducer(state: WidgetState, action: WidgetAction): WidgetState {
-  switch (action.type) {
-    case "ACTIVATE":
-      return { ...state, mode: "active", settingsOpen: false };
-
-    case "SET_MODE":
-      return {
-        ...state,
-        mode: action.mode,
-        settingsOpen: false,
-        activePopoverAnnotationId: null,
-        previewingItemId: action.mode === "reviewing" || action.mode === "active" ? null : state.previewingItemId,
-      };
-
-    case "TOGGLE_SETTINGS":
-      return {
-        ...state,
-        settingsOpen: !state.settingsOpen,
-        mode: !state.settingsOpen ? "active" : state.mode,
-      };
-
-    case "CLOSE_SETTINGS":
-      return { ...state, settingsOpen: false };
-
-    case "CLOSE":
-      return {
-        ...state,
-        mode: "idle" as const,
-        settingsOpen: false,
-        activePopoverAnnotationId: null,
-        pendingCapture: null,
-        previewingItemId: null,
-      };
-
-    case "ADD_ITEM": {
-      const items = [...state.items, { ...action.item, index: state.items.length + 1 }];
-      return {
-        ...state,
-        items,
-        mode: action.item.type === "annotation" ? state.mode : "active",
-        pendingCapture: null,
-        activePopoverAnnotationId: null,
-        previewingItemId: null,
-      };
-    }
-
-    case "REMOVE_ITEM": {
-      const filtered = state.items
-        .filter((i) => i.id !== action.id)
-        .map((i, idx) => ({ ...i, index: idx + 1 }));
-      return {
-        ...state,
-        items: filtered,
-        activePopoverAnnotationId: null,
-        previewingItemId: state.previewingItemId === action.id ? null : state.previewingItemId,
-      };
-    }
-
-    case "SET_ACTIVE_POPOVER":
-      return { ...state, activePopoverAnnotationId: action.id };
-
-    case "UPDATE_ANNOTATION": {
-      const items = state.items.map((item) =>
-        item.id === action.id && item.type === "annotation"
-          ? { ...item, note: action.note, priority: action.priority }
-          : item
-      );
-      return { ...state, items, activePopoverAnnotationId: null };
-    }
-
-    case "SET_PENDING_CAPTURE":
-      return { ...state, pendingCapture: action.capture };
-
-    case "SET_BLOCK_INTERACTIONS":
-      if (typeof window !== "undefined") localStorage.setItem(STORAGE_KEY_BLOCK, String(action.blocked));
-      return { ...state, blockInteractions: action.blocked };
-
-    case "SET_THEME":
-      if (typeof window !== "undefined") localStorage.setItem(STORAGE_KEY_THEME, action.theme);
-      return { ...state, widgetTheme: action.theme };
-
-    case "SET_CLEAR_AFTER_SEND":
-      if (typeof window !== "undefined") localStorage.setItem(STORAGE_KEY_CLEAR, String(action.enabled));
-      return { ...state, clearAfterSend: action.enabled };
-
-    case "SET_OUTPUT_DETAIL":
-      if (typeof window !== "undefined") localStorage.setItem(STORAGE_KEY_OUTPUT, action.level);
-      return { ...state, outputDetail: action.level };
-
-    case "REVIEW":
-      return { ...state, mode: "reviewing", settingsOpen: false, activePopoverAnnotationId: null };
-
-    case "SUBMIT_SUCCESS":
-      return { ...state, mode: "success", items: [], pendingCapture: null, previewingItemId: null };
-
-    case "SUBMIT_ERROR":
-      return { ...state, mode: "submitError" };
-
-    case "CLEAR_ALL":
-      return { ...state, items: [], mode: "active", activePopoverAnnotationId: null, pendingCapture: null, previewingItemId: null };
-
-    case "UPDATE_ITEM": {
-      const items = state.items.map(i =>
-        i.id === action.id ? { ...i, ...action.item, id: i.id, index: i.index } as FeedbackItem : i
-      );
-      return { ...state, items, mode: "reviewing", pendingCapture: null, previewingItemId: null };
-    }
-
-    case "PREVIEW_ITEM": {
-      const item = state.items.find(i => i.id === action.id);
-      if (!item) return state;
-      switch (item.type) {
-        case "photo":
-          return { ...state, mode: "capturePreview", previewingItemId: action.id,
-            pendingCapture: { area: item.area, variant: "photo" } };
-        case "video":
-          return { ...state, mode: "capturePreview", previewingItemId: action.id,
-            pendingCapture: { area: item.area, variant: "video", recordingDuration: item.duration } };
-        case "textNote":
-          return { ...state, mode: "textNote", previewingItemId: action.id };
-        case "voiceNote":
-          return { ...state, mode: "voicePreview", previewingItemId: action.id };
-        case "annotation":
-          return { ...state, mode: "annotating", previewingItemId: action.id,
-            activePopoverAnnotationId: action.id };
-        default:
-          return state;
-      }
-    }
-
-    case "RESET":
-      return {
-        ...getInitialState(),
-        markerColor: state.markerColor,
-        blockInteractions: state.blockInteractions,
-        clearAfterSend: state.clearAfterSend,
-        outputDetail: state.outputDetail,
-        widgetTheme: state.widgetTheme,
-      };
-
-    default:
-      return state;
-  }
-}
-
 export function Remediate({ onSubmit, endpoint, metadata: extraMetadata, onError }: RemediateProps) {
   const [state, dispatch] = useReducer(widgetReducer, undefined, () => {
     return getInitialState();
@@ -220,11 +37,11 @@ export function Remediate({ onSubmit, endpoint, metadata: extraMetadata, onError
 
   // Hooks — useCapture before useWidgetKeyboard (keyboard receives cancelVideoRecording)
   const {
-    screenshotBlob, setScreenshotBlob,
-    videoBlob, setVideoBlob,
+    screenshotBlobRef, videoBlobRef,
     isVideoReady,
     cancelVideoRecording,
     handleAreaSelected, handleStopVideoRecording, handleAddCapture,
+    preparePreview, clearBlobs,
   } = useCapture({ mode: state.mode, pendingCapture: state.pendingCapture, dispatch });
 
   const { voiceRecorderRef, startVoice, handleAddVoiceNote } = useVoiceRecording({ dispatch });
@@ -259,49 +76,19 @@ export function Remediate({ onSubmit, endpoint, metadata: extraMetadata, onError
   const [barPosition, setBarPosition] = useState<{ x: number; y: number } | null>(null);
   const [anchorX, setAnchorX] = useState<number | null>(null);
 
-  const showCaptureMenu = state.mode === "captureMenu";
-  const showNoteMenu = state.mode === "noteMenu" || state.mode === "voiceNote";
   const showAreaSelector =
     state.mode === "capturePhoto" ||
     state.mode === "captureVideo" ||
     state.mode === "captureDragging";
-  const showTextNote = state.mode === "textNote";
-  const showVoicePanel = state.mode === "voiceRecording" || state.mode === "voicePreview";
-
-  const isPhotoFlow =
-    state.mode === "capturePreview" && state.pendingCapture?.variant === "photo";
   const isVideoFlow = state.mode === "videoRecording";
-  const isVideoPreview =
-    state.mode === "capturePreview" && state.pendingCapture?.variant === "video";
-
   const isIdle = state.mode === "idle";
-  const isSuccess = state.mode === "success";
   const isError = state.mode === "submitError";
 
-  // Panel routing: derive active panel key and width from state.
-  // Width is co-located with key so adding a panel is a single edit.
-  const PANEL_CONFIG: Record<string, number> = {
-    settings: 240, captureMenu: 176, noteMenu: 176,
-    capturePhoto: 280, captureVideo: 280, textNote: 280,
-    voicePanel: 240, review: 280, submitError: 200,
-  };
-
-  const panelKey = state.settingsOpen && !isIdle && !isSuccess && !isError
-    ? "settings"
-    : showCaptureMenu ? "captureMenu"
-    : showNoteMenu ? "noteMenu"
-    : isPhotoFlow ? "capturePhoto"
-    : isVideoPreview ? "captureVideo"
-    : showTextNote ? "textNote"
-    : showVoicePanel ? "voicePanel"
-    : state.mode === "reviewing" ? "review"
-    : isError ? "submitError"
-    : null;
-
+  const panelKey = derivePanelKey(state);
   const hasContent = state.items.length > 0;
 
   const { panelPosition, panelBelow } = usePanelPosition({
-    panelKey, panelWidth: PANEL_CONFIG[panelKey ?? ""] ?? 176, barPosition, anchorX,
+    panelKey, panelWidth: panelKey ? PANEL_WIDTHS[panelKey] : 176, barPosition, anchorX,
   });
 
   const annotations = state.items.filter(
@@ -424,7 +211,7 @@ export function Remediate({ onSubmit, endpoint, metadata: extraMetadata, onError
             variant="photo"
             area={state.pendingCapture?.area ?? null}
             isRecording={false}
-            screenshotBlob={screenshotBlob}
+            screenshotBlob={screenshotBlobRef.current}
             initialText={findPreview<import("../types").PhotoCapture>("photo")?.additionalText}
             initialPriority={findPreview<import("../types").PhotoCapture>("photo")?.priority}
             submitLabel={submitLabel}
@@ -434,7 +221,7 @@ export function Remediate({ onSubmit, endpoint, metadata: extraMetadata, onError
               ? (text, priority) => previewSave({ additionalText: text, priority })
               : handleAddCapture}
             onCancel={() => previewCancel(() => {
-              setScreenshotBlob(null);
+              clearBlobs();
               dispatch({ type: "SET_PENDING_CAPTURE", capture: null });
             })}
           />
@@ -445,7 +232,7 @@ export function Remediate({ onSubmit, endpoint, metadata: extraMetadata, onError
             variant="video"
             area={state.pendingCapture?.area ?? null}
             isRecording={false}
-            screenshotBlob={videoBlob}
+            screenshotBlob={videoBlobRef.current}
             initialText={findPreview<import("../types").VideoCapture>("video")?.additionalText}
             initialPriority={findPreview<import("../types").VideoCapture>("video")?.priority}
             submitLabel={submitLabel}
@@ -455,7 +242,7 @@ export function Remediate({ onSubmit, endpoint, metadata: extraMetadata, onError
               ? (text, priority) => previewSave({ additionalText: text, priority })
               : handleAddCapture}
             onCancel={() => previewCancel(() => {
-              setVideoBlob(null);
+              clearBlobs();
               dispatch({ type: "SET_PENDING_CAPTURE", capture: null });
             })}
           />
@@ -503,8 +290,7 @@ export function Remediate({ onSubmit, endpoint, metadata: extraMetadata, onError
                 : item.type === "annotation" ? "Annotate mode"
                 : null;
               if (label) anchorToButton(label);
-              if (item.type === "photo") setScreenshotBlob(item.blob ?? null);
-              if (item.type === "video") setVideoBlob(item.blob ?? null);
+              preparePreview(item);
               dispatch({ type: "PREVIEW_ITEM", id });
             }}
             onBack={() => dispatch({ type: "SET_MODE", mode: "active" })}

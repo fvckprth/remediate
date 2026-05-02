@@ -1,0 +1,56 @@
+# Remediate
+
+> Open-source React component for in-app feedback. Captures screenshots, video, voice notes, and annotations. Routes to Slack, Linear, GitHub, email, or webhooks.
+
+## What is Remediate?
+
+Remediate is an npm package (`npm install remediate`) that adds a feedback widget to any React app. Users capture screenshots, screen recordings, voice notes, and element annotations without leaving the page. The widget POSTs structured FormData to your endpoint. A server helper (`parseFeedback` from `remediate/server`) parses the submission into typed JSON and a file map. You own the data — no accounts, no SaaS, no storage. MIT licensed.
+
+## Key facts
+
+- Package: `npm install remediate`
+- Also available as a script tag for non-React sites
+- React 18+ and React 19 compatible
+- Works with React Server Components (widget is client, server helper is server-only)
+- Bundle: ~14kb gzipped core, +8kb video (lazy), +2kb voice (lazy)
+- Requires HTTPS for video and voice (localhost works in dev)
+- TypeScript types included
+- Accessible: keyboard nav, focus traps, screen reader labels via `messages` prop
+- i18n: all strings overridable via `messages` prop
+- No telemetry, no phone-home
+
+## Capture modes
+
+- **Screenshots**: DOM-based PNG of a selected region
+- **Screen recordings**: real video via getDisplayMedia (desktop only)
+- **Voice notes**: microphone recording via getUserMedia
+- **Annotations**: pin on a DOM element with selector, path, computed styles, bounding rect, nearby text
+- **Text notes**: plain text from the user
+
+## Integration targets
+
+The server route you write can forward feedback anywhere:
+- Slack (webhook)
+- Discord (webhook)
+- GitHub Issues (API)
+- Linear (GraphQL API)
+- Email (Resend, SendGrid, etc.)
+- Vercel Blob + database
+- Postgres + Drizzle (self-hosted)
+- Any webhook endpoint
+
+## Documentation
+
+- Getting started: https://remediate.ski/docs/install
+- Integration recipes: https://remediate.ski/docs/recipes
+- Payload schema: https://remediate.ski/docs/payload
+- Privacy & capture: https://remediate.ski/docs/privacy
+- API reference: https://remediate.ski/docs/reference
+- FAQ: https://remediate.ski/docs/faq
+
+## Links
+
+- Website: https://remediate.ski
+- npm: https://www.npmjs.com/package/remediate
+- GitHub: https://github.com/fvckprth/remediate
+- Author: Parth Patel (https://withparth.com)

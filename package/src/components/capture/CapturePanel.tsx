@@ -77,11 +77,8 @@ export function CapturePanel({
         e.preventDefault();
         handleSubmit();
       }
-      if (e.key === "Escape") {
-        onCancel();
-      }
     },
-    [handleSubmit, onCancel]
+    [handleSubmit]
   );
 
   const togglePlayback = useCallback(() => {

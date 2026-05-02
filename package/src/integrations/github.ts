@@ -1,5 +1,5 @@
 import type { ParsedFeedback } from "../server/parse";
-import { deriveFeedbackTitle, renderEnvironmentMarkdown, getFileForItem, priorityTag, summarizeItem } from "./shared";
+import { deriveFeedbackTitle, renderEnvironmentMarkdown, getFileForItem, priorityTag, summarizeItem, type FeedbackFile } from "./shared";
 
 export interface GithubIssuePayload {
   /** Auto-generated issue title. */
@@ -9,7 +9,7 @@ export interface GithubIssuePayload {
   /** Suggested labels based on feedback content. */
   labels: string[];
   /** Files to upload. Developer uploads via GitHub API, then replaces placeholders in body. */
-  files: Array<{ filename: string; content: Blob; placeholder: string }>;
+  files: FeedbackFile[];
 }
 
 /**
@@ -46,7 +46,7 @@ export function toGithubIssue(feedback: ParsedFeedback): GithubIssuePayload {
       else lines.push(`[Download ${s.filePrefix}](${placeholder})`);
 
       const file = getFileForItem(feedback, item);
-      if (file) files.push({ filename: file.filename, content: file.blob, placeholder });
+      if (file) files.push({ filename: file.filename, content: file.blob, contentType: file.type, placeholder, title: file.filename });
     }
 
     if (s.text) {

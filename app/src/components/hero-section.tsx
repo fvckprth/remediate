@@ -15,9 +15,9 @@ export function HeroSection() {
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-col gap-4">
-        <p className="text-base font-medium tracking-tight leading-snug text-foreground">
+        <h1 className="text-base font-medium tracking-tight leading-snug text-foreground">
           capture feedback where it happens
-        </p>
+        </h1>
         <p className="text-sm font-medium tracking-tight leading-normal text-foreground/50 max-w-sm">
           remediate is a react component that captures screenshots, video, voice notes, and annotations
           from your users.

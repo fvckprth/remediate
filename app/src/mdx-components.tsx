@@ -9,6 +9,7 @@ import { PropsTable } from "@/components/docs/props-table";
 import { AltInstall } from "@/components/docs/alt-install";
 import { FaqItem } from "@/components/docs/faq-item";
 import { Checklist, ChecklistItem } from "@/components/docs/checklist";
+import { JsonLd } from "@/components/json-ld";
 
 type CodeElementProps = ComponentProps<"code"> & { className?: string };
 
@@ -104,6 +105,7 @@ export function useMDXComponents(components: MDXComponents): MDXComponents {
     FaqItem,
     Checklist,
     ChecklistItem,
+    JsonLd,
     // `Prose` is an object namespace (Prose.H2, Prose.InlineCode, etc.),
     // not a component — MDXComponents' strict typing doesn't allow it,
     // but MDX accepts it at runtime for inline `<Prose.X>` usage in .mdx files.

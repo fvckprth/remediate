@@ -1,3 +1,31 @@
+export const metadata = {
+  title: "FAQ",
+  description:
+    "Frequently asked questions about remediate: troubleshooting, browser support, React 19, RSC, TypeScript, accessibility, i18n, bundle size, and more.",
+  alternates: { canonical: "https://remediate.ski/docs/faq" },
+}
+
+import { JsonLd } from "@/components/json-ld"
+
+export const faqJsonLd = {
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  mainEntity: [
+    { "@type": "Question", name: "How do I add a feedback widget to my React app?", acceptedAnswer: { "@type": "Answer", text: "Install remediate with npm install remediate, add the <Remediate endpoint=\"/api/feedback\" /> component to your layout, and create a server route using parseFeedback from remediate/server." } },
+    { "@type": "Question", name: "Does remediate work with React 19?", acceptedAnswer: { "@type": "Answer", text: "Yes. Remediate supports React 18 and React 19." } },
+    { "@type": "Question", name: "Does remediate work with React Server Components?", acceptedAnswer: { "@type": "Answer", text: "The widget is a client component. The server helper (parseFeedback) is server-only." } },
+    { "@type": "Question", name: "What is the bundle size of remediate?", acceptedAnswer: { "@type": "Answer", text: "~14kb gzipped core, +8kb for video, +2kb for voice. Video and voice are lazy-loaded on first open." } },
+    { "@type": "Question", name: "Is remediate accessible?", acceptedAnswer: { "@type": "Answer", text: "Yes. Keyboard accessible with focus traps inside the widget when open. Screen reader labels are overridable via the messages prop." } },
+    { "@type": "Question", name: "Does remediate support i18n?", acceptedAnswer: { "@type": "Answer", text: "Yes. Pass a messages object to override all user-visible strings." } },
+    { "@type": "Question", name: "Does remediate work without HTTPS?", acceptedAnswer: { "@type": "Answer", text: "Screenshots and text notes work over plain HTTP. Video and voice require HTTPS or localhost." } },
+    { "@type": "Question", name: "Who owns the data captured by remediate?", acceptedAnswer: { "@type": "Answer", text: "You own everything. Remediate has no servers, no telemetry, no phone-home. All data stays on your infrastructure." } },
+    { "@type": "Question", name: "What license is remediate?", acceptedAnswer: { "@type": "Answer", text: "MIT." } },
+    { "@type": "Question", name: "Can I self-host remediate?", acceptedAnswer: { "@type": "Answer", text: "Yes. Remediate is the client + server helper. You bring the storage. The Postgres + Drizzle recipe is the all-yours stack." } },
+  ],
+}
+
+<JsonLd data={faqJsonLd} />
+
 <article>
 
 <PageHeader

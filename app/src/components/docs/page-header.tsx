@@ -9,9 +9,9 @@ interface PageHeaderProps {
 export function PageHeader({ title, description }: PageHeaderProps) {
   return (
     <div className="flex flex-col gap-4">
-      <p className="text-base font-bold tracking-tight leading-none text-foreground">
+      <h1 className="text-base font-bold tracking-tight leading-none text-foreground">
         {title}
-      </p>
+      </h1>
       {description ? (
         <p className="text-sm font-medium tracking-[-0.28px] leading-[1.5] text-foreground/50">
           {description}
