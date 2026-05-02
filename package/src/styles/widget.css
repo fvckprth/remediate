@@ -1155,46 +1155,34 @@
   cursor: not-allowed;
 }
 
-/* ── Success State ───────────────────────── */
+/* ── Success State (toolbar morph) ────────── */
 
-.rm-success {
-  width: 200px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 10px;
-  padding: 24px 32px;
-  box-sizing: border-box;
+.rm-bar[data-success] {
+  background: #22c55e !important;
 }
 
-.rm-success__icon {
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  background: #22c55e;
+.rm-bar__check {
+  position: absolute;
+  inset: 0;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--rm-fg);
-  animation: rm-check-pop 350ms cubic-bezier(0.34, 1.56, 0.64, 1);
+  color: #fff;
+  animation: rm-check-in 400ms cubic-bezier(0.16, 1, 0.3, 1) both;
   animation-delay: 80ms;
 }
 
-@keyframes rm-check-pop {
+@keyframes rm-check-in {
   from {
-    transform: scale(0);
     opacity: 0;
+    filter: blur(6px);
+    transform: scale(0.5);
   }
   to {
-    transform: scale(1);
     opacity: 1;
+    filter: blur(0px);
+    transform: scale(1);
   }
-}
-
-.rm-success__text {
-  font-size: 13px;
-  font-weight: 500;
-  color: var(--rm-fg);
 }
 
 /* ── Submit Error toast ─────────────────── */

@@ -161,7 +161,7 @@ function widgetReducer(state: WidgetState, action: WidgetAction): WidgetState {
       return { ...state, mode: "reviewing", settingsOpen: false, activePopoverAnnotationId: null };
 
     case "SUBMIT_SUCCESS":
-      return { ...state, mode: "success" };
+      return { ...state, mode: "success", items: [], pendingCapture: null, previewingItemId: null };
 
     case "SUBMIT_ERROR":
       return { ...state, mode: "submitError" };
@@ -238,10 +238,6 @@ export function Remediate({ onSubmit, endpoint, metadata: extraMetadata, onError
   // Auto-reset after success/error
   useEffect(() => {
     if (state.mode === "success") {
-      if (state.clearAfterSend) {
-        const timer = setTimeout(() => dispatch({ type: "RESET" }), 2000);
-        return () => clearTimeout(timer);
-      }
       const timer = setTimeout(() => dispatch({ type: "SET_MODE", mode: "active" }), 2000);
       return () => clearTimeout(timer);
     }
@@ -287,7 +283,7 @@ export function Remediate({ onSubmit, endpoint, metadata: extraMetadata, onError
   const PANEL_CONFIG: Record<string, number> = {
     settings: 240, captureMenu: 176, noteMenu: 176,
     capturePhoto: 280, captureVideo: 280, textNote: 280,
-    voicePanel: 240, review: 280, success: 200, submitError: 200,
+    voicePanel: 240, review: 280, submitError: 200,
   };
 
   const panelKey = state.settingsOpen && !isIdle && !isSuccess && !isError
@@ -299,7 +295,6 @@ export function Remediate({ onSubmit, endpoint, metadata: extraMetadata, onError
     : showTextNote ? "textNote"
     : showVoicePanel ? "voicePanel"
     : state.mode === "reviewing" ? "review"
-    : isSuccess ? "success"
     : isError ? "submitError"
     : null;
 
@@ -375,7 +370,7 @@ export function Remediate({ onSubmit, endpoint, metadata: extraMetadata, onError
         onBadgeClick={(id: string) => dispatch({ type: "SET_ACTIVE_POPOVER", id: id || null })}
       />
 
-      {!isSuccess && !isError && (
+      {!isError && (
         <FeedbackBar
           isIdle={isIdle}
           onActivate={() => dispatch({ type: "ACTIVATE" })}
@@ -515,15 +510,6 @@ export function Remediate({ onSubmit, endpoint, metadata: extraMetadata, onError
             onBack={() => dispatch({ type: "SET_MODE", mode: "active" })}
             onSubmit={handleSubmit}
           />
-        )}
-
-        {panelKey === "success" && (
-          <div className="rm-success">
-            <div className="rm-success__icon">
-              <CheckLine size={20} />
-            </div>
-            <span className="rm-success__text"></span>
-          </div>
         )}
 
         {panelKey === "submitError" && (

@@ -9,6 +9,7 @@ import {
   CloseLine,
   Delete2Fill,
   SendFill,
+  CheckLine,
 } from "../icons";
 import { Tooltip } from "../shared/Tooltip";
 
@@ -43,6 +44,7 @@ export function FeedbackBar({
   onAnchorX,
   panelOpen,
 }: FeedbackBarProps) {
+  const isSuccess = mode === "success";
   const captureActive = isCaptureMode(mode);
   const annotateActive = mode === "annotating";
   const noteActive = isNoteMode(mode);
@@ -63,6 +65,11 @@ export function FeedbackBar({
   useEffect(() => {
     const bar = barRef.current;
     if (!bar) return;
+    if (isSuccess) {
+      bar.style.width = "48px";
+      bar.style.height = "40px";
+      return;
+    }
     if (isIdle) {
       if (itemCount > 0) {
         bar.style.width = itemCount > 9 ? "48px" : "36px";
@@ -81,7 +88,7 @@ export function FeedbackBar({
       bar.style.height = "40px";
     });
     return () => cancelAnimationFrame(id);
-  }, [isIdle, hasContent, itemCount, barRef]);
+  }, [isIdle, isSuccess, hasContent, itemCount, barRef]);
 
   const guardClick = (fn: () => void) => {
     if (justDragged.current) return;
@@ -102,6 +109,7 @@ export function FeedbackBar({
         mode === "captureMenu" || mode === "noteMenu" || undefined
       }
       data-has-content={hasContent}
+      data-success={isSuccess ? "" : undefined}
       onMouseDown={handleMouseDown}
       style={{
         position: "fixed",
@@ -131,9 +139,15 @@ export function FeedbackBar({
         </div>
       </button>
 
+      {isSuccess && (
+        <div className="rm-bar__check">
+          <CheckLine size={24} />
+        </div>
+      )}
+
       <div
         ref={toolsRef}
-        className={`rm-bar__tools ${isIdle ? "" : "rm-bar__tools--visible"}`}
+        className={`rm-bar__tools ${!isIdle && !isSuccess ? "rm-bar__tools--visible" : ""}`}
         onMouseLeave={showTooltips}
       >
         <div className="rm-toolbar__actions">

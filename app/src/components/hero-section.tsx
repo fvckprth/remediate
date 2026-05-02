@@ -25,10 +25,22 @@ export function HeroSection() {
       </div>
       <Link
         href="/docs/install"
-        className="inline-flex items-center gap-1 bg-[#406dff] text-foreground text-base font-medium tracking-tight h-8 pl-3 pr-2 rounded-full w-fit transition-transform duration-200 hover:scale-105"
+        className="group relative inline-flex items-center gap-1 text-white text-base font-medium tracking-tight h-8 pl-3 pr-2 rounded-full w-fit transition-transform duration-200 hover:scale-105 overflow-hidden"
+        style={{
+          background: "linear-gradient(180deg, #6da3ff 0%, #4a78ff 25%, #3058e0 65%, #1a3db8 100%)",
+          textShadow: "0px 1px 2px rgba(10, 40, 120, 0.5)",
+          boxShadow: "inset 0 1px 0 rgba(255,255,255,0.25), inset 0 -2px 4px rgba(0,0,0,0.15), 0 0 8px rgba(64,109,255,0.3), 0 0 0 1px rgba(9,101,227,0.85)",
+        }}
       >
-        Get started
-        <ArrowRight className="size-6" />
+        {/* gloss reflection */}
+        <span
+          className="pointer-events-none absolute inset-x-[15%] top-[2px] h-[40%] rounded-full"
+          style={{
+            background: "linear-gradient(180deg, rgba(255,255,255,0.5) 0%, rgba(255,255,255,0.1) 60%, rgba(255,255,255,0) 100%)",
+          }}
+        />
+        <span className="relative">Get started</span>
+        <ArrowRight className="relative size-6" />
       </Link>
     </div>
   );

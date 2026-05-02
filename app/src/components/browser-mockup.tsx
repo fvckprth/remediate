@@ -12,11 +12,13 @@ function PearLogo({ className = "" }: { className?: string }) {
 }
 
 // ── Animated cursor ──────────────────────────────────────────
-function AnimatedCursor({ x, y, clicking, crosshair = false }: { x: number; y: number; clicking: boolean; crosshair?: boolean }) {
+function AnimatedCursor({ x, y, clicking, crosshair = false }: { x: number | string; y: number | string; clicking: boolean; crosshair?: boolean }) {
+  const left = typeof x === "number" ? `${x}%` : x;
+  const top = typeof y === "number" ? `${y}%` : y;
   return (
     <div
       className="absolute z-[60] pointer-events-none transition-all duration-700 ease-[cubic-bezier(0.16,1,0.3,1)]"
-      style={{ left: `${x}%`, top: `${y}%` }}
+      style={{ left, top }}
     >
       {crosshair ? (
         <svg
@@ -49,250 +51,564 @@ function AnimatedCursor({ x, y, clicking, crosshair = false }: { x: number; y: n
   );
 }
 
-// ── Widget icons (matching real Remediate toolbar) ────────────
-function ScanIcon({ size = 20 }: { size?: number }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-      <path d="M3 7V5a2 2 0 012-2h2M17 3h2a2 2 0 012 2v2M21 17v2a2 2 0 01-2 2h-2M7 21H5a2 2 0 01-2-2v-2" />
-      <line x1="7" y1="12" x2="17" y2="12" />
-    </svg>
-  );
-}
-
-function CursorIcon({ size = 20 }: { size?: number }) {
+// ── Icons (exact paths from package/src/components/icons.tsx) ──
+function Icon({ size = 20, d }: { size?: number; d: string }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor">
-      <path d="M4 2l16 9.25-7.2 1.65L11 20z" />
+      <path d={d} />
     </svg>
   );
 }
 
-function PenIcon({ size = 20 }: { size?: number }) {
+function ScanLine({ size = 20 }: { size?: number }) {
+  return <Icon size={size} d="M4 15a1 1 0 0 1 .993.883L5 16v3h4a1 1 0 0 1 .117 1.993L9 21H5a2 2 0 0 1-1.995-1.85L3 19v-3a1 1 0 0 1 1-1m16 0a1 1 0 0 1 1 1v3a2 2 0 0 1-2 2h-4a1 1 0 1 1 0-2h4v-3a1 1 0 0 1 1-1m0-4a1 1 0 0 1 .117 1.993L20 13H4a1 1 0 0 1-.117-1.993L4 11zM9 3a1 1 0 0 1 0 2H5v3a1 1 0 0 1-2 0V5a2 2 0 0 1 2-2zm10 0a2 2 0 0 1 2 2v3a1 1 0 1 1-2 0V5h-4a1 1 0 1 1 0-2z" />;
+}
+
+function Cursor3Fill({ size = 20 }: { size?: number }) {
+  return <Icon size={size} d="M10 3a1 1 0 0 0-2 0v2a1 1 0 0 0 2 0zM5.464 4.05A1 1 0 1 0 4.05 5.464L5.464 6.88A1 1 0 1 0 6.88 5.464zm4.327 4.16c-.978-.326-1.907.603-1.582 1.58l3.533 10.598c.357 1.072 1.84 1.158 2.319.134l2.055-4.406 4.406-2.055c1.024-.478.938-1.962-.134-2.319zm4.159-4.16a1 1 0 0 1 0 1.414L12.536 6.88a1 1 0 1 1-1.415-1.415l1.415-1.414a1 1 0 0 1 1.414 0M2 9a1 1 0 0 1 1-1h2a1 1 0 1 1 0 2H3a1 1 0 0 1-1-1m4.879 3.536a1 1 0 1 0-1.415-1.415L4.05 12.536a1 1 0 1 0 1.414 1.414z" />;
+}
+
+function PenFill({ size = 20 }: { size?: number }) {
+  return <Icon size={size} d="m14.295 4.98 4.724 4.725a2 2 0 0 1 .443 2.157l-2.365 5.913a2 2 0 0 1-1.605 1.24l-5.079.635q-.196.023-.41.056l-.444.072-.232.042-.723.14-.495.105-.745.168-.955.228-1.552.396-.646.174a1.01 1.01 0 0 1-1.265-1.134l.034-.146.295-1.112.264-1.048.228-.955.167-.745.105-.496.141-.722.08-.457.064-.428.66-5.28a2 2 0 0 1 1.241-1.605l5.913-2.365a2 2 0 0 1 2.157.443Zm-3.71 5.605a2 2 0 0 0-.507 1.968 1 1 0 0 0-.2.154L5.82 16.765a.2.2 0 0 0-.053.098l-.089.385-.178.743-.086.351a.2.2 0 0 0 .244.244l.717-.175.763-.178a.2.2 0 0 0 .097-.054l4.058-4.058a1 1 0 0 0 .154-.199 2 2 0 1 0-.861-3.337Zm4.658-7.484a1 1 0 0 1 1.32-.084l.094.084L20.9 7.343a1 1 0 0 1-1.32 1.498l-.095-.084-4.242-4.242a1 1 0 0 1 0-1.414" />;
+}
+
+function CloseLine({ size = 20 }: { size?: number }) {
+  return <Icon size={size} d="m12 13.414 5.657 5.657a1 1 0 0 0 1.414-1.414L13.414 12l5.657-5.657a1 1 0 0 0-1.414-1.414L12 10.586 6.343 4.929A1 1 0 0 0 4.93 6.343L10.586 12l-5.657 5.657a1 1 0 1 0 1.414 1.414z" />;
+}
+
+function SendFill({ size = 20 }: { size?: number }) {
+  return <Icon size={size} d="M18.314 3.766c1.195-.433 2.353.725 1.92 1.92l-5.282 14.605c-.434 1.198-2.07 1.344-2.709.241l-3.217-5.558-5.558-3.217c-1.103-.639-.957-2.275.241-2.709z" />;
+}
+
+function Delete2Fill({ size = 20 }: { size?: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor">
-      <path d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+      <path d="M14.28 2a2 2 0 0 1 1.897 1.368L16.72 5H20a1 1 0 1 1 0 2l-.003.071-.867 12.143A3 3 0 0 1 16.138 22H7.862a3 3 0 0 1-2.992-2.786L4.003 7.07 4 7a1 1 0 0 1 0-2h3.28l.543-1.632A2 2 0 0 1 9.721 2zM9 10a1 1 0 0 0-.993.883L8 11v6a1 1 0 0 0 1.993.117L10 17v-6a1 1 0 0 0-1-1m6 0a1 1 0 0 0-1 1v6a1 1 0 1 0 2 0v-6a1 1 0 0 0-1-1m-.72-6H9.72l-.333 1h5.226z" />
     </svg>
   );
 }
 
-function SendIcon({ size = 20 }: { size?: number }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor">
-      <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" />
-    </svg>
-  );
+function CheckLine({ size = 20 }: { size?: number }) {
+  return <Icon size={size} d="M21.192 5.465a1 1 0 0 1 0 1.414L9.95 18.122a1.1 1.1 0 0 1-1.556 0l-5.586-5.586a1 1 0 1 1 1.415-1.415l4.95 4.95L19.777 5.465a1 1 0 0 1 1.414 0Z" />;
 }
 
-function CloseIcon({ size = 20 }: { size?: number }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
-      <path d="M6 6l12 12M18 6L6 18" />
-    </svg>
-  );
+function CameraFill({ size = 20 }: { size?: number }) {
+  return <Icon size={size} d="M19 3a3 3 0 0 1 3 3v12a3 3 0 0 1-3 3H5a3 3 0 0 1-3-3V6a3 3 0 0 1 3-3zm-7 4a5 5 0 1 0 0 10 5 5 0 0 0 0-10m0 2a3 3 0 1 1 0 6 3 3 0 0 1 0-6m7-3h-1a1 1 0 0 0-.117 1.993L18 8h1a1 1 0 0 0 .117-1.993z" />;
 }
 
-function CheckIcon() {
-  return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-      <polyline points="20 6 9 17 4 12" />
-    </svg>
-  );
+function CamcorderFill({ size = 20 }: { size?: number }) {
+  return <Icon size={size} d="M4 4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2.21l2.094 1.29A1.25 1.25 0 0 0 22 16.018V7.984a1.25 1.25 0 0 0-1.906-1.065L18 8.21V6a2 2 0 0 0-2-2z" />;
 }
 
-function CameraIcon() {
-  return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-      <path d="M12 15.2a3.2 3.2 0 100-6.4 3.2 3.2 0 000 6.4z" />
-      <path d="M9 2L7.17 4H4a2 2 0 00-2 2v12a2 2 0 002 2h16a2 2 0 002-2V6a2 2 0 00-2-2h-3.17L15 2H9z" />
-    </svg>
-  );
+function Message4Fill({ size = 20 }: { size?: number }) {
+  return <Icon size={size} d="M19 3a3 3 0 0 1 3 3v10a3 3 0 0 1-3 3H7.333L4 21.5c-.824.618-2 .03-2-1V6a3 3 0 0 1 3-3zm-8 9H8a1 1 0 1 0 0 2h3a1 1 0 1 0 0-2m5-4H8a1 1 0 0 0-.117 1.993L8 10h8a1 1 0 0 0 .117-1.993z" />;
 }
 
-function VideoIcon() {
-  return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-      <path d="M17 10.5V7a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h12a1 1 0 001-1v-3.5l4 4v-11l-4 4z" />
-    </svg>
-  );
+function VoiceFill({ size = 20 }: { size?: number }) {
+  return <Icon size={size} d="M12 2.5a1.5 1.5 0 0 1 1.493 1.356L13.5 4v16a1.5 1.5 0 0 1-2.993.144L10.5 20V4A1.5 1.5 0 0 1 12 2.5m-4 3A1.5 1.5 0 0 1 9.5 7v10a1.5 1.5 0 0 1-3 0V7A1.5 1.5 0 0 1 8 5.5m8 0A1.5 1.5 0 0 1 17.5 7v10a1.5 1.5 0 0 1-3 0V7A1.5 1.5 0 0 1 16 5.5m-12 3A1.5 1.5 0 0 1 5.5 10v4a1.5 1.5 0 0 1-3 0v-4A1.5 1.5 0 0 1 4 8.5m16 0a1.5 1.5 0 0 1 1.493 1.356L21.5 10v4a1.5 1.5 0 0 1-2.993.144L18.5 14v-4A1.5 1.5 0 0 1 20 8.5" />;
 }
 
-function TextIcon() {
-  return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-      <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" />
-    </svg>
-  );
+function StopFill({ size = 20 }: { size?: number }) {
+  return <Icon size={size} d="M8 6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2z" />;
 }
 
-function MicIcon() {
-  return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
-      <path d="M12 1a4 4 0 00-4 4v7a4 4 0 008 0V5a4 4 0 00-4-4z" />
-      <path d="M19 10v2a7 7 0 01-14 0v-2M12 19v4M8 23h8" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-    </svg>
-  );
+function PlayFill({ size = 20 }: { size?: number }) {
+  return <Icon size={size} d="M5.669 4.76a1.47 1.47 0 0 1 2.04-1.177c1.062.454 3.442 1.533 6.462 3.276 3.021 1.744 5.146 3.267 6.069 3.958.788.591.79 1.763.001 2.356-.914.687-3.013 2.19-6.07 3.956-3.06 1.766-5.412 2.832-6.464 3.28-.906.387-1.92-.2-2.038-1.177-.138-1.142-.396-3.735-.396-7.237 0-3.5.257-6.092.396-7.235" />;
+}
+
+function EyeLine({ size = 20 }: { size?: number }) {
+  return <Icon size={size} d="M12 5c4.97 0 9.27 3.11 10.72 7.5C21.27 16.89 16.97 20 12 20s-9.27-3.11-10.72-7.5C2.73 8.11 7.03 5 12 5m0 2a8.72 8.72 0 0 0-8.16 5.5A8.72 8.72 0 0 0 12 18a8.72 8.72 0 0 0 8.16-5.5A8.72 8.72 0 0 0 12 7m0 2a3.5 3.5 0 1 1 0 7 3.5 3.5 0 0 1 0-7m0 2a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3" />;
+}
+
+// ── Shared styles ──────────────────────────────────────────────
+const PANEL_SHADOW = "3px 4px 11px rgba(0,0,0,0.08), 13px 14px 19px rgba(0,0,0,0.07), 29px 32px 26px rgba(0,0,0,0.04), 52px 57px 31px rgba(0,0,0,0.01)";
+const PANEL_BG = "#1c1c1c";
+const ACCENT = "#3B82F6";
+const FG = "#e7e7e7";
+const FG50 = "rgba(231,231,231,0.5)";
+const FG25 = "rgba(231,231,231,0.25)";
+const FG10 = "rgba(231,231,231,0.1)";
+const FG05 = "rgba(231,231,231,0.05)";
+const FONT = "'Open Runde', -apple-system, sans-serif";
+
+// ── Waveform bars generator (matches real VoicePanel) ──────────
+const BAR_COUNT = 22;
+function generateBars(active: boolean, seed: number): number[] {
+  return Array.from({ length: BAR_COUNT }, (_, i) => {
+    if (!active) return 4;
+    const base = Math.sin((i + seed) * 0.7) * 0.5 + 0.5;
+    const noise = Math.sin((i * 3.7 + seed * 2.3)) * 0.3;
+    return Math.max(4, Math.min(28, (base + noise) * 28));
+  });
 }
 
 // ── Widget states ────────────────────────────────────────────
-type WidgetState = "idle" | "expanded" | "captureMenu" | "areaSelect" | "areaDragging" | "captured" | "noteMenu" | "hasItems" | "reviewing" | "success";
+type WidgetState =
+  | "idle"
+  | "expanded"
+  | "captureMenu"
+  | "areaSelect"
+  | "areaDragging"
+  | "captured"
+  | "capturePanel"
+  | "noteMenu"
+  | "textPanel"
+  | "voiceRecording"
+  | "voicePreview"
+  | "countOnly"
+  | "reviewing"
+  | "success";
 
 interface AnimStep {
+  scrollY?: number;
   state: WidgetState;
-  cursorX: number;
-  cursorY: number;
+  cursorX: number | string;
+  cursorY: number | string;
   click: boolean;
   duration: number;
   itemCount?: number;
-  /** For areaDragging: where the drag started */
-  dragStartX?: number;
-  dragStartY?: number;
+  dragStartX?: number | string;
+  dragStartY?: number | string;
+  /** Characters to show in typing animation */
+  typedChars?: number;
 }
 
+const CAPTURE_NOTE = "Button is misaligned";
+const TEXT_NOTE = "Colors feel off on this section";
+
 const ANIM_STEPS: AnimStep[] = [
-  // Cursor drifts in from offscreen
-  { state: "idle",        cursorX: 95, cursorY: 95, click: false, duration: 1200 },
-  // Slowly approach the feedback button
-  { state: "idle",        cursorX: 90, cursorY: 90, click: false, duration: 800 },
-  { state: "idle",        cursorX: 88, cursorY: 88, click: false, duration: 600 },
-  // Hover over feedback — small pause
-  { state: "idle",        cursorX: 87, cursorY: 86, click: false, duration: 400 },
-  // Click feedback
-  { state: "idle",        cursorX: 87, cursorY: 86, click: true,  duration: 200 },
-  // Widget expands
-  { state: "expanded",    cursorX: 87, cursorY: 86, click: false, duration: 700 },
+  // ── ACT 0: Idle entrance ──
+  { state: "idle",           cursorX: "50%", cursorY: "50%", click: false, duration: 1200, scrollY: 0 },
+  { state: "idle",           cursorX: "calc(100% - 65px)", cursorY: "calc(100% - 40px)", click: false, duration: 600, scrollY: 0 },
+  { state: "idle",           cursorX: "calc(100% - 65px)", cursorY: "calc(100% - 40px)", click: true,  duration: 200, scrollY: 0 },
+
+  // ── ACT 1: Screenshot capture ──
+  { state: "expanded",       cursorX: "calc(100% - 65px)", cursorY: "calc(100% - 40px)", click: false, duration: 700, scrollY: 0 },
   // Move to capture button
-  { state: "expanded",    cursorX: 74, cursorY: 87, click: false, duration: 600 },
-  // Hover pause
-  { state: "expanded",    cursorX: 74, cursorY: 87, click: false, duration: 300 },
-  // Click capture
-  { state: "expanded",    cursorX: 74, cursorY: 87, click: true,  duration: 200 },
-  // Capture menu opens
-  { state: "captureMenu", cursorX: 74, cursorY: 87, click: false, duration: 600 },
-  // Move to Screenshot option
-  { state: "captureMenu", cursorX: 74, cursorY: 79, click: false, duration: 400 },
-  // Click Screenshot
-  { state: "captureMenu", cursorX: 74, cursorY: 79, click: true,  duration: 200 },
-  // Screen dims — area select mode, cursor moves to start position
-  { state: "areaSelect",  cursorX: 15, cursorY: 25, click: false, duration: 800 },
-  // Click down to start drag
-  { state: "areaDragging", cursorX: 15, cursorY: 25, click: true,  duration: 200, dragStartX: 15, dragStartY: 25 },
-  // Drag to expand selection — cursor moves while holding
-  { state: "areaDragging", cursorX: 55, cursorY: 55, click: false, duration: 1000, dragStartX: 15, dragStartY: 25 },
-  // Brief pause at full size
-  { state: "areaDragging", cursorX: 55, cursorY: 55, click: false, duration: 400, dragStartX: 15, dragStartY: 25 },
-  // Release — capture flash
-  { state: "captured",    cursorX: 55, cursorY: 55, click: false, duration: 500 },
-  // Back to expanded with screenshot taken
-  { state: "expanded",    cursorX: 55, cursorY: 55, click: false, duration: 800, itemCount: 1 },
-  // Pause to show the result
-  { state: "expanded",    cursorX: 80, cursorY: 80, click: false, duration: 1500, itemCount: 1 },
-  // Reset
-  { state: "idle",        cursorX: 95, cursorY: 95, click: false, duration: 1000 },
+  { state: "expanded",       cursorX: "calc(100% - 161px)", cursorY: "calc(100% - 40px)", click: false, duration: 500, scrollY: 0 },
+  { state: "expanded",       cursorX: "calc(100% - 161px)", cursorY: "calc(100% - 40px)", click: true,  duration: 200, scrollY: 0 },
+  // Capture submenu opens
+  { state: "captureMenu",    cursorX: "calc(100% - 161px)", cursorY: "calc(100% - 40px)", click: false, duration: 400, scrollY: 0 },
+  // Move to Screenshot tile
+  { state: "captureMenu",    cursorX: "calc(100% - 152px)", cursorY: "calc(100% - 108px)", click: false, duration: 400, scrollY: 0 },
+  { state: "captureMenu",    cursorX: "calc(100% - 152px)", cursorY: "calc(100% - 108px)", click: true,  duration: 200, scrollY: 0 },
+  // Area select
+  { state: "areaSelect",     cursorX: 20, cursorY: 30, click: false, duration: 800, scrollY: 0 },
+  { state: "areaDragging",   cursorX: 20, cursorY: 30, click: true,  duration: 200, dragStartX: 20, dragStartY: 30, scrollY: 0 },
+  { state: "areaDragging",   cursorX: 60, cursorY: 65, click: false, duration: 1000, dragStartX: 20, dragStartY: 30, scrollY: 0 },
+  { state: "areaDragging",   cursorX: 60, cursorY: 65, click: false, duration: 300, dragStartX: 20, dragStartY: 30, scrollY: 0 },
+  // Capture flash
+  { state: "captured",       cursorX: 60, cursorY: 65, click: false, duration: 500, scrollY: 0 },
+  // Capture panel appears with preview
+  { state: "capturePanel",   cursorX: "calc(100% - 64px)", cursorY: "calc(100% - 96px)", click: false, duration: 800, itemCount: 0, typedChars: 0, scrollY: 0 },
+  // Typing animation in capture panel
+  { state: "capturePanel",   cursorX: "calc(100% - 64px)", cursorY: "calc(100% - 96px)", click: false, duration: 300, typedChars: 7, scrollY: 0 },
+  { state: "capturePanel",   cursorX: "calc(100% - 64px)", cursorY: "calc(100% - 96px)", click: false, duration: 250, typedChars: 10, scrollY: 0 },
+  { state: "capturePanel",   cursorX: "calc(100% - 64px)", cursorY: "calc(100% - 96px)", click: false, duration: 400, typedChars: 20, scrollY: 0 },
+  // Pause to read
+  { state: "capturePanel",   cursorX: "calc(100% - 64px)", cursorY: "calc(100% - 96px)", click: false, duration: 600, typedChars: 20, scrollY: 0 },
+  // Click Add
+  { state: "capturePanel",   cursorX: "calc(100% - 64px)", cursorY: "calc(100% - 96px)", click: true,  duration: 200, typedChars: 20, scrollY: 0 },
+  // Collapse to count-only (1 item)
+  { state: "countOnly",      cursorX: "calc(100% - 64px)", cursorY: "calc(100% - 96px)", click: false, duration: 1000, itemCount: 1, scrollY: 0 },
+
+  // ── ACT 2: Text note ──
+  // Move to count-only pill
+  { state: "countOnly",      cursorX: "calc(100% - 38px)", cursorY: "calc(100% - 40px)", click: false, duration: 500, itemCount: 1, scrollY: 0 },
+  { state: "countOnly",      cursorX: "calc(100% - 38px)", cursorY: "calc(100% - 40px)", click: true,  duration: 200, itemCount: 1, scrollY: 0 },
+  { state: "expanded",       cursorX: "calc(100% - 38px)", cursorY: "calc(100% - 40px)", click: false, duration: 700, itemCount: 1, scrollY: 0 },
+  // Move to Note button
+  { state: "expanded",       cursorX: "calc(100% - 168px)", cursorY: "calc(100% - 40px)", click: false, duration: 500, itemCount: 1, scrollY: 0 },
+  { state: "expanded",       cursorX: "calc(100% - 168px)", cursorY: "calc(100% - 40px)", click: true,  duration: 200, itemCount: 1, scrollY: 0 },
+  // Note submenu
+  { state: "noteMenu",       cursorX: "calc(100% - 168px)", cursorY: "calc(100% - 40px)", click: false, duration: 400, itemCount: 1, scrollY: 0 },
+  // Click Text tile
+  { state: "noteMenu",       cursorX: "calc(100% - 152px)", cursorY: "calc(100% - 108px)", click: false, duration: 400, itemCount: 1, scrollY: 0 },
+  { state: "noteMenu",       cursorX: "calc(100% - 152px)", cursorY: "calc(100% - 108px)", click: true,  duration: 200, itemCount: 1, scrollY: 0 },
+  // Text panel opens
+  { state: "textPanel",      cursorX: "calc(100% - 66px)", cursorY: "calc(100% - 96px)", click: false, duration: 800, itemCount: 1, typedChars: 0, scrollY: 0 },
+  // Type text
+  { state: "textPanel",      cursorX: "calc(100% - 66px)", cursorY: "calc(100% - 96px)", click: false, duration: 300, itemCount: 1, typedChars: 7, scrollY: 0 },
+  { state: "textPanel",      cursorX: "calc(100% - 66px)", cursorY: "calc(100% - 96px)", click: false, duration: 350, itemCount: 1, typedChars: 16, scrollY: 0 },
+  { state: "textPanel",      cursorX: "calc(100% - 66px)", cursorY: "calc(100% - 96px)", click: false, duration: 300, itemCount: 1, typedChars: 24, scrollY: 0 },
+  { state: "textPanel",      cursorX: "calc(100% - 66px)", cursorY: "calc(100% - 96px)", click: false, duration: 350, itemCount: 1, typedChars: 31, scrollY: 0 },
+  // Pause
+  { state: "textPanel",      cursorX: "calc(100% - 66px)", cursorY: "calc(100% - 96px)", click: false, duration: 600, itemCount: 1, typedChars: 31, scrollY: 0 },
+  // Click Add
+  { state: "textPanel",      cursorX: "calc(100% - 66px)", cursorY: "calc(100% - 96px)", click: true,  duration: 200, itemCount: 1, typedChars: 31, scrollY: 0 },
+  // Collapse to count-only (2 items)
+  { state: "countOnly",      cursorX: "calc(100% - 66px)", cursorY: "calc(100% - 96px)", click: false, duration: 1000, itemCount: 2, scrollY: 0 },
+
+  // ── ACT 3: Voice note ──
+  { state: "countOnly",      cursorX: "calc(100% - 38px)", cursorY: "calc(100% - 40px)", click: false, duration: 500, itemCount: 2, scrollY: 0 },
+  { state: "countOnly",      cursorX: "calc(100% - 38px)", cursorY: "calc(100% - 40px)", click: true,  duration: 200, itemCount: 2, scrollY: 0 },
+  { state: "expanded",       cursorX: "calc(100% - 38px)", cursorY: "calc(100% - 40px)", click: false, duration: 700, itemCount: 2, scrollY: 0 },
+  // Move to Note
+  { state: "expanded",       cursorX: "calc(100% - 168px)", cursorY: "calc(100% - 40px)", click: false, duration: 500, itemCount: 2, scrollY: 0 },
+  { state: "expanded",       cursorX: "calc(100% - 168px)", cursorY: "calc(100% - 40px)", click: true,  duration: 200, itemCount: 2, scrollY: 0 },
+  { state: "noteMenu",       cursorX: "calc(100% - 168px)", cursorY: "calc(100% - 40px)", click: false, duration: 400, itemCount: 2, scrollY: 0 },
+  // Click Voice tile
+  { state: "noteMenu",       cursorX: "calc(100% - 64px)", cursorY: "calc(100% - 108px)", click: false, duration: 400, itemCount: 2, scrollY: 0 },
+  { state: "noteMenu",       cursorX: "calc(100% - 64px)", cursorY: "calc(100% - 108px)", click: true,  duration: 200, itemCount: 2, scrollY: 0 },
+  // Voice recording
+  { state: "voiceRecording", cursorX: "calc(100% - 40px)", cursorY: "calc(100% - 88px)", click: false, duration: 800, itemCount: 2, scrollY: 0 },
+  { state: "voiceRecording", cursorX: "calc(100% - 40px)", cursorY: "calc(100% - 88px)", click: false, duration: 1000, itemCount: 2, scrollY: 140 },
+  { state: "voiceRecording", cursorX: "calc(100% - 40px)", cursorY: "calc(100% - 88px)", click: false, duration: 1000, itemCount: 2, scrollY: 260 },
+  // Click stop
+  { state: "voiceRecording", cursorX: "calc(100% - 40px)", cursorY: "calc(100% - 88px)", click: false, duration: 200, itemCount: 2, scrollY: 260 },
+  { state: "voiceRecording", cursorX: "calc(100% - 40px)", cursorY: "calc(100% - 88px)", click: true,  duration: 200, itemCount: 2, scrollY: 260 },
+  // Voice preview
+  { state: "voicePreview",   cursorX: "calc(100% - 62px)", cursorY: "calc(100% - 94px)", click: false, duration: 1200, itemCount: 2, scrollY: 260 },
+  // Click Add
+  { state: "voicePreview",   cursorX: "calc(100% - 62px)", cursorY: "calc(100% - 94px)", click: false, duration: 200, itemCount: 2, scrollY: 260 },
+  { state: "voicePreview",   cursorX: "calc(100% - 62px)", cursorY: "calc(100% - 94px)", click: true,  duration: 200, itemCount: 2, scrollY: 260 },
+  // Collapse to count-only (3 items)
+  { state: "countOnly",      cursorX: "calc(100% - 62px)", cursorY: "calc(100% - 94px)", click: false, duration: 1000, itemCount: 3, scrollY: 0 },
+
+  // ── ACT 4: Review & submit ──
+  { state: "countOnly",      cursorX: "calc(100% - 38px)", cursorY: "calc(100% - 40px)", click: false, duration: 500, itemCount: 3, scrollY: 0 },
+  { state: "countOnly",      cursorX: "calc(100% - 38px)", cursorY: "calc(100% - 40px)", click: true,  duration: 200, itemCount: 3, scrollY: 0 },
+  { state: "expanded",       cursorX: "calc(100% - 38px)", cursorY: "calc(100% - 40px)", click: false, duration: 700, itemCount: 3, scrollY: 0 },
+  // Click send/review button
+  { state: "expanded",       cursorX: "calc(100% - 85px)", cursorY: "calc(100% - 40px)", click: false, duration: 500, itemCount: 3, scrollY: 0 },
+  { state: "expanded",       cursorX: "calc(100% - 85px)", cursorY: "calc(100% - 40px)", click: true,  duration: 200, itemCount: 3, scrollY: 0 },
+  // Review panel
+  { state: "reviewing",      cursorX: "calc(100% - 62px)", cursorY: "calc(100% - 94px)", click: false, duration: 1500, itemCount: 3, scrollY: 0 },
+  // Click Submit
+  { state: "reviewing",      cursorX: "calc(100% - 62px)", cursorY: "calc(100% - 94px)", click: false, duration: 200, itemCount: 3, scrollY: 0 },
+  { state: "reviewing",      cursorX: "calc(100% - 62px)", cursorY: "calc(100% - 94px)", click: true,  duration: 200, itemCount: 3, scrollY: 0 },
+  // Success
+  { state: "success",        cursorX: "calc(100% - 62px)", cursorY: "calc(100% - 94px)", click: false, duration: 1500, scrollY: 0 },
+  // Back to idle
+  { state: "idle",           cursorX: "50%", cursorY: "50%", click: false, duration: 1200, scrollY: 0 },
 ];
 
+// ── Mock panels ────────────────────────────────────────────────
+
+function MockSubMenu({ items }: { items: { icon: React.ReactNode; label: string }[] }) {
+  return (
+    <div
+      className="absolute bottom-[48px] right-0 flex items-center gap-2 p-1 rounded-2xl animate-[fadeInUp_200ms_ease-out]"
+      style={{ background: PANEL_BG, boxShadow: PANEL_SHADOW, fontFamily: FONT }}
+    >
+      {items.map((item) => (
+        <div
+          key={item.label}
+          className="flex flex-col items-center justify-center gap-2 rounded-xl"
+          style={{ width: 80, height: 72, color: FG50 }}
+        >
+          <span className="flex items-center justify-center">{item.icon}</span>
+          <span className="text-[13px] font-medium" style={{ letterSpacing: "-0.48px" }}>{item.label}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function MockCapturePanel({ typedChars = 0 }: { typedChars?: number }) {
+  const text = CAPTURE_NOTE.slice(0, typedChars);
+  return (
+    <div
+      className="absolute bottom-[48px] right-0 flex flex-col gap-2 rounded-2xl animate-[fadeInUp_200ms_ease-out]"
+      style={{ width: 280, padding: 14, background: PANEL_BG, boxShadow: PANEL_SHADOW, fontFamily: FONT }}
+    >
+      {/* Fake header */}
+      <div className="text-[11px] font-medium" style={{ color: FG25, letterSpacing: "-0.48px" }}>
+        320 × 240 at (45, 60)
+      </div>
+      {/* Preview */}
+      <div className="rounded-lg overflow-hidden" style={{ height: 120, background: "linear-gradient(135deg, #2a2a4a, #1a1a3a)" }}>
+        <img src="/capture-preview.png" alt="Screenshot preview" className="w-full h-full object-cover" />
+      </div>
+      {/* Textarea */}
+      <div className="rounded-xl" style={{ background: FG05, border: `1px solid ${FG10}` }}>
+        <div className="px-3 py-2 text-[13px] min-h-[52px]" style={{ color: text ? FG : FG25 }}>
+          {text || "Add a note (optional)"}
+          {typedChars < CAPTURE_NOTE.length && <span className="animate-pulse">|</span>}
+        </div>
+      </div>
+      {/* Footer */}
+      <div className="flex justify-end gap-1.5">
+        <button className="px-3.5 py-1.5 rounded-full text-[13px] font-medium" style={{ color: FG50 }}>
+          Cancel
+        </button>
+        <button className="px-3.5 py-1.5 rounded-full text-[13px] font-medium" style={{ background: ACCENT, color: FG }}>
+          Add
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function MockTextPanel({ typedChars = 0 }: { typedChars?: number }) {
+  const text = TEXT_NOTE.slice(0, typedChars);
+  return (
+    <div
+      className="absolute bottom-[48px] right-0 flex flex-col rounded-2xl animate-[fadeInUp_200ms_ease-out]"
+      style={{ width: 280, padding: "12px 16px 14px", background: PANEL_BG, boxShadow: PANEL_SHADOW, fontFamily: FONT }}
+    >
+      <p className="text-[13px] mb-2" style={{ color: FG50 }}>Text</p>
+      {/* Textarea */}
+      <div className="rounded-xl" style={{ background: FG05, border: `1px solid ${FG10}` }}>
+        <div className="px-3 py-2 text-[13px] min-h-[52px]" style={{ color: text ? FG : FG25 }}>
+          {text || "What's on your mind?"}
+          {typedChars < TEXT_NOTE.length && <span className="animate-pulse">|</span>}
+        </div>
+      </div>
+      {/* Footer */}
+      <div className="flex justify-end gap-1.5 mt-2">
+        <button className="px-3.5 py-1.5 rounded-full text-[13px] font-medium" style={{ color: FG50 }}>
+          Cancel
+        </button>
+        <button
+          className="px-3.5 py-1.5 rounded-full text-[13px] font-medium"
+          style={{ background: ACCENT, color: FG, opacity: text.trim() ? 1 : 0.4 }}
+        >
+          Add
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function MockVoiceRecording({ bars, time }: { bars: number[]; time: string }) {
+  return (
+    <div
+      className="absolute bottom-[48px] right-0 flex items-center rounded-full animate-[fadeInUp_200ms_ease-out]"
+      style={{ width: 240, padding: "4px 4px 4px 16px", height: 40, background: PANEL_BG, boxShadow: PANEL_SHADOW, fontFamily: FONT }}
+    >
+      {/* Waveform */}
+      <div className="flex-1 flex items-center justify-between gap-[3px] h-6 min-w-0 overflow-hidden" style={{
+        maskImage: "linear-gradient(to right, transparent, black 24px, black calc(100% - 24px), transparent)",
+        WebkitMaskImage: "linear-gradient(to right, transparent, black 24px, black calc(100% - 24px), transparent)",
+      }}>
+        {bars.map((h, i) => (
+          <div
+            key={i}
+            className="shrink-0 rounded-[1px]"
+            style={{ width: 2, minWidth: 2, height: h, background: FG50, transition: "height 80ms ease" }}
+          />
+        ))}
+      </div>
+      {/* Timer */}
+      <span className="text-[12px] font-medium shrink-0 mx-2 tabular-nums" style={{ color: FG, letterSpacing: "-0.48px", width: 32 }}>
+        {time}
+      </span>
+      {/* Stop button */}
+      <div
+        className="w-8 h-8 rounded-full flex items-center justify-center shrink-0"
+        style={{ background: "rgba(255, 95, 87, 0.25)", color: "#ff4545" }}
+      >
+        <StopFill size={20} />
+      </div>
+    </div>
+  );
+}
+
+function MockVoicePreview({ bars }: { bars: number[] }) {
+  return (
+    <div
+      className="absolute bottom-[48px] right-0 flex flex-col rounded-2xl animate-[fadeInUp_200ms_ease-out]"
+      style={{ width: 240, padding: 12, background: PANEL_BG, boxShadow: PANEL_SHADOW, fontFamily: FONT }}
+    >
+      {/* Top row: play + waveform */}
+      <div className="flex items-center">
+        <div
+          className="w-6 h-6 rounded-full flex items-center justify-center shrink-0 mr-2"
+          style={{ background: FG05, color: FG }}
+        >
+          <PlayFill size={14} />
+        </div>
+        <div className="flex-1 flex items-center justify-between gap-[3px] h-6 min-w-0 overflow-hidden" style={{
+          maskImage: "linear-gradient(to right, transparent, black 24px, black calc(100% - 24px), transparent)",
+          WebkitMaskImage: "linear-gradient(to right, transparent, black 24px, black calc(100% - 24px), transparent)",
+        }}>
+          {bars.map((h, i) => (
+            <div
+              key={i}
+              className="shrink-0 rounded-[1px]"
+              style={{ width: 2, minWidth: 2, height: h, background: FG50 }}
+            />
+          ))}
+        </div>
+      </div>
+      {/* Textarea */}
+      <div className="rounded-xl mt-2.5" style={{ background: FG05, border: `1px solid ${FG10}` }}>
+        <div className="px-3 py-2 text-[13px] min-h-[40px]" style={{ color: FG25 }}>
+          Add a note…
+        </div>
+      </div>
+      {/* Footer */}
+      <div className="flex justify-end gap-1.5 mt-2.5">
+        <button className="px-3.5 py-1.5 rounded-full text-[13px] font-medium" style={{ color: FG50 }}>
+          Cancel
+        </button>
+        <button className="px-3.5 py-1.5 rounded-full text-[13px] font-medium" style={{ background: ACCENT, color: FG }}>
+          Add
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function MockReviewPanel({ itemCount }: { itemCount: number }) {
+  const items = [
+    { icon: <CameraFill size={16} />, label: "320 × 240 at (45, 60)" },
+    { icon: <Message4Fill size={16} />, label: TEXT_NOTE },
+    { icon: <VoiceFill size={16} />, label: "~1 minute" },
+  ].slice(0, itemCount);
+
+  return (
+    <div
+      className="absolute bottom-[48px] right-0 flex flex-col gap-4 rounded-2xl animate-[fadeInUp_200ms_ease-out]"
+      style={{ width: 280, padding: 12, background: PANEL_BG, boxShadow: PANEL_SHADOW, fontFamily: FONT }}
+    >
+      {/* Item list */}
+      <div className="flex flex-col gap-1">
+        {items.map((item, i) => (
+          <div
+            key={i}
+            className="flex items-center gap-2 px-3 py-3 rounded-xl"
+            style={{ background: FG05 }}
+          >
+            {/* Priority placeholder */}
+            <span className="text-[10px] shrink-0" style={{ color: FG25, letterSpacing: "-0.5px", width: 16 }}>---</span>
+            <span className="flex shrink-0" style={{ color: FG50 }}>{item.icon}</span>
+            <span className="text-[13px] truncate" style={{ color: FG50, letterSpacing: "-0.48px" }}>{item.label}</span>
+          </div>
+        ))}
+      </div>
+      {/* Footer */}
+      <div className="flex items-center justify-between">
+        <span className="text-[13px]" style={{ color: FG25 }}>{itemCount} item{itemCount !== 1 ? "s" : ""}</span>
+        <div className="flex gap-1.5">
+          <button className="px-3.5 py-1.5 rounded-full text-[13px] font-medium" style={{ color: FG50 }}>
+            Cancel
+          </button>
+          <button className="px-3.5 py-1.5 rounded-full text-[13px] font-medium" style={{ background: ACCENT, color: FG }}>
+            Submit
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── Feedback widget (visual only) ────────────────────────────
-function MockFeedbackBar({ widgetState, itemCount }: { widgetState: WidgetState; itemCount: number }) {
+function MockFeedbackBar({ widgetState, itemCount, typedChars, voiceBars, voiceTime }: {
+  widgetState: WidgetState;
+  itemCount: number;
+  typedChars?: number;
+  voiceBars: number[];
+  voiceTime: string;
+}) {
   const isIdle = widgetState === "idle";
-  const showItems = itemCount > 0 && !isIdle;
+  const isCountOnly = widgetState === "countOnly";
   const isSuccess = widgetState === "success";
+  const showToolbar = !isIdle && !isCountOnly && !isSuccess;
+  const showSendBadge = itemCount > 0 && showToolbar;
+
+  const captureActive = widgetState === "captureMenu" || widgetState === "capturePanel";
+  const noteActive = widgetState === "noteMenu" || widgetState === "textPanel" || widgetState === "voiceRecording" || widgetState === "voicePreview";
 
   return (
     <div className="absolute bottom-5 right-5 z-10">
       {/* Panels above the bar */}
       {widgetState === "captureMenu" && (
-        <div className="absolute bottom-[48px] right-0 bg-[#1c1c1c] rounded-xl p-1.5 shadow-2xl border border-white/10 w-[176px] animate-[fadeInUp_200ms_ease-out]">
-          <button className="flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-[13px] text-white/80 hover:bg-white/5 transition-colors">
-            <CameraIcon /> Screenshot
-          </button>
-          <button className="flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-[13px] text-white/80 hover:bg-white/5 transition-colors">
-            <VideoIcon /> Record
-          </button>
-        </div>
+        <MockSubMenu items={[
+          { icon: <CameraFill size={20} />, label: "Screenshot" },
+          { icon: <CamcorderFill size={20} />, label: "Record" },
+        ]} />
       )}
       {widgetState === "noteMenu" && (
-        <div className="absolute bottom-[48px] right-0 bg-[#1c1c1c] rounded-xl p-1.5 shadow-2xl border border-white/10 w-[176px] animate-[fadeInUp_200ms_ease-out]">
-          <button className="flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-[13px] text-white/80 hover:bg-white/5 transition-colors">
-            <TextIcon /> Text
-          </button>
-          <button className="flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-[13px] text-white/80 hover:bg-white/5 transition-colors">
-            <MicIcon /> Voice
-          </button>
-        </div>
+        <MockSubMenu items={[
+          { icon: <Message4Fill size={20} />, label: "Text" },
+          { icon: <VoiceFill size={20} />, label: "Voice" },
+        ]} />
       )}
-      {widgetState === "reviewing" && (
-        <div className="absolute bottom-[48px] right-0 bg-[#1c1c1c] rounded-2xl p-4 shadow-2xl border border-white/10 w-[220px] animate-[fadeInUp_200ms_ease-out]">
-          <div className="text-[15px] font-semibold text-white/90 mb-3">Review ({itemCount})</div>
-          <div className="flex flex-col gap-1.5">
-            {["Screenshot", "Text note", "Voice note"].slice(0, itemCount).map((label, i) => (
-              <div key={i} className="flex items-center gap-2.5 px-3 py-2 rounded-lg bg-white/5 text-[13px] text-white/70">
-                <div className="w-2.5 h-2.5 rounded-full bg-[#406dff] shrink-0" />
-                {label}
-              </div>
-            ))}
-          </div>
-          <button className="mt-3 w-full bg-[#406dff] hover:bg-[#3058d9] text-white text-[14px] font-medium text-center py-2.5 rounded-xl transition-colors">
-            Submit
-          </button>
-        </div>
-      )}
-      {isSuccess && (
-        <div className="absolute bottom-[48px] right-0 bg-[#1c1c1c] rounded-2xl p-5 shadow-2xl border border-white/10 w-[160px] animate-[fadeInUp_200ms_ease-out] flex flex-col items-center gap-2">
-          <div className="w-8 h-8 rounded-full bg-emerald-500/20 flex items-center justify-center text-emerald-400">
-            <CheckIcon />
-          </div>
-          <span className="text-[13px] text-white/60">Sent</span>
-        </div>
-      )}
+      {widgetState === "capturePanel" && <MockCapturePanel typedChars={typedChars} />}
+      {widgetState === "textPanel" && <MockTextPanel typedChars={typedChars} />}
+      {widgetState === "voiceRecording" && <MockVoiceRecording bars={voiceBars} time={voiceTime} />}
+      {widgetState === "voicePreview" && <MockVoicePreview bars={voiceBars} />}
+      {widgetState === "reviewing" && <MockReviewPanel itemCount={itemCount} />}
 
       {/* Toolbar bar */}
       <div
-        className="flex items-center rounded-full transition-all duration-300 ease-[cubic-bezier(0.19,1,0.22,1)]"
+        className="flex items-center justify-end rounded-full overflow-hidden"
         style={{
-          background: "#1c1c1c",
-          boxShadow: "3px 4px 11px rgba(0,0,0,0.08), 13px 14px 19px rgba(0,0,0,0.07), 29px 32px 26px rgba(0,0,0,0.04)",
-          padding: "4px",
-          height: "40px",
+          background: isSuccess ? "#22c55e" : isCountOnly ? ACCENT : PANEL_BG,
+          boxShadow: PANEL_SHADOW,
+          padding: 4,
+          height: 40,
+          width: isCountOnly ? (itemCount > 9 ? 48 : 36) : isSuccess ? 48 : isIdle ? 90 : showSendBadge ? 236 : 158,
+          fontFamily: FONT,
+          transition: "width 400ms cubic-bezier(0.19,1,0.22,1), height 400ms cubic-bezier(0.19,1,0.22,1), background-color 400ms cubic-bezier(0.19,1,0.22,1)",
         }}
       >
-        {isIdle && !isSuccess ? (
+        {/* Idle: "Feedback" text */}
+        {isIdle && (
           <div className="flex items-center justify-center px-2 h-8">
-            <span className="text-[14px] font-medium text-white/90 whitespace-nowrap tracking-[-0.02em]" style={{ fontFamily: "'Open Runde', -apple-system, sans-serif" }}>
+            <span className="text-[14px] font-medium whitespace-nowrap tracking-[-0.02em]" style={{ color: FG }}>
               Feedback
             </span>
           </div>
-        ) : isSuccess ? (
-          <div className="flex items-center justify-center px-3 h-8">
-            <span className="text-[14px] font-medium text-emerald-400 whitespace-nowrap">Sent</span>
+        )}
+
+        {/* Count-only: number */}
+        {isCountOnly && (
+          <div className="flex items-center justify-center w-full h-full">
+            <span className="text-[14px] font-medium tabular-nums" style={{ color: FG }}>{itemCount}</span>
           </div>
-        ) : (
+        )}
+
+        {/* Success: checkmark */}
+        {isSuccess && (
+          <div className="flex items-center justify-center w-full h-full" style={{ color: FG }}>
+            <CheckLine size={24} />
+          </div>
+        )}
+
+        {/* Expanded toolbar */}
+        {showToolbar && (
           <div className="flex items-center gap-[6px]">
             {/* Capture */}
-            <button className={`w-8 h-8 rounded-full flex items-center justify-center transition-colors ${widgetState === "captureMenu" ? "bg-white/15 text-white" : "text-white/70 hover:bg-white/10"}`}>
-              <ScanIcon />
-            </button>
+            <div className={`w-8 h-8 rounded-full flex items-center justify-center transition-colors ${captureActive ? "bg-white/25 text-white" : "text-white/50"}`}>
+              <ScanLine />
+            </div>
             {/* Annotate */}
-            <button className="w-8 h-8 rounded-full flex items-center justify-center text-white/70 hover:bg-white/10 transition-colors">
-              <CursorIcon />
-            </button>
+            <div className="w-8 h-8 rounded-full flex items-center justify-center text-white/50">
+              <Cursor3Fill />
+            </div>
             {/* Note */}
-            <button className={`w-8 h-8 rounded-full flex items-center justify-center transition-colors ${widgetState === "noteMenu" ? "bg-white/15 text-white" : "text-white/70 hover:bg-white/10"}`}>
-              <PenIcon />
-            </button>
-            {showItems && (
+            <div className={`w-8 h-8 rounded-full flex items-center justify-center transition-colors ${noteActive ? "bg-white/25 text-white" : "text-white/50"}`}>
+              <PenFill />
+            </div>
+
+            {showSendBadge && (
               <>
-                <div className="w-px h-5 bg-white/10" />
-                <button className="w-8 h-8 rounded-full flex items-center justify-center text-white/70 relative">
-                  <SendIcon />
-                  <span className="absolute -top-0.5 -right-0.5 min-w-[16px] h-4 flex items-center justify-center bg-[#406dff] text-white text-[11px] font-semibold rounded-full px-1 leading-none">
+                <div className="w-px h-4" style={{ background: FG05 }} />
+                {/* Delete */}
+                <div className="w-8 h-8 rounded-full flex items-center justify-center text-white/50">
+                  <Delete2Fill />
+                </div>
+                {/* Send + badge */}
+                <div className="w-8 h-8 rounded-full flex items-center justify-center text-white/50 relative">
+                  <SendFill />
+                  <span
+                    className="absolute -top-0.5 -right-0.5 min-w-[16px] h-4 flex items-center justify-center text-[11px] font-semibold rounded-full px-1 leading-none tabular-nums"
+                    style={{ background: ACCENT, color: FG }}
+                  >
                     {itemCount}
                   </span>
-                </button>
+                </div>
               </>
             )}
-            <div className="w-px h-5 bg-white/10" />
-            <button className="w-8 h-8 rounded-full flex items-center justify-center text-white/50 hover:bg-white/10 transition-colors">
-              <CloseIcon />
-            </button>
+
+            <div className="w-px h-4" style={{ background: FG05 }} />
+            {/* Close */}
+            <div className="w-8 h-8 rounded-full flex items-center justify-center text-white/50">
+              <CloseLine />
+            </div>
           </div>
         )}
       </div>
@@ -324,7 +640,6 @@ function TrafficLight({ color }: { color: "red" | "yellow" | "green" }) {
       className="rounded-full relative overflow-hidden"
       style={{ width: "11px", height: "11px", background: s.gradient, boxShadow: s.shadow }}
     >
-      {/* Top shine */}
       <div
         className="absolute left-1/2 -translate-x-1/2 pointer-events-none"
         style={{
@@ -349,7 +664,6 @@ function PearSite() {
         style={{ background: "linear-gradient(to bottom, #b8b8b8, #8e8e8e)", borderBottom: "1px solid #555" }}
       >
         <div className="px-3 py-[5px] flex items-center" style={{ background: "linear-gradient(to bottom, #4a4a4a, #2a2a2a)" }}>
-          {/* Pear logo */}
           <PearLogo className="size-[14px] text-white" />
         </div>
         {["Hardware", "Software", "Made4Pear", "Education", ".Pear", "Support"].map((tab, i) => (
@@ -391,21 +705,12 @@ function PearSite() {
       {/* Three-column strip */}
       <div className="grid grid-cols-3 border-t border-b border-[#ccc]">
         {[
-          { title: "pPod", desc: "10,000 songs in your pocket.", link: "Buy now", bg: "none", icon: null, img: "/pear-pod.png" },
-          { title: "pPhoto", desc: "Share your photo library.", link: "Learn more", bg: "none", icon: null, img: "/pear-photo.png" },
-          { title: "Pear Store", desc: "Free shipping. Easy returns.", link: "Shop now", bg: "none", icon: null, img: "/pear-store.png" },
-        ].map(({ title, desc, link, bg, icon, img }, i) => (
+          { title: "pPod", desc: "10,000 songs in your pocket.", link: "Buy now", img: "/pear-pod.png" },
+          { title: "pPhoto", desc: "Share your photo library.", link: "Learn more", img: "/pear-photo.png" },
+          { title: "Pear Store", desc: "Free shipping. Easy returns.", link: "Shop now", img: "/pear-store.png" },
+        ].map(({ title, desc, link, img }, i) => (
           <div key={title} className="text-center py-5 px-3" style={{ borderRight: i < 2 ? "1px solid #ccc" : "none" }}>
-            {img ? (
-              <img src={img} alt={title} className="w-[48px] h-[48px] mx-auto mb-2 rounded-[10px] object-cover" style={{ boxShadow: "0 2px 6px rgba(0,0,0,0.2)" }} />
-            ) : (
-              <div
-                className="w-[48px] h-[48px] mx-auto mb-2 rounded-[10px] flex items-center justify-center"
-                style={{ background: bg, boxShadow: "0 2px 6px rgba(0,0,0,0.2)" }}
-              >
-                {icon && <span className={`text-[20px] ${i === 1 ? "text-white" : ""}`}>{icon}</span>}
-              </div>
-            )}
+            <img src={img} alt={title} className="w-[48px] h-[48px] mx-auto mb-2 rounded-[10px] object-cover" style={{ boxShadow: "0 2px 6px rgba(0,0,0,0.2)" }} />
             <h3 className="text-[16px] text-black" style={{ fontFamily: "'Apple Garamond', Georgia, serif" }}>{title}</h3>
             <p className="text-[10px] text-[#555] mt-0.5">{desc}</p>
             <span className="text-[10px] text-[#06c] underline mt-1 inline-block">{link} &gt;</span>
@@ -466,7 +771,6 @@ function AquaMenuBar() {
       }}
     >
       <div className="flex items-center gap-4">
-        {/* Pear logo */}
         <PearLogo className="size-[14px] text-black/80 -mt-px" />
         <span className="font-bold">Finder</span>
         <span>File</span>
@@ -494,14 +798,11 @@ function AquaTitleBar() {
         borderRadius: "8px 8px 0 0",
       }}
     >
-      {/* Traffic lights */}
       <div className="flex items-center gap-[6px] ml-0.5">
         <TrafficLight color="red" />
         <TrafficLight color="yellow" />
         <TrafficLight color="green" />
       </div>
-
-      {/* Centered title */}
       <span
         className="absolute left-1/2 -translate-x-1/2 text-[13px] text-black/80 pointer-events-none whitespace-nowrap"
         style={{
@@ -527,7 +828,6 @@ function AquaToolbar() {
         fontFamily: "'Lucida Grande', 'Helvetica Neue', system-ui, sans-serif",
       }}
     >
-      {/* Back / Forward buttons */}
       <div className="flex items-center gap-0.5">
         <div
           className="w-[22px] h-[20px] rounded flex items-center justify-center"
@@ -554,8 +854,6 @@ function AquaToolbar() {
           </svg>
         </div>
       </div>
-
-      {/* URL bar */}
       <div className="flex-1 flex justify-center">
         <div
           className="w-full max-w-[320px] flex items-center justify-center py-[2px] px-3 text-[11px] text-black/60"
@@ -570,8 +868,6 @@ function AquaToolbar() {
           https://www.pear.com
         </div>
       </div>
-
-      {/* Reload button */}
       <div
         className="w-[22px] h-[20px] rounded flex items-center justify-center"
         style={{
@@ -593,24 +889,60 @@ function AquaToolbar() {
 export function BrowserMockup() {
   const [stepIndex, setStepIndex] = useState(0);
   const [clicking, setClicking] = useState(false);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
   const timerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
 
+  // Voice waveform animation
+  const [voiceBars, setVoiceBars] = useState<number[]>(() => generateBars(false, 0));
+  const [voiceSeconds, setVoiceSeconds] = useState(0);
+  const voiceSeedRef = useRef(0);
+  const voiceAnimRef = useRef<ReturnType<typeof setInterval>>(undefined);
+  const voiceTimerRef = useRef<ReturnType<typeof setInterval>>(undefined);
+
+  const step = ANIM_STEPS[stepIndex];
+
+  // Animate voice waveform when in voiceRecording state
+  useEffect(() => {
+    if (step.state === "voiceRecording") {
+      setVoiceSeconds(0);
+      voiceSeedRef.current = 0;
+      voiceTimerRef.current = setInterval(() => setVoiceSeconds((s) => s + 1), 1000);
+      voiceAnimRef.current = setInterval(() => {
+        voiceSeedRef.current += 1;
+        setVoiceBars(generateBars(true, voiceSeedRef.current));
+      }, 80);
+    } else if (step.state === "voicePreview") {
+      // Freeze bars
+      if (voiceAnimRef.current) clearInterval(voiceAnimRef.current);
+      if (voiceTimerRef.current) clearInterval(voiceTimerRef.current);
+    } else {
+      if (voiceAnimRef.current) clearInterval(voiceAnimRef.current);
+      if (voiceTimerRef.current) clearInterval(voiceTimerRef.current);
+      setVoiceBars(generateBars(false, 0));
+    }
+    return () => {
+      if (voiceAnimRef.current) clearInterval(voiceAnimRef.current);
+      if (voiceTimerRef.current) clearInterval(voiceTimerRef.current);
+    };
+  }, [step.state]);
+
+  // Step advancement
   useEffect(() => {
     function advance() {
       setStepIndex((prev) => (prev + 1) % ANIM_STEPS.length);
     }
 
-    const step = ANIM_STEPS[stepIndex];
-    if (step.click) {
+    const s = ANIM_STEPS[stepIndex];
+    if (s.click) {
       setClicking(true);
       const clickTimer = setTimeout(() => setClicking(false), 150);
       timerRef.current = setTimeout(() => {
         clearTimeout(clickTimer);
         advance();
-      }, step.duration);
+      }, s.duration);
     } else {
       setClicking(false);
-      timerRef.current = setTimeout(advance, step.duration);
+      timerRef.current = setTimeout(advance, s.duration);
     }
 
     return () => {
@@ -618,7 +950,23 @@ export function BrowserMockup() {
     };
   }, [stepIndex]);
 
-  const step = ANIM_STEPS[stepIndex];
+  
+  // Scroll effect
+  useEffect(() => {
+    if (scrollContainerRef.current && step.scrollY !== undefined) {
+      scrollContainerRef.current.scrollTo({
+        top: step.scrollY,
+        behavior: "smooth",
+      });
+    }
+  }, [step.scrollY]);
+
+  const voiceTime = `${Math.floor(voiceSeconds / 60)}:${String(voiceSeconds % 60).padStart(2, "0")}`;
+
+  // Map states to what the bar sees
+  const barState = (step.state === "areaSelect" || step.state === "areaDragging" || step.state === "captured")
+    ? "expanded" as WidgetState
+    : step.state;
 
   return (
     <div className="w-full h-full relative rounded-[12px] border-4 border-foreground/25">
@@ -642,7 +990,7 @@ export function BrowserMockup() {
           <AquaTitleBar />
           <AquaToolbar />
           <div className="relative flex-1 overflow-hidden bg-white">
-            <div className="absolute inset-0 overflow-y-auto scrollbar-none">
+            <div ref={scrollContainerRef} className="absolute inset-0 overflow-y-auto scrollbar-none" style={{ scrollBehavior: "smooth" }}>
               <PearSite />
             </div>
 
@@ -654,19 +1002,18 @@ export function BrowserMockup() {
             {/* Selection rectangle */}
             {step.state === "areaDragging" && step.dragStartX != null && step.dragStartY != null && (
               <div
-                className="absolute z-30 border-2 border-[#406dff] bg-[#406dff]/10 transition-all duration-700 ease-[cubic-bezier(0.16,1,0.3,1)]"
+                className="absolute z-30 border-2 border-[#3B82F6] bg-[#3B82F6]/10 transition-all duration-700 ease-[cubic-bezier(0.16,1,0.3,1)]"
                 style={{
-                  left: `${Math.min(step.dragStartX, step.cursorX)}%`,
-                  top: `${Math.min(step.dragStartY, step.cursorY)}%`,
-                  width: `${Math.abs(step.cursorX - step.dragStartX)}%`,
-                  height: `${Math.abs(step.cursorY - step.dragStartY)}%`,
+                  left: `${Math.min(Number(step.dragStartX), Number(step.cursorX))}%`,
+                  top: `${Math.min(Number(step.dragStartY), Number(step.cursorY))}%`,
+                  width: `${Math.abs(Number(step.cursorX) - Number(step.dragStartX))}%`,
+                  height: `${Math.abs(Number(step.cursorY) - Number(step.dragStartY))}%`,
                 }}
               >
-                {/* Corner handles */}
-                <div className="absolute -top-1 -left-1 w-2 h-2 bg-[#406dff] rounded-full" />
-                <div className="absolute -top-1 -right-1 w-2 h-2 bg-[#406dff] rounded-full" />
-                <div className="absolute -bottom-1 -left-1 w-2 h-2 bg-[#406dff] rounded-full" />
-                <div className="absolute -bottom-1 -right-1 w-2 h-2 bg-[#406dff] rounded-full" />
+                <div className="absolute -top-1 -left-1 w-2 h-2 bg-[#3B82F6] rounded-full" />
+                <div className="absolute -top-1 -right-1 w-2 h-2 bg-[#3B82F6] rounded-full" />
+                <div className="absolute -bottom-1 -left-1 w-2 h-2 bg-[#3B82F6] rounded-full" />
+                <div className="absolute -bottom-1 -right-1 w-2 h-2 bg-[#3B82F6] rounded-full" />
               </div>
             )}
 
@@ -675,12 +1022,19 @@ export function BrowserMockup() {
               <div className="absolute inset-0 z-30 bg-white animate-[captureFlash_500ms_ease-out_both]" />
             )}
 
-            <MockFeedbackBar widgetState={step.state === "areaSelect" || step.state === "areaDragging" || step.state === "captured" ? "expanded" : step.state} itemCount={step.itemCount ?? 0} />
+            <MockFeedbackBar
+              widgetState={barState}
+              itemCount={step.itemCount ?? 0}
+              typedChars={step.typedChars}
+              voiceBars={voiceBars}
+              voiceTime={voiceTime}
+            />
+
+            {/* Cursor */}
+            <AnimatedCursor x={step.cursorX} y={step.cursorY} clicking={clicking} crosshair={step.state === "areaSelect" || step.state === "areaDragging"} />
           </div>
         </div>
 
-        {/* Cursor */}
-        <AnimatedCursor x={step.cursorX} y={step.cursorY} clicking={clicking} crosshair={step.state === "areaSelect" || step.state === "areaDragging"} />
       </div>
     </div>
   );
