@@ -48,7 +48,7 @@ export function LandingPage() {
       </div>
 
       {/* Content */}
-      <main className="h-full flex items-center justify-center p-5 pt-16 lg:p-10 lg:pt-10">
+      <main className="h-full flex items-center justify-center p-5 pt-20 lg:p-10 lg:pt-10">
         <div className="flex gap-20 w-full max-w-3xl h-full">
           <div className="hidden lg:block shrink-0 w-[120px]" />
 
@@ -60,8 +60,8 @@ export function LandingPage() {
 
             {/* Mockup — width-constrained on mobile, height-constrained on desktop */}
             <div className="flex-1 min-h-0 flex items-center justify-center py-4 lg:py-6">
-              <FadeIn delay={200} className="w-full lg:h-full flex justify-center">
-                <div className="w-full lg:w-auto lg:h-full max-w-[840px] aspect-[3/4] lg:aspect-[16/10]">
+              <FadeIn delay={200} className="w-full lg:h-full flex justify-center h-full">
+                <div className="w-full h-full lg:w-auto lg:h-full max-w-[840px] lg:aspect-[16/10]">
                   <BrowserMockup />
                 </div>
               </FadeIn>
