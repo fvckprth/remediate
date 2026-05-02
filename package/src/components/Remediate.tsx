@@ -30,22 +30,19 @@ import { PanelHost } from "./shared/PanelHost";
 import { CheckLine, CameraFill, CamcorderFill, Message4Fill, VoiceFill } from "./icons";
 import "../styles/widget.css";
 
-const STORAGE_KEY_COLOR = "rm_marker_color";
 const STORAGE_KEY_BLOCK = "rm_block_interactions";
 const STORAGE_KEY_CLEAR = "rm_clear_after_send";
 const STORAGE_KEY_OUTPUT = "rm_output_detail";
 const STORAGE_KEY_THEME = "rm_theme";
 
 function getInitialState(): WidgetState {
-  let markerColor = DEFAULT_MARKER_COLOR;
+  const markerColor = DEFAULT_MARKER_COLOR;
   let blockInteractions = false;
   let clearAfterSend = false;
   let outputDetail: OutputDetail = "standard";
   let widgetTheme: "light" | "dark" = "dark";
 
   if (typeof window !== "undefined") {
-    const savedColor = localStorage.getItem(STORAGE_KEY_COLOR);
-    if (savedColor) markerColor = savedColor;
     const savedBlock = localStorage.getItem(STORAGE_KEY_BLOCK);
     if (savedBlock === "true") blockInteractions = true;
     const savedClear = localStorage.getItem(STORAGE_KEY_CLEAR);
@@ -143,10 +140,6 @@ function widgetReducer(state: WidgetState, action: WidgetAction): WidgetState {
 
     case "SET_PENDING_CAPTURE":
       return { ...state, pendingCapture: action.capture };
-
-    case "SET_MARKER_COLOR":
-      if (typeof window !== "undefined") localStorage.setItem(STORAGE_KEY_COLOR, action.color);
-      return { ...state, markerColor: action.color };
 
     case "SET_BLOCK_INTERACTIONS":
       if (typeof window !== "undefined") localStorage.setItem(STORAGE_KEY_BLOCK, String(action.blocked));
@@ -403,10 +396,9 @@ export function Remediate({ onSubmit, endpoint, metadata: extraMetadata, onError
       <PanelHost panelKey={panelKey} position={panelPosition} below={panelBelow} maxWidth={panelWidth} pill={state.mode === "voiceRecording"}>
         {panelKey === "settings" && (
           <SettingsPanel
-            markerColor={state.markerColor}
             blockInteractions={state.blockInteractions}
             widgetTheme={state.widgetTheme}
-            onSetColor={(color: string) => dispatch({ type: "SET_MARKER_COLOR", color })}
+
             onSetBlock={(blocked: boolean) => dispatch({ type: "SET_BLOCK_INTERACTIONS", blocked })}
             onSetTheme={(theme: "light" | "dark") => dispatch({ type: "SET_THEME", theme })}
           />

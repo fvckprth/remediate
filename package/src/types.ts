@@ -134,7 +134,6 @@ export type WidgetAction =
   | { type: "REMOVE_ITEM"; id: string }
   | { type: "SET_ACTIVE_POPOVER"; id: string | null }
   | { type: "SET_PENDING_CAPTURE"; capture: PendingCapture | null }
-  | { type: "SET_MARKER_COLOR"; color: string }
   | { type: "SET_BLOCK_INTERACTIONS"; blocked: boolean }
   | { type: "SET_THEME"; theme: "light" | "dark" }
   | { type: "SET_CLEAR_AFTER_SEND"; enabled: boolean }
@@ -180,16 +179,6 @@ export interface FeedbackSubmission {
 }
 
 // --- Constants ---
-
-export const MARKER_COLORS = [
-  "#3B82F6",
-  "#8B5CF6",
-  "#22C55E",
-  "#EAB308",
-  "#F97316",
-  "#EF4444",
-  "#94A3B8",
-] as const;
 
 export const DEFAULT_MARKER_COLOR = "#3B82F6";
 

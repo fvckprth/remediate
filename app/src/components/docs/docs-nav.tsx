@@ -58,7 +58,7 @@ export function DocsNav() {
           <Wordmark />
         </Link>
         <nav className="flex flex-col text-base font-medium tracking-tight leading-none">
-          <div className="flex flex-col gap-3">
+          <div className="flex flex-col -my-1.5">
             {navLinks.map((link) => {
               const isActive = link.href === "/"
                 ? pathname === "/"
@@ -67,7 +67,7 @@ export function DocsNav() {
                 <Link
                   key={link.href}
                   href={link.href}
-                  className={`transition-colors duration-150 ${
+                  className={`py-1.5 transition-colors duration-150 ${
                     isActive
                       ? "text-foreground"
                       : "text-foreground/25 hover:text-foreground/50"
@@ -80,12 +80,12 @@ export function DocsNav() {
           </div>
         </nav>
       </div>
-      <div className="flex items-center gap-2 h-4 opacity-50">
+      <div className="flex items-center gap-2 h-4 pt-10 text-foreground/50">
         <a
           href="https://www.npmjs.com/package/remediate"
           target="_blank"
           rel="noopener noreferrer"
-          className="text-sm font-medium leading-none tracking-tight text-foreground/25 underline decoration-dotted underline-offset-2 transition-colors hover:text-foreground/50"
+          className="text-sm font-medium leading-none tracking-tight underline decoration-dotted underline-offset-2 transition-colors hover:text-foreground/70"
         >
           v0.1.0
         </a>
@@ -93,7 +93,7 @@ export function DocsNav() {
           href="https://github.com/fvckprth/remediate"
           target="_blank"
           rel="noopener noreferrer"
-          className="text-foreground/25 opacity-60 transition-colors hover:text-foreground/50"
+          className="transition-colors hover:text-foreground/70"
         >
           <GithubIcon />
         </a>

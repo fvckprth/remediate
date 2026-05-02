@@ -1,20 +1,15 @@
-import { MARKER_COLORS } from "../../types";
 import { CheckLine, SunLine, MoonLine } from "../icons";
 
 interface SettingsPanelProps {
-  markerColor: string;
   blockInteractions: boolean;
   widgetTheme: "light" | "dark";
-  onSetColor: (color: string) => void;
   onSetBlock: (blocked: boolean) => void;
   onSetTheme: (theme: "light" | "dark") => void;
 }
 
 export function SettingsPanel({
-  markerColor,
   blockInteractions,
   widgetTheme,
-  onSetColor,
   onSetBlock,
   onSetTheme,
 }: SettingsPanelProps) {
@@ -37,23 +32,6 @@ export function SettingsPanel({
             </span>
           </span>
         </button>
-      </div>
-
-      {/* Theme */}
-      <span className="rm-settings__label">Theme</span>
-      <div className="rm-color-swatches">
-        {MARKER_COLORS.map((color) => (
-          <div
-            key={color}
-            className={`rm-swatch-ring ${markerColor === color ? "rm-swatch-ring--active" : ""}`}
-            style={{ "--swatch-color": color } as React.CSSProperties}
-            onClick={() => onSetColor(color)}
-            role="button"
-            aria-label={`Set theme color to ${color}`}
-          >
-            <div className={`rm-swatch ${markerColor === color ? "rm-swatch--active" : ""}`} />
-          </div>
-        ))}
       </div>
 
       {/* Checkboxes */}

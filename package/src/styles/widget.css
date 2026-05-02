@@ -503,15 +503,6 @@
   margin-left: auto;
 }
 
-.rm-settings__label {
-  font-size: 13px;
-  font-weight: 500;
-  color: var(--rm-fg-50);
-  margin-bottom: 8px;
-  display: block;
-}
-
-
 /* ── Theme toggle (icon button, Agentation-style) ── */
 
 .rm-theme-toggle {
@@ -559,55 +550,6 @@
     opacity: 1;
     transform: scale(1) rotate(0deg);
   }
-}
-
-.rm-color-swatches {
-  display: flex;
-  justify-content: space-between;
-  margin-bottom: 16px;
-}
-
-.rm-swatch-ring {
-  width: 24px;
-  height: 24px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border: 2px solid transparent;
-  border-radius: 50%;
-  cursor: pointer;
-  transition: border-color 0.3s ease;
-}
-
-.rm-swatch-ring--active {
-  border-color: var(--swatch-color);
-}
-
-.rm-swatch {
-  width: 20px;
-  height: 20px;
-  border-radius: 50%;
-  background: var(--swatch-color);
-  border: 2px solid transparent;
-  transition: transform 0.2s cubic-bezier(0.25, 1, 0.5, 1);
-}
-
-.rm-swatch--active {
-  transform: scale(0.83);
-}
-
-@media (hover: hover) {
-  .rm-swatch-ring:hover .rm-swatch {
-    transform: scale(1.15);
-  }
-  .rm-swatch-ring--active:hover .rm-swatch {
-    transform: scale(0.83);
-  }
-}
-
-.rm-swatch-ring:focus-visible {
-  outline: 2px solid var(--rm-fg-50);
-  outline-offset: 2px;
 }
 
 .rm-settings__checkbox-row {
@@ -2061,7 +2003,6 @@
   .rm-badge,
   .rm-marker-tooltip,
   .rm-hover-tooltip,
-  .rm-swatch,
   .rm-toolbar-btn,
   .rm-btn,
   .rm-submenu,

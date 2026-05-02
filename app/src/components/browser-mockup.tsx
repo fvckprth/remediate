@@ -345,7 +345,7 @@ function PearSite() {
     <div className="flex flex-col bg-white" style={{ minHeight: "100%", fontFamily: "'Lucida Grande', Geneva, Verdana, sans-serif" }}>
       {/* Tab navigation bar */}
       <div
-        className="flex items-center shrink-0"
+        className="flex items-center shrink-0 sticky top-0 z-10"
         style={{ background: "linear-gradient(to bottom, #b8b8b8, #8e8e8e)", borderBottom: "1px solid #555" }}
       >
         <div className="px-3 py-[5px] flex items-center" style={{ background: "linear-gradient(to bottom, #4a4a4a, #2a2a2a)" }}>
