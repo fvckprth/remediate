@@ -21,7 +21,8 @@
     "react-dom": "19.2.3",
     "remark-gfm": "^4.0.1",
     "remediate": "workspace:*",
-    "sugar-high": "^1.1.0"
+    "sugar-high": "^1.1.0",
+    "web-haptics": "^0.0.6"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",

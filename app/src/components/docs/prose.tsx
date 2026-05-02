@@ -104,7 +104,7 @@ function Li({ children, className = "", ...props }: ComponentProps<"li">) {
 function InlineCode({ children, className = "", ...props }: ComponentProps<"code">) {
   return (
     <code
-      className={`inline-flex items-center h-6 px-2 bg-foreground/5 border border-foreground/5 rounded-lg font-mono text-xs tracking-[-0.48px] text-foreground ${className}`}
+      className={`inline-flex items-center h-5 px-1.5 lg:h-6 lg:px-2 bg-foreground/5 border border-foreground/5 rounded-lg font-mono text-[11px] lg:text-xs tracking-[-0.48px] text-foreground ${className}`}
       {...props}
     >
       {children}
@@ -155,7 +155,7 @@ function Tr({ children, className = "", ...props }: ComponentProps<"tr">) {
 function Th({ children, className = "", ...props }: ComponentProps<"th">) {
   return (
     <th
-      className={`text-left px-3 py-2 font-medium text-foreground/25 text-[14px] bg-foreground/5 first:rounded-tl-xl last:rounded-tr-xl ${className}`}
+      className={`text-left px-2 py-2 lg:px-3 font-medium text-foreground/25 text-[13px] lg:text-[14px] bg-foreground/5 first:rounded-tl-xl last:rounded-tr-xl ${className}`}
       {...props}
     >
       {children}
@@ -165,7 +165,7 @@ function Th({ children, className = "", ...props }: ComponentProps<"th">) {
 
 function Td({ children, className = "", ...props }: ComponentProps<"td">) {
   return (
-    <td className={`px-3 py-3 align-top text-foreground/50 text-[14px] bg-foreground/5 ${className}`} {...props}>
+    <td className={`px-2 py-2.5 lg:px-3 lg:py-3 align-top text-foreground/50 text-[13px] lg:text-[14px] bg-foreground/5 ${className}`} {...props}>
       {children}
     </td>
   );
