@@ -48,7 +48,7 @@ export function LandingPage() {
       </div>
 
       {/* Content */}
-      <main className="h-full flex items-center justify-center p-4 pt-24 lg:p-10 lg:pt-10">
+      <main className="h-full flex items-center justify-center p-5 pt-24 lg:p-10 lg:pt-10">
         <div className="flex gap-20 w-full max-w-3xl h-full">
           <div className="hidden lg:block shrink-0 w-[120px]" />
 
