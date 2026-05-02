@@ -36,7 +36,7 @@ function Footer() {
 
 export function LandingPage() {
   return (
-    <div className="h-screen overflow-hidden">
+    <div className="h-dvh overflow-hidden">
       {/* Desktop nav — hidden on mobile */}
       <div className="hidden lg:block fixed top-10 left-10 z-30 h-[calc(100vh-80px)]">
         <DocsNav />
@@ -48,7 +48,7 @@ export function LandingPage() {
       </div>
 
       {/* Content */}
-      <main className="h-full flex items-center justify-center p-5 pt-20 lg:p-10 lg:pt-10">
+      <main className="h-full flex items-center justify-center p-4 pt-24 lg:p-10 lg:pt-10">
         <div className="flex gap-20 w-full max-w-3xl h-full">
           <div className="hidden lg:block shrink-0 w-[120px]" />
 
