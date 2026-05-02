@@ -44,6 +44,29 @@ export function AreaSelector({ onSelect, onCancel }: AreaSelectorProps) {
     onSelect(rect);
   }, [drag, onSelect]);
 
+  const handleTouchStart = useCallback((e: React.TouchEvent) => {
+    e.preventDefault();
+    const t = e.touches[0];
+    setDrag({ startX: t.clientX, startY: t.clientY, currentX: t.clientX, currentY: t.clientY });
+  }, []);
+
+  const handleTouchMove = useCallback((e: React.TouchEvent) => {
+    if (!drag) return;
+    const t = e.touches[0];
+    setDrag((prev) => prev ? { ...prev, currentX: t.clientX, currentY: t.clientY } : null);
+  }, [drag]);
+
+  const handleTouchEnd = useCallback(() => {
+    if (!drag) return;
+    const rect = toRect(drag);
+    if (rect.width < 10 || rect.height < 10) {
+      setDrag(null);
+      return;
+    }
+    setDrag(null);
+    onSelect(rect);
+  }, [drag, onSelect]);
+
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
     if (e.key === "Escape") {
       setDrag(null);
@@ -60,6 +83,9 @@ export function AreaSelector({ onSelect, onCancel }: AreaSelectorProps) {
       onMouseDown={handleMouseDown}
       onMouseMove={handleMouseMove}
       onMouseUp={handleMouseUp}
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
       onKeyDown={handleKeyDown}
       tabIndex={0}
       data-remediate-widget=""
