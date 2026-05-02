@@ -28,19 +28,19 @@ export function DocsBreadcrumbJsonLd() {
         "@type": "ListItem",
         position: 1,
         name: "Remediate",
-        item: "https://remediate.ski",
+        item: "https://www.remediate.ski",
       },
       {
         "@type": "ListItem",
         position: 2,
         name: "Docs",
-        item: "https://remediate.ski/docs/install",
+        item: "https://www.remediate.ski/docs/install",
       },
       {
         "@type": "ListItem",
         position: 3,
         name: label,
-        item: `https://remediate.ski${pathname}`,
+        item: `https://www.remediate.ski${pathname}`,
       },
     ],
   };

@@ -9,6 +9,6 @@ export default function robots(): MetadataRoute.Robots {
         disallow: ["/lab"],
       },
     ],
-    sitemap: "https://remediate.ski/sitemap.xml",
+    sitemap: "https://www.remediate.ski/sitemap.xml",
   };
 }

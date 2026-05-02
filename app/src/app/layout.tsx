@@ -22,7 +22,7 @@ const berkeleyMono = localFont({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://remediate.ski"),
+  metadataBase: new URL("https://www.remediate.ski"),
   title: {
     default: "Remediate — Open-Source In-App Feedback for React",
     template: "%s | Remediate",
@@ -46,7 +46,7 @@ export const metadata: Metadata = {
   openGraph: {
     type: "website",
     locale: "en_US",
-    url: "https://remediate.ski",
+    url: "https://www.remediate.ski",
     siteName: "Remediate",
     title: "Remediate — Open-Source In-App Feedback for React",
     description:
@@ -59,7 +59,7 @@ export const metadata: Metadata = {
       "Capture screenshots, video, voice notes, and annotations from users as in-app feedback. One React component, one server helper. MIT licensed.",
   },
   alternates: {
-    canonical: "https://remediate.ski",
+    canonical: "https://www.remediate.ski",
   },
 };
 
@@ -78,7 +78,7 @@ export default function RootLayout({
               "@context": "https://schema.org",
               "@type": "WebSite",
               name: "Remediate",
-              url: "https://remediate.ski",
+              url: "https://www.remediate.ski",
               description:
                 "Open-source React component for in-app feedback. Captures screenshots, video, voice notes, and annotations.",
               publisher: {

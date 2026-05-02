@@ -41,16 +41,16 @@ The server route you write can forward feedback anywhere:
 
 ## Documentation
 
-- Getting started: https://remediate.ski/docs/install
-- Integration recipes: https://remediate.ski/docs/recipes
-- Payload schema: https://remediate.ski/docs/payload
-- Privacy & capture: https://remediate.ski/docs/privacy
-- API reference: https://remediate.ski/docs/reference
-- FAQ: https://remediate.ski/docs/faq
+- Getting started: https://www.remediate.ski/docs/install
+- Integration recipes: https://www.remediate.ski/docs/recipes
+- Payload schema: https://www.remediate.ski/docs/payload
+- Privacy & capture: https://www.remediate.ski/docs/privacy
+- API reference: https://www.remediate.ski/docs/reference
+- FAQ: https://www.remediate.ski/docs/faq
 
 ## Links
 
-- Website: https://remediate.ski
+- Website: https://www.remediate.ski
 - npm: https://www.npmjs.com/package/remediate
 - GitHub: https://github.com/fvckprth/remediate
 - Author: Parth Patel (https://withparth.com)
