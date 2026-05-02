@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import { useState, useEffect, useId, type ReactNode } from "react";
 import { DownFill } from "@mingcute/react";
 
 interface FaqItemProps {
@@ -9,15 +9,36 @@ interface FaqItemProps {
 }
 
 export function FaqItem({ question, children }: FaqItemProps) {
+  const id = useId();
   const [open, setOpen] = useState(false);
 
+  // Close when another FaqItem opens
+  useEffect(() => {
+    function handleOtherOpen(e: Event) {
+      if ((e as CustomEvent).detail !== id) setOpen(false);
+    }
+    window.addEventListener("faq-open", handleOtherOpen);
+    return () => window.removeEventListener("faq-open", handleOtherOpen);
+  }, [id]);
+
+  function toggle() {
+    const next = !open;
+    setOpen(next);
+    if (next) {
+      window.dispatchEvent(new CustomEvent("faq-open", { detail: id }));
+    }
+  }
+
   return (
-    <div className="border-b border-foreground/5 last:border-b-0">
+    <div
+      className="border-b border-foreground/5 last:border-b-0 faq-item transition-[filter,opacity] duration-300"
+      data-open={open || undefined}
+    >
       <button
-        onClick={() => setOpen(!open)}
+        onClick={toggle}
         className="flex items-center justify-between w-full py-4 text-left cursor-pointer group"
       >
-        <span className="text-sm font-bold tracking-tight leading-none text-foreground/75">
+        <span className="text-sm font-bold tracking-tight leading-none text-foreground/75 transition-colors duration-150 group-hover:text-foreground">
           {question}
         </span>
         <DownFill

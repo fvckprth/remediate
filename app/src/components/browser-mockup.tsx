@@ -17,6 +17,7 @@ function AnimatedCursor({ x, y, clicking, crosshair = false }: { x: number | str
   const top = typeof y === "number" ? `${y}%` : y;
   return (
     <div
+      data-mock-cursor
       className="absolute z-[60] pointer-events-none transition-all duration-700 ease-[cubic-bezier(0.16,1,0.3,1)]"
       style={{ left, top }}
     >
@@ -156,8 +157,13 @@ type WidgetState =
   | "voiceRecording"
   | "voicePreview"
   | "countOnly"
+  | "annotating"
+  | "annotateHover"
+  | "annotatePopover"
   | "reviewing"
   | "success";
+
+type Priority = "none" | "low" | "medium" | "high" | "urgent";
 
 interface AnimStep {
   scrollY?: number;
@@ -171,121 +177,136 @@ interface AnimStep {
   dragStartY?: number | string;
   /** Characters to show in typing animation */
   typedChars?: number;
+  priority?: Priority;
+  hoveredIcon?: "capture" | "annotate" | "note" | "delete" | "send" | "close";
 }
 
 const CAPTURE_NOTE = "Button is misaligned";
 const TEXT_NOTE = "Colors feel off on this section";
+const ANNOT_NOTE = "Make this 200";
+
+// Default placeholder cursor positions (calibrate.js will overwrite cursorX/cursorY for QA-checked steps).
+const C = "calc(100% - 65px)";
+const CY = "calc(100% - 40px)";
 
 const ANIM_STEPS: AnimStep[] = [
-  // ── ACT 0: Idle entrance ──
-  { state: "idle",           cursorX: "50%", cursorY: "50%", click: false, duration: 1200, scrollY: 0 },
-  { state: "idle",           cursorX: "calc(100% - 65px)", cursorY: "calc(100% - 40px)", click: false, duration: 600, scrollY: 0 },
-  { state: "idle",           cursorX: "calc(100% - 65px)", cursorY: "calc(100% - 40px)", click: true,  duration: 200, scrollY: 0 },
+  // ── ACT 0: Idle (steps 0-2) ──
+  /*  0 */ { state: "idle",           cursorX: "50%", cursorY: "50%", click: false, duration: 1200, scrollY: 0 },
+  /*  1 */ { state: "idle",           cursorX: C, cursorY: CY, click: false, duration: 600, scrollY: 0 },
+  /*  2 */ { state: "idle",           cursorX: C, cursorY: CY, click: true,  duration: 200, scrollY: 0 },
 
-  // ── ACT 1: Screenshot capture ──
-  { state: "expanded",       cursorX: "calc(100% - 65px)", cursorY: "calc(100% - 40px)", click: false, duration: 700, scrollY: 0 },
-  // Move to capture button
-  { state: "expanded",       cursorX: "calc(100% - 161px)", cursorY: "calc(100% - 40px)", click: false, duration: 500, scrollY: 0 },
-  { state: "expanded",       cursorX: "calc(100% - 161px)", cursorY: "calc(100% - 40px)", click: true,  duration: 200, scrollY: 0 },
-  // Capture submenu opens
-  { state: "captureMenu",    cursorX: "calc(100% - 161px)", cursorY: "calc(100% - 40px)", click: false, duration: 400, scrollY: 0 },
-  // Move to Screenshot tile
-  { state: "captureMenu",    cursorX: "calc(100% - 152px)", cursorY: "calc(100% - 108px)", click: false, duration: 400, scrollY: 0 },
-  { state: "captureMenu",    cursorX: "calc(100% - 152px)", cursorY: "calc(100% - 108px)", click: true,  duration: 200, scrollY: 0 },
-  // Area select
-  { state: "areaSelect",     cursorX: 20, cursorY: 30, click: false, duration: 800, scrollY: 0 },
-  { state: "areaDragging",   cursorX: 20, cursorY: 30, click: true,  duration: 200, dragStartX: 20, dragStartY: 30, scrollY: 0 },
-  { state: "areaDragging",   cursorX: 60, cursorY: 65, click: false, duration: 1000, dragStartX: 20, dragStartY: 30, scrollY: 0 },
-  { state: "areaDragging",   cursorX: 60, cursorY: 65, click: false, duration: 300, dragStartX: 20, dragStartY: 30, scrollY: 0 },
-  // Capture flash
-  { state: "captured",       cursorX: 60, cursorY: 65, click: false, duration: 500, scrollY: 0 },
-  // Capture panel appears with preview
-  { state: "capturePanel",   cursorX: "calc(100% - 64px)", cursorY: "calc(100% - 96px)", click: false, duration: 800, itemCount: 0, typedChars: 0, scrollY: 0 },
-  // Typing animation in capture panel
-  { state: "capturePanel",   cursorX: "calc(100% - 64px)", cursorY: "calc(100% - 96px)", click: false, duration: 300, typedChars: 7, scrollY: 0 },
-  { state: "capturePanel",   cursorX: "calc(100% - 64px)", cursorY: "calc(100% - 96px)", click: false, duration: 250, typedChars: 10, scrollY: 0 },
-  { state: "capturePanel",   cursorX: "calc(100% - 64px)", cursorY: "calc(100% - 96px)", click: false, duration: 400, typedChars: 20, scrollY: 0 },
-  // Pause to read
-  { state: "capturePanel",   cursorX: "calc(100% - 64px)", cursorY: "calc(100% - 96px)", click: false, duration: 600, typedChars: 20, scrollY: 0 },
-  // Click Add
-  { state: "capturePanel",   cursorX: "calc(100% - 64px)", cursorY: "calc(100% - 96px)", click: true,  duration: 200, typedChars: 20, scrollY: 0 },
-  // Collapse to count-only (1 item)
-  { state: "countOnly",      cursorX: "calc(100% - 64px)", cursorY: "calc(100% - 96px)", click: false, duration: 1000, itemCount: 1, scrollY: 0 },
+  // ── ACT 1: Screenshot capture (steps 3-26) ──
+  /*  3 */ { state: "expanded",       cursorX: C, cursorY: CY, click: false, duration: 700, scrollY: 0 },
+  /*  4 */ { state: "expanded",       cursorX: "calc(100% - 140px)", cursorY: "calc(100% - 35px)", click: false, duration: 500, scrollY: 0, hoveredIcon: "capture" },
+  /*  5 */ { state: "expanded",       cursorX: "calc(100% - 140px)", cursorY: "calc(100% - 35px)", click: true,  duration: 200, scrollY: 0, hoveredIcon: "capture" },
+  /*  6 */ { state: "captureMenu",    cursorX: "calc(100% - 161px)", cursorY: CY, click: false, duration: 400, scrollY: 0 },
+  /*  7 */ { state: "captureMenu",    cursorX: "calc(100% - 132px)", cursorY: "calc(100% - 94px)", click: false, duration: 400, scrollY: 0 },
+  /*  8 */ { state: "captureMenu",    cursorX: "calc(100% - 132px)", cursorY: "calc(100% - 94px)", click: true,  duration: 200, scrollY: 0 },
+  /*  9 */ { state: "areaSelect",     cursorX: 20, cursorY: 30, click: false, duration: 800, scrollY: 0 },
+  /* 10 */ { state: "areaDragging",   cursorX: 20, cursorY: 30, click: true,  duration: 200, dragStartX: 20, dragStartY: 30, scrollY: 0 },
+  /* 11 */ { state: "areaDragging",   cursorX: 60, cursorY: 65, click: false, duration: 1000, dragStartX: 20, dragStartY: 30, scrollY: 0 },
+  /* 12 */ { state: "areaDragging",   cursorX: 60, cursorY: 65, click: false, duration: 300, dragStartX: 20, dragStartY: 30, scrollY: 0 },
+  /* 13 */ { state: "captured",       cursorX: 60, cursorY: 65, click: false, duration: 500, scrollY: 0 },
+  /* 14 */ { state: "capturePanel",   cursorX: "calc(100% - 64px)", cursorY: "calc(100% - 96px)", click: false, duration: 800, typedChars: 0, scrollY: 0 },
+  /* 15 */ { state: "capturePanel",   cursorX: "calc(100% - 139px)", cursorY: "calc(100% - 163px)", click: false, duration: 300, typedChars: 7, scrollY: 0 },
+  /* 16 */ { state: "capturePanel",   cursorX: "calc(100% - 139px)", cursorY: "calc(100% - 163px)", click: false, duration: 250, typedChars: 14, scrollY: 0 },
+  /* 17 */ { state: "capturePanel",   cursorX: "calc(100% - 64px)", cursorY: "calc(100% - 96px)", click: false, duration: 400, typedChars: 20, scrollY: 0 },
+  /* 18 */ { state: "capturePanel",   cursorX: "calc(100% - 64px)", cursorY: "calc(100% - 96px)", click: false, duration: 500, typedChars: 20, scrollY: 0 },
+  /* 19 */ { state: "capturePanel",   cursorX: "calc(100% - 200px)", cursorY: "calc(100% - 130px)", click: false, duration: 350, typedChars: 20, scrollY: 0, priority: "none" },
+  /* 20 */ { state: "capturePanel",   cursorX: "calc(100% - 200px)", cursorY: "calc(100% - 130px)", click: false, duration: 200, typedChars: 20, scrollY: 0, priority: "none" },
+  /* 21 */ { state: "capturePanel",   cursorX: "calc(100% - 213px)", cursorY: "calc(100% - 124px)", click: true,  duration: 250, typedChars: 20, scrollY: 0, priority: "low" },
+  /* 22 */ { state: "capturePanel",   cursorX: "calc(100% - 204px)", cursorY: "calc(100% - 124px)", click: true,  duration: 250, typedChars: 20, scrollY: 0, priority: "medium" },
+  /* 23 */ { state: "capturePanel",   cursorX: "calc(100% - 212px)", cursorY: "calc(100% - 124px)", click: true,  duration: 250, typedChars: 20, scrollY: 0, priority: "high" },
+  /* 24 */ { state: "capturePanel",   cursorX: "calc(100% - 207px)", cursorY: "calc(100% - 124px)", click: true,  duration: 350, typedChars: 20, scrollY: 0, priority: "urgent" },
+  /* 25 */ { state: "capturePanel",   cursorX: "calc(100% - 53px)", cursorY: "calc(100% - 85px)", click: false, duration: 400, typedChars: 20, scrollY: 0, priority: "urgent" },
+  /* 26 */ { state: "capturePanel",   cursorX: "calc(100% - 53px)", cursorY: "calc(100% - 85px)", click: true,  duration: 200, typedChars: 20, scrollY: 0, priority: "urgent" },
+  /* 27 */ { state: "countOnly",      cursorX: "calc(100% - 64px)", cursorY: "calc(100% - 96px)", click: false, duration: 800, itemCount: 1, scrollY: 0 },
 
-  // ── ACT 2: Text note ──
-  // Move to count-only pill
-  { state: "countOnly",      cursorX: "calc(100% - 38px)", cursorY: "calc(100% - 40px)", click: false, duration: 500, itemCount: 1, scrollY: 0 },
-  { state: "countOnly",      cursorX: "calc(100% - 38px)", cursorY: "calc(100% - 40px)", click: true,  duration: 200, itemCount: 1, scrollY: 0 },
-  { state: "expanded",       cursorX: "calc(100% - 38px)", cursorY: "calc(100% - 40px)", click: false, duration: 700, itemCount: 1, scrollY: 0 },
-  // Move to Note button
-  { state: "expanded",       cursorX: "calc(100% - 168px)", cursorY: "calc(100% - 40px)", click: false, duration: 500, itemCount: 1, scrollY: 0 },
-  { state: "expanded",       cursorX: "calc(100% - 168px)", cursorY: "calc(100% - 40px)", click: true,  duration: 200, itemCount: 1, scrollY: 0 },
-  // Note submenu
-  { state: "noteMenu",       cursorX: "calc(100% - 168px)", cursorY: "calc(100% - 40px)", click: false, duration: 400, itemCount: 1, scrollY: 0 },
-  // Click Text tile
-  { state: "noteMenu",       cursorX: "calc(100% - 152px)", cursorY: "calc(100% - 108px)", click: false, duration: 400, itemCount: 1, scrollY: 0 },
-  { state: "noteMenu",       cursorX: "calc(100% - 152px)", cursorY: "calc(100% - 108px)", click: true,  duration: 200, itemCount: 1, scrollY: 0 },
-  // Text panel opens
-  { state: "textPanel",      cursorX: "calc(100% - 66px)", cursorY: "calc(100% - 96px)", click: false, duration: 800, itemCount: 1, typedChars: 0, scrollY: 0 },
-  // Type text
-  { state: "textPanel",      cursorX: "calc(100% - 66px)", cursorY: "calc(100% - 96px)", click: false, duration: 300, itemCount: 1, typedChars: 7, scrollY: 0 },
-  { state: "textPanel",      cursorX: "calc(100% - 66px)", cursorY: "calc(100% - 96px)", click: false, duration: 350, itemCount: 1, typedChars: 16, scrollY: 0 },
-  { state: "textPanel",      cursorX: "calc(100% - 66px)", cursorY: "calc(100% - 96px)", click: false, duration: 300, itemCount: 1, typedChars: 24, scrollY: 0 },
-  { state: "textPanel",      cursorX: "calc(100% - 66px)", cursorY: "calc(100% - 96px)", click: false, duration: 350, itemCount: 1, typedChars: 31, scrollY: 0 },
-  // Pause
-  { state: "textPanel",      cursorX: "calc(100% - 66px)", cursorY: "calc(100% - 96px)", click: false, duration: 600, itemCount: 1, typedChars: 31, scrollY: 0 },
-  // Click Add
-  { state: "textPanel",      cursorX: "calc(100% - 66px)", cursorY: "calc(100% - 96px)", click: true,  duration: 200, itemCount: 1, typedChars: 31, scrollY: 0 },
-  // Collapse to count-only (2 items)
-  { state: "countOnly",      cursorX: "calc(100% - 66px)", cursorY: "calc(100% - 96px)", click: false, duration: 1000, itemCount: 2, scrollY: 0 },
+  // ── ACT 2: Annotate (steps 28-52) ──
+  /* 28 */ { state: "countOnly",      cursorX: "calc(100% - 33px)", cursorY: "calc(100% - 35px)", click: false, duration: 500, itemCount: 1, scrollY: 0 },
+  /* 29 */ { state: "countOnly",      cursorX: "calc(100% - 33px)", cursorY: "calc(100% - 35px)", click: true,  duration: 250, itemCount: 1, scrollY: 0 },
+  /* 30 */ { state: "expanded",       cursorX: "calc(100% - 38px)", cursorY: CY, click: false, duration: 600, itemCount: 1, scrollY: 0 },
+  /* 31 */ { state: "expanded",       cursorX: "calc(100% - 179px)", cursorY: "calc(100% - 35px)", click: false, duration: 500, itemCount: 1, scrollY: 0, hoveredIcon: "annotate" },
+  /* 32 */ { state: "expanded",       cursorX: "calc(100% - 179px)", cursorY: "calc(100% - 35px)", click: true,  duration: 200, itemCount: 1, scrollY: 0, hoveredIcon: "annotate" },
+  /* 33 */ { state: "annotating",     cursorX: "50%", cursorY: "60%", click: false, duration: 600, itemCount: 1, scrollY: 0 },
+  /* 34 */ { state: "annotateHover",  cursorX: "211px", cursorY: "106px", click: false, duration: 500, itemCount: 1, scrollY: 0 },
+  /* 35 */ { state: "annotateHover",  cursorX: "211px", cursorY: "106px", click: false, duration: 350, itemCount: 1, scrollY: 0 },
+  /* 36 */ { state: "annotateHover",  cursorX: "211px", cursorY: "106px", click: true,  duration: 250, itemCount: 1, scrollY: 0 },
+  /* 37 */ { state: "annotatePopover", cursorX: "calc(50% - 30px)", cursorY: "100px", click: false, duration: 600, itemCount: 1, typedChars: 0, scrollY: 0 },
+  /* 38 */ { state: "annotatePopover", cursorX: "calc(100% - 331px)", cursorY: "177px", click: false, duration: 350, itemCount: 1, typedChars: 5, scrollY: 0 },
+  /* 39 */ { state: "annotatePopover", cursorX: "calc(100% - 331px)", cursorY: "177px", click: false, duration: 350, itemCount: 1, typedChars: 13, scrollY: 0 },
+  /* 40 */ { state: "annotatePopover", cursorX: "50%", cursorY: "180px", click: false, duration: 600, itemCount: 1, typedChars: 13, scrollY: 0 },
+  /* 41 */ { state: "annotatePopover", cursorX: "50%", cursorY: "180px", click: false, duration: 250, itemCount: 1, typedChars: 13, scrollY: 0 },
+  /* 42 */ { state: "annotatePopover", cursorX: "50%", cursorY: "180px", click: false, duration: 250, itemCount: 1, typedChars: 13, scrollY: 0 },
+  /* 43 */ { state: "annotatePopover", cursorX: "50%", cursorY: "180px", click: false, duration: 250, itemCount: 1, typedChars: 13, scrollY: 0 },
+  /* 44 */ { state: "annotatePopover", cursorX: "50%", cursorY: "180px", click: false, duration: 350, itemCount: 1, typedChars: 13, scrollY: 0, priority: "none" },
+  /* 45 */ { state: "annotatePopover", cursorX: "274px", cursorY: "calc(100% - 156px)", click: false, duration: 300, itemCount: 1, typedChars: 13, scrollY: 0, priority: "none" },
+  /* 46 */ { state: "annotatePopover", cursorX: "259px", cursorY: "calc(100% - 156px)", click: true,  duration: 250, itemCount: 1, typedChars: 13, scrollY: 0, priority: "low" },
+  /* 47 */ { state: "annotatePopover", cursorX: "268px", cursorY: "calc(100% - 156px)", click: true,  duration: 250, itemCount: 1, typedChars: 13, scrollY: 0, priority: "medium" },
+  /* 48 */ { state: "annotatePopover", cursorX: "260px", cursorY: "calc(100% - 156px)", click: true,  duration: 250, itemCount: 1, typedChars: 13, scrollY: 0, priority: "high" },
+  /* 49 */ { state: "annotatePopover", cursorX: "265px", cursorY: "calc(100% - 156px)", click: true,  duration: 250, itemCount: 1, typedChars: 13, scrollY: 0, priority: "urgent" },
+  /* 50 */ { state: "annotatePopover", cursorX: "260px", cursorY: "calc(100% - 156px)", click: true,  duration: 350, itemCount: 1, typedChars: 13, scrollY: 0, priority: "high" },
+  /* 51 */ { state: "annotatePopover", cursorX: "calc(100% - 246px)", cursorY: "calc(100% - 117px)", click: false, duration: 400, itemCount: 1, typedChars: 13, scrollY: 0, priority: "high" },
+  /* 52 */ { state: "annotatePopover", cursorX: "calc(100% - 246px)", cursorY: "calc(100% - 117px)", click: true,  duration: 250, itemCount: 1, typedChars: 13, scrollY: 0, priority: "high" },
+  /* 53 */ { state: "countOnly",      cursorX: "calc(50% + 110px)", cursorY: "280px", click: false, duration: 700, itemCount: 2, scrollY: 0 },
 
-  // ── ACT 3: Voice note ──
-  { state: "countOnly",      cursorX: "calc(100% - 38px)", cursorY: "calc(100% - 40px)", click: false, duration: 500, itemCount: 2, scrollY: 0 },
-  { state: "countOnly",      cursorX: "calc(100% - 38px)", cursorY: "calc(100% - 40px)", click: true,  duration: 200, itemCount: 2, scrollY: 0 },
-  { state: "expanded",       cursorX: "calc(100% - 38px)", cursorY: "calc(100% - 40px)", click: false, duration: 700, itemCount: 2, scrollY: 0 },
-  // Move to Note
-  { state: "expanded",       cursorX: "calc(100% - 168px)", cursorY: "calc(100% - 40px)", click: false, duration: 500, itemCount: 2, scrollY: 0 },
-  { state: "expanded",       cursorX: "calc(100% - 168px)", cursorY: "calc(100% - 40px)", click: true,  duration: 200, itemCount: 2, scrollY: 0 },
-  { state: "noteMenu",       cursorX: "calc(100% - 168px)", cursorY: "calc(100% - 40px)", click: false, duration: 400, itemCount: 2, scrollY: 0 },
-  // Click Voice tile
-  { state: "noteMenu",       cursorX: "calc(100% - 64px)", cursorY: "calc(100% - 108px)", click: false, duration: 400, itemCount: 2, scrollY: 0 },
-  { state: "noteMenu",       cursorX: "calc(100% - 64px)", cursorY: "calc(100% - 108px)", click: true,  duration: 200, itemCount: 2, scrollY: 0 },
-  // Voice recording
-  { state: "voiceRecording", cursorX: "calc(100% - 40px)", cursorY: "calc(100% - 88px)", click: false, duration: 800, itemCount: 2, scrollY: 0 },
-  { state: "voiceRecording", cursorX: "calc(100% - 40px)", cursorY: "calc(100% - 88px)", click: false, duration: 1000, itemCount: 2, scrollY: 140 },
-  { state: "voiceRecording", cursorX: "calc(100% - 40px)", cursorY: "calc(100% - 88px)", click: false, duration: 1000, itemCount: 2, scrollY: 260 },
-  // Click stop
-  { state: "voiceRecording", cursorX: "calc(100% - 40px)", cursorY: "calc(100% - 88px)", click: false, duration: 200, itemCount: 2, scrollY: 260 },
-  { state: "voiceRecording", cursorX: "calc(100% - 40px)", cursorY: "calc(100% - 88px)", click: true,  duration: 200, itemCount: 2, scrollY: 260 },
-  // Voice preview
-  { state: "voicePreview",   cursorX: "calc(100% - 62px)", cursorY: "calc(100% - 94px)", click: false, duration: 1200, itemCount: 2, scrollY: 260 },
-  // Click Add
-  { state: "voicePreview",   cursorX: "calc(100% - 62px)", cursorY: "calc(100% - 94px)", click: false, duration: 200, itemCount: 2, scrollY: 260 },
-  { state: "voicePreview",   cursorX: "calc(100% - 62px)", cursorY: "calc(100% - 94px)", click: true,  duration: 200, itemCount: 2, scrollY: 260 },
-  // Collapse to count-only (3 items)
-  { state: "countOnly",      cursorX: "calc(100% - 62px)", cursorY: "calc(100% - 94px)", click: false, duration: 1000, itemCount: 3, scrollY: 0 },
+  // ── ACT 3: Text note (steps 54-74) ──
+  /* 54 */ { state: "countOnly",      cursorX: "calc(100% - 33px)", cursorY: "calc(100% - 35px)", click: false, duration: 500, itemCount: 2, scrollY: 0 },
+  /* 55 */ { state: "countOnly",      cursorX: "calc(100% - 33px)", cursorY: "calc(100% - 35px)", click: true,  duration: 250, itemCount: 2, scrollY: 0 },
+  /* 56 */ { state: "expanded",       cursorX: "calc(100% - 38px)", cursorY: CY, click: false, duration: 600, itemCount: 2, scrollY: 0 },
+  /* 57 */ { state: "expanded",       cursorX: "calc(100% - 146px)", cursorY: "calc(100% - 35px)", click: false, duration: 500, itemCount: 2, scrollY: 0, hoveredIcon: "note" },
+  /* 58 */ { state: "expanded",       cursorX: "calc(100% - 146px)", cursorY: "calc(100% - 35px)", click: true,  duration: 200, itemCount: 2, scrollY: 0, hoveredIcon: "note" },
+  /* 59 */ { state: "noteMenu",       cursorX: "calc(100% - 168px)", cursorY: CY, click: false, duration: 400, itemCount: 2, scrollY: 0 },
+  /* 60 */ { state: "noteMenu",       cursorX: "calc(100% - 132px)", cursorY: "calc(100% - 94px)", click: false, duration: 400, itemCount: 2, scrollY: 0 },
+  /* 61 */ { state: "noteMenu",       cursorX: "calc(100% - 132px)", cursorY: "calc(100% - 94px)", click: true,  duration: 200, itemCount: 2, scrollY: 0 },
+  /* 62 */ { state: "textPanel",      cursorX: "calc(100% - 66px)", cursorY: "calc(100% - 96px)", click: false, duration: 700, itemCount: 2, typedChars: 0, scrollY: 0 },
+  /* 63 */ { state: "textPanel",      cursorX: "calc(100% - 139px)", cursorY: "calc(100% - 163px)", click: false, duration: 300, itemCount: 2, typedChars: 7, scrollY: 0 },
+  /* 64 */ { state: "textPanel",      cursorX: "calc(100% - 139px)", cursorY: "calc(100% - 163px)", click: false, duration: 350, itemCount: 2, typedChars: 16, scrollY: 0 },
+  /* 65 */ { state: "textPanel",      cursorX: "calc(100% - 66px)", cursorY: "calc(100% - 96px)", click: false, duration: 300, itemCount: 2, typedChars: 24, scrollY: 0 },
+  /* 66 */ { state: "textPanel",      cursorX: "calc(100% - 66px)", cursorY: "calc(100% - 96px)", click: false, duration: 350, itemCount: 2, typedChars: 31, scrollY: 0 },
+  /* 67 */ { state: "textPanel",      cursorX: "calc(100% - 66px)", cursorY: "calc(100% - 96px)", click: false, duration: 600, itemCount: 2, typedChars: 31, scrollY: 0 },
+  /* 68 */ { state: "textPanel",      cursorX: "calc(100% - 66px)", cursorY: "calc(100% - 96px)", click: false, duration: 200, itemCount: 2, typedChars: 31, scrollY: 0 },
+  /* 69 */ { state: "textPanel",      cursorX: "calc(100% - 200px)", cursorY: "calc(100% - 130px)", click: false, duration: 350, itemCount: 2, typedChars: 31, scrollY: 0, priority: "none" },
+  /* 70 */ { state: "textPanel",      cursorX: "calc(100% - 200px)", cursorY: "calc(100% - 130px)", click: false, duration: 200, itemCount: 2, typedChars: 31, scrollY: 0, priority: "none" },
+  /* 71 */ { state: "textPanel",      cursorX: "calc(100% - 211px)", cursorY: "calc(100% - 124px)", click: true,  duration: 250, itemCount: 2, typedChars: 31, scrollY: 0, priority: "low" },
+  /* 72 */ { state: "textPanel",      cursorX: "calc(100% - 203px)", cursorY: "calc(100% - 124px)", click: true,  duration: 350, itemCount: 2, typedChars: 31, scrollY: 0, priority: "medium" },
+  /* 73 */ { state: "textPanel",      cursorX: "calc(100% - 54px)", cursorY: "calc(100% - 85px)", click: false, duration: 400, itemCount: 2, typedChars: 31, scrollY: 0, priority: "medium" },
+  /* 74 */ { state: "textPanel",      cursorX: "calc(100% - 54px)", cursorY: "calc(100% - 85px)", click: true,  duration: 200, itemCount: 2, typedChars: 31, scrollY: 0, priority: "medium" },
+  /* 75 */ { state: "countOnly",      cursorX: "calc(100% - 66px)", cursorY: "calc(100% - 96px)", click: false, duration: 800, itemCount: 3, scrollY: 0 },
 
-  // ── ACT 4: Review & submit ──
-  { state: "countOnly",      cursorX: "calc(100% - 38px)", cursorY: "calc(100% - 40px)", click: false, duration: 500, itemCount: 3, scrollY: 0 },
-  { state: "countOnly",      cursorX: "calc(100% - 38px)", cursorY: "calc(100% - 40px)", click: true,  duration: 200, itemCount: 3, scrollY: 0 },
-  { state: "expanded",       cursorX: "calc(100% - 38px)", cursorY: "calc(100% - 40px)", click: false, duration: 700, itemCount: 3, scrollY: 0 },
-  // Click send/review button
-  { state: "expanded",       cursorX: "calc(100% - 85px)", cursorY: "calc(100% - 40px)", click: false, duration: 500, itemCount: 3, scrollY: 0 },
-  { state: "expanded",       cursorX: "calc(100% - 85px)", cursorY: "calc(100% - 40px)", click: true,  duration: 200, itemCount: 3, scrollY: 0 },
-  // Review panel
-  { state: "reviewing",      cursorX: "calc(100% - 62px)", cursorY: "calc(100% - 94px)", click: false, duration: 1500, itemCount: 3, scrollY: 0 },
-  // Click Submit
-  { state: "reviewing",      cursorX: "calc(100% - 62px)", cursorY: "calc(100% - 94px)", click: false, duration: 200, itemCount: 3, scrollY: 0 },
-  { state: "reviewing",      cursorX: "calc(100% - 62px)", cursorY: "calc(100% - 94px)", click: true,  duration: 200, itemCount: 3, scrollY: 0 },
-  // Success
-  { state: "success",        cursorX: "calc(100% - 62px)", cursorY: "calc(100% - 94px)", click: false, duration: 1500, scrollY: 0 },
-  // Back to idle
-  { state: "idle",           cursorX: "50%", cursorY: "50%", click: false, duration: 1200, scrollY: 0 },
+  // ── ACT 4: Voice note (steps 76-91) ──
+  /* 76 */ { state: "countOnly",      cursorX: "calc(100% - 33px)", cursorY: "calc(100% - 35px)", click: false, duration: 500, itemCount: 3, scrollY: 0 },
+  /* 77 */ { state: "countOnly",      cursorX: "calc(100% - 33px)", cursorY: "calc(100% - 35px)", click: true,  duration: 250, itemCount: 3, scrollY: 0 },
+  /* 78 */ { state: "expanded",       cursorX: "calc(100% - 38px)", cursorY: CY, click: false, duration: 600, itemCount: 3, scrollY: 0 },
+  /* 79 */ { state: "expanded",       cursorX: "calc(100% - 146px)", cursorY: "calc(100% - 35px)", click: false, duration: 500, itemCount: 3, scrollY: 0, hoveredIcon: "note" },
+  /* 80 */ { state: "expanded",       cursorX: "calc(100% - 146px)", cursorY: "calc(100% - 35px)", click: true,  duration: 200, itemCount: 3, scrollY: 0, hoveredIcon: "note" },
+  /* 81 */ { state: "noteMenu",       cursorX: "calc(100% - 168px)", cursorY: CY, click: false, duration: 400, itemCount: 3, scrollY: 0 },
+  /* 82 */ { state: "noteMenu",       cursorX: "calc(100% - 56px)", cursorY: "calc(100% - 94px)", click: false, duration: 400, itemCount: 3, scrollY: 0 },
+  /* 83 */ { state: "noteMenu",       cursorX: "calc(100% - 56px)", cursorY: "calc(100% - 94px)", click: true,  duration: 200, itemCount: 3, scrollY: 0 },
+  /* 84 */ { state: "voiceRecording", cursorX: "calc(100% - 40px)", cursorY: "calc(100% - 88px)", click: false, duration: 800, itemCount: 3, scrollY: 0 },
+  /* 85 */ { state: "voiceRecording", cursorX: "calc(100% - 40px)", cursorY: "calc(100% - 88px)", click: false, duration: 1000, itemCount: 3, scrollY: 140 },
+  /* 86 */ { state: "voiceRecording", cursorX: "calc(100% - 40px)", cursorY: "calc(100% - 88px)", click: false, duration: 1000, itemCount: 3, scrollY: 260 },
+  /* 87 */ { state: "voiceRecording", cursorX: "calc(100% - 35px)", cursorY: "calc(100% - 77px)", click: false, duration: 350, itemCount: 3, scrollY: 260 },
+  /* 88 */ { state: "voiceRecording", cursorX: "calc(100% - 35px)", cursorY: "calc(100% - 77px)", click: true,  duration: 200, itemCount: 3, scrollY: 260 },
+  /* 89 */ { state: "voicePreview",   cursorX: "calc(100% - 62px)", cursorY: "calc(100% - 94px)", click: false, duration: 1000, itemCount: 3, scrollY: 260 },
+  /* 90 */ { state: "voicePreview",   cursorX: "calc(100% - 51px)", cursorY: "calc(100% - 83px)", click: false, duration: 350, itemCount: 3, scrollY: 260 },
+  /* 91 */ { state: "voicePreview",   cursorX: "calc(100% - 51px)", cursorY: "calc(100% - 83px)", click: true,  duration: 200, itemCount: 3, scrollY: 260 },
+  /* 92 */ { state: "countOnly",      cursorX: "calc(100% - 62px)", cursorY: "calc(100% - 94px)", click: false, duration: 800, itemCount: 4, scrollY: 0 },
+
+  // ── ACT 5: Review & submit (steps 93-100) ──
+  /* 93 */ { state: "countOnly",      cursorX: "calc(100% - 33px)", cursorY: "calc(100% - 35px)", click: false, duration: 500, itemCount: 4, scrollY: 0 },
+  /* 94 */ { state: "countOnly",      cursorX: "calc(100% - 33px)", cursorY: "calc(100% - 35px)", click: true,  duration: 250, itemCount: 4, scrollY: 0 },
+  /* 95 */ { state: "expanded",       cursorX: "calc(100% - 38px)", cursorY: CY, click: false, duration: 600, itemCount: 4, scrollY: 0 },
+  /* 96 */ { state: "expanded",       cursorX: "calc(100% - 74px)", cursorY: "calc(100% - 35px)", click: false, duration: 500, itemCount: 4, scrollY: 0, hoveredIcon: "send" },
+  /* 97 */ { state: "expanded",       cursorX: "calc(100% - 74px)", cursorY: "calc(100% - 35px)", click: true,  duration: 200, itemCount: 4, scrollY: 0, hoveredIcon: "send" },
+  /* 98 */ { state: "reviewing",      cursorX: "calc(100% - 62px)", cursorY: "calc(100% - 94px)", click: false, duration: 1000, itemCount: 4, scrollY: 0 },
+  /* 99 */ { state: "reviewing",      cursorX: "calc(100% - 59px)", cursorY: "calc(100% - 83px)", click: false, duration: 350, itemCount: 4, scrollY: 0 },
+  /*100 */ { state: "reviewing",      cursorX: "calc(100% - 59px)", cursorY: "calc(100% - 83px)", click: true,  duration: 200, itemCount: 4, scrollY: 0 },
 ];
 
 // ── Mock panels ────────────────────────────────────────────────
 
-function MockSubMenu({ items }: { items: { icon: React.ReactNode; label: string }[] }) {
+function MockSubMenu({ items }: { items: { icon: React.ReactNode; label: string; target?: string }[] }) {
   return (
     <div
       className="absolute bottom-[48px] right-0 flex items-center gap-2 p-1 rounded-2xl animate-[fadeInUp_200ms_ease-out]"
@@ -294,6 +315,7 @@ function MockSubMenu({ items }: { items: { icon: React.ReactNode; label: string 
       {items.map((item) => (
         <div
           key={item.label}
+          data-mock-target={item.target}
           className="flex flex-col items-center justify-center gap-2 rounded-xl"
           style={{ width: 80, height: 72, color: FG50 }}
         >
@@ -305,7 +327,61 @@ function MockSubMenu({ items }: { items: { icon: React.ReactNode; label: string 
   );
 }
 
-function MockCapturePanel({ typedChars = 0 }: { typedChars?: number }) {
+const PRIORITY_LABELS: Record<Priority, string> = {
+  none: "Set priority",
+  low: "Low",
+  medium: "Medium",
+  high: "High",
+  urgent: "Urgent",
+};
+
+const PRIORITY_BG: Record<Priority, string> = {
+  none: "rgba(255,255,255,0.06)",
+  low: "rgba(69,255,100,0.12)",
+  medium: "rgba(255,237,45,0.14)",
+  high: "rgba(255,136,45,0.16)",
+  urgent: "rgba(255,69,69,0.18)",
+};
+
+const PRIORITY_FG: Record<Priority, string> = {
+  none: FG50,
+  low: "#45ff64",
+  medium: "#ffed2d",
+  high: "#ff882d",
+  urgent: "#ff4545",
+};
+
+function MockPriorityButton({ priority = "none", targetPrefix }: { priority?: Priority; targetPrefix: string }) {
+  const isUrgent = priority === "urgent";
+  const dim = "rgba(255,255,255,0.2)";
+  const c1 = priority === "low" || priority === "medium" || priority === "high" ? (priority === "low" ? "#45ff64" : priority === "medium" ? "#ffed2d" : "#ff882d") : dim;
+  const c2 = priority === "medium" || priority === "high" ? (priority === "medium" ? "#ffed2d" : "#ff882d") : dim;
+  const c3 = priority === "high" ? "#ff882d" : dim;
+  return (
+    <button
+      data-mock-target={`${targetPrefix}-priority`}
+      className="inline-flex items-center gap-1.5 rounded-full px-2 py-1 text-[11px] font-medium"
+      style={{ background: PRIORITY_BG[priority], color: PRIORITY_FG[priority], letterSpacing: "-0.3px", transition: "background 200ms ease, color 200ms ease" }}
+    >
+      {isUrgent ? (
+        <svg width={14} height={14} viewBox="0 0 16 16" fill="none">
+          <circle cx="8" cy="8" r="7" fill="#ff4545" />
+          <path d="M8 4.5v4" stroke="#fff" strokeWidth="1.8" strokeLinecap="round" />
+          <circle cx="8" cy="11" r="0.9" fill="#fff" />
+        </svg>
+      ) : (
+        <svg width={14} height={14} viewBox="0 0 16 16" fill="none">
+          <rect x="3" y="10" width="3" height="4" rx="1.5" fill={c1} />
+          <rect x="7" y="6" width="3" height="8" rx="1.5" fill={c2} />
+          <rect x="11" y="2" width="3" height="12" rx="1.5" fill={c3} />
+        </svg>
+      )}
+      <span>{PRIORITY_LABELS[priority]}</span>
+    </button>
+  );
+}
+
+function MockCapturePanel({ typedChars = 0, priority = "none" }: { typedChars?: number; priority?: Priority }) {
   const text = CAPTURE_NOTE.slice(0, typedChars);
   return (
     <div
@@ -320,19 +396,22 @@ function MockCapturePanel({ typedChars = 0 }: { typedChars?: number }) {
       <div className="rounded-lg overflow-hidden" style={{ height: 120, background: "linear-gradient(135deg, #2a2a4a, #1a1a3a)" }}>
         <img src="/capture-preview.png" alt="Screenshot preview" className="w-full h-full object-cover" />
       </div>
-      {/* Textarea */}
-      <div className="rounded-xl" style={{ background: FG05, border: `1px solid ${FG10}` }}>
-        <div className="px-3 py-2 text-[13px] min-h-[52px]" style={{ color: text ? FG : FG25 }}>
+      {/* Textarea + priority */}
+      <div className="rounded-xl flex flex-col gap-1.5 px-3 py-2" style={{ background: FG05, border: `1px solid ${FG10}` }}>
+        <div data-mock-target="capture-textarea" className="text-[13px] min-h-[52px]" style={{ color: text ? FG : FG25 }}>
           {text || "Add a note (optional)"}
           {typedChars < CAPTURE_NOTE.length && <span className="animate-pulse">|</span>}
+        </div>
+        <div className="flex items-center">
+          <MockPriorityButton priority={priority} targetPrefix="capture" />
         </div>
       </div>
       {/* Footer */}
       <div className="flex justify-end gap-1.5">
-        <button className="px-3.5 py-1.5 rounded-full text-[13px] font-medium" style={{ color: FG50 }}>
+        <button data-mock-target="capture-cancel" className="px-3.5 py-1.5 rounded-full text-[13px] font-medium" style={{ color: FG50 }}>
           Cancel
         </button>
-        <button className="px-3.5 py-1.5 rounded-full text-[13px] font-medium" style={{ background: ACCENT, color: FG }}>
+        <button data-mock-target="capture-add" className="px-3.5 py-1.5 rounded-full text-[13px] font-medium" style={{ background: ACCENT, color: FG }}>
           Add
         </button>
       </div>
@@ -340,7 +419,7 @@ function MockCapturePanel({ typedChars = 0 }: { typedChars?: number }) {
   );
 }
 
-function MockTextPanel({ typedChars = 0 }: { typedChars?: number }) {
+function MockTextPanel({ typedChars = 0, priority = "none" }: { typedChars?: number; priority?: Priority }) {
   const text = TEXT_NOTE.slice(0, typedChars);
   return (
     <div
@@ -348,19 +427,67 @@ function MockTextPanel({ typedChars = 0 }: { typedChars?: number }) {
       style={{ width: 280, padding: "12px 16px 14px", background: PANEL_BG, boxShadow: PANEL_SHADOW, fontFamily: FONT }}
     >
       <p className="text-[13px] mb-2" style={{ color: FG50 }}>Text</p>
-      {/* Textarea */}
-      <div className="rounded-xl" style={{ background: FG05, border: `1px solid ${FG10}` }}>
-        <div className="px-3 py-2 text-[13px] min-h-[52px]" style={{ color: text ? FG : FG25 }}>
+      {/* Textarea + priority */}
+      <div className="rounded-xl flex flex-col gap-1.5 px-3 py-2" style={{ background: FG05, border: `1px solid ${FG10}` }}>
+        <div data-mock-target="text-textarea" className="text-[13px] min-h-[52px]" style={{ color: text ? FG : FG25 }}>
           {text || "What's on your mind?"}
           {typedChars < TEXT_NOTE.length && <span className="animate-pulse">|</span>}
+        </div>
+        <div className="flex items-center">
+          <MockPriorityButton priority={priority} targetPrefix="text" />
         </div>
       </div>
       {/* Footer */}
       <div className="flex justify-end gap-1.5 mt-2">
-        <button className="px-3.5 py-1.5 rounded-full text-[13px] font-medium" style={{ color: FG50 }}>
+        <button data-mock-target="text-cancel" className="px-3.5 py-1.5 rounded-full text-[13px] font-medium" style={{ color: FG50 }}>
           Cancel
         </button>
         <button
+          data-mock-target="text-add"
+          className="px-3.5 py-1.5 rounded-full text-[13px] font-medium"
+          style={{ background: ACCENT, color: FG, opacity: text.trim() ? 1 : 0.4 }}
+        >
+          Add
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function MockAnnotationPopover({ typedChars = 0, priority = "none" }: { typedChars?: number; priority?: Priority }) {
+  const text = ANNOT_NOTE.slice(0, typedChars);
+  return (
+    <div
+      className="absolute z-40 flex flex-col rounded-2xl animate-[fadeInUp_200ms_ease-out]"
+      style={{
+        top: 130,
+        left: "50%",
+        transform: "translateX(-50%)",
+        width: 280,
+        padding: "12px 16px 14px",
+        background: PANEL_BG,
+        boxShadow: PANEL_SHADOW,
+        fontFamily: FONT,
+      }}
+    >
+      <p className="text-[12px] mb-2" style={{ color: FG50, letterSpacing: "-0.3px" }}>span</p>
+      {/* Textarea + priority */}
+      <div className="rounded-xl flex flex-col gap-1.5 px-3 py-2" style={{ background: FG05, border: `1px solid ${FG10}` }}>
+        <div data-mock-target="annot-textarea" className="text-[13px] min-h-[52px]" style={{ color: text ? FG : FG25 }}>
+          {text || "What should change?"}
+          {typedChars < ANNOT_NOTE.length && <span className="animate-pulse">|</span>}
+        </div>
+        <div className="flex items-center">
+          <MockPriorityButton priority={priority} targetPrefix="annot" />
+        </div>
+      </div>
+      {/* Footer */}
+      <div className="flex justify-end gap-1.5 mt-2">
+        <button data-mock-target="annot-cancel" className="px-3.5 py-1.5 rounded-full text-[13px] font-medium" style={{ color: FG50 }}>
+          Cancel
+        </button>
+        <button
+          data-mock-target="annot-add"
           className="px-3.5 py-1.5 rounded-full text-[13px] font-medium"
           style={{ background: ACCENT, color: FG, opacity: text.trim() ? 1 : 0.4 }}
         >
@@ -396,6 +523,7 @@ function MockVoiceRecording({ bars, time }: { bars: number[]; time: string }) {
       </span>
       {/* Stop button */}
       <div
+        data-mock-target="voice-stop"
         className="w-8 h-8 rounded-full flex items-center justify-center shrink-0"
         style={{ background: "rgba(255, 95, 87, 0.25)", color: "#ff4545" }}
       >
@@ -405,7 +533,7 @@ function MockVoiceRecording({ bars, time }: { bars: number[]; time: string }) {
   );
 }
 
-function MockVoicePreview({ bars }: { bars: number[] }) {
+function MockVoicePreview({ bars, priority = "none" }: { bars: number[]; priority?: Priority }) {
   return (
     <div
       className="absolute bottom-[48px] right-0 flex flex-col rounded-2xl animate-[fadeInUp_200ms_ease-out]"
@@ -414,6 +542,7 @@ function MockVoicePreview({ bars }: { bars: number[] }) {
       {/* Top row: play + waveform */}
       <div className="flex items-center">
         <div
+          data-mock-target="voice-play"
           className="w-6 h-6 rounded-full flex items-center justify-center shrink-0 mr-2"
           style={{ background: FG05, color: FG }}
         >
@@ -432,18 +561,21 @@ function MockVoicePreview({ bars }: { bars: number[] }) {
           ))}
         </div>
       </div>
-      {/* Textarea */}
-      <div className="rounded-xl mt-2.5" style={{ background: FG05, border: `1px solid ${FG10}` }}>
-        <div className="px-3 py-2 text-[13px] min-h-[40px]" style={{ color: FG25 }}>
+      {/* Textarea + priority */}
+      <div className="rounded-xl mt-2.5 flex flex-col gap-1.5 px-3 py-2" style={{ background: FG05, border: `1px solid ${FG10}` }}>
+        <div data-mock-target="voice-textarea" className="text-[13px] min-h-[40px]" style={{ color: FG25 }}>
           Add a note…
+        </div>
+        <div className="flex items-center">
+          <MockPriorityButton priority={priority} targetPrefix="voice" />
         </div>
       </div>
       {/* Footer */}
       <div className="flex justify-end gap-1.5 mt-2.5">
-        <button className="px-3.5 py-1.5 rounded-full text-[13px] font-medium" style={{ color: FG50 }}>
+        <button data-mock-target="voice-cancel" className="px-3.5 py-1.5 rounded-full text-[13px] font-medium" style={{ color: FG50 }}>
           Cancel
         </button>
-        <button className="px-3.5 py-1.5 rounded-full text-[13px] font-medium" style={{ background: ACCENT, color: FG }}>
+        <button data-mock-target="voice-add" className="px-3.5 py-1.5 rounded-full text-[13px] font-medium" style={{ background: ACCENT, color: FG }}>
           Add
         </button>
       </div>
@@ -482,10 +614,10 @@ function MockReviewPanel({ itemCount }: { itemCount: number }) {
       <div className="flex items-center justify-between">
         <span className="text-[13px]" style={{ color: FG25 }}>{itemCount} item{itemCount !== 1 ? "s" : ""}</span>
         <div className="flex gap-1.5">
-          <button className="px-3.5 py-1.5 rounded-full text-[13px] font-medium" style={{ color: FG50 }}>
+          <button data-mock-target="review-cancel" className="px-3.5 py-1.5 rounded-full text-[13px] font-medium" style={{ color: FG50 }}>
             Cancel
           </button>
-          <button className="px-3.5 py-1.5 rounded-full text-[13px] font-medium" style={{ background: ACCENT, color: FG }}>
+          <button data-mock-target="review-submit" className="px-3.5 py-1.5 rounded-full text-[13px] font-medium" style={{ background: ACCENT, color: FG }}>
             Submit
           </button>
         </div>
@@ -495,10 +627,12 @@ function MockReviewPanel({ itemCount }: { itemCount: number }) {
 }
 
 // ── Feedback widget (visual only) ────────────────────────────
-function MockFeedbackBar({ widgetState, itemCount, typedChars, voiceBars, voiceTime }: {
+function MockFeedbackBar({ widgetState, itemCount, typedChars, priority, hoveredIcon, voiceBars, voiceTime }: {
   widgetState: WidgetState;
   itemCount: number;
   typedChars?: number;
+  priority?: Priority;
+  hoveredIcon?: AnimStep["hoveredIcon"];
   voiceBars: number[];
   voiceTime: string;
 }) {
@@ -508,32 +642,34 @@ function MockFeedbackBar({ widgetState, itemCount, typedChars, voiceBars, voiceT
   const showToolbar = !isIdle && !isCountOnly && !isSuccess;
   const showSendBadge = itemCount > 0 && showToolbar;
 
-  const captureActive = widgetState === "captureMenu" || widgetState === "capturePanel";
-  const noteActive = widgetState === "noteMenu" || widgetState === "textPanel" || widgetState === "voiceRecording" || widgetState === "voicePreview";
+  const captureActive = widgetState === "captureMenu" || widgetState === "capturePanel" || hoveredIcon === "capture";
+  const annotateActive = widgetState === "annotating" || widgetState === "annotateHover" || widgetState === "annotatePopover" || hoveredIcon === "annotate";
+  const noteActive = widgetState === "noteMenu" || widgetState === "textPanel" || widgetState === "voiceRecording" || widgetState === "voicePreview" || hoveredIcon === "note";
 
   return (
     <div className="absolute bottom-5 right-5 z-10">
       {/* Panels above the bar */}
       {widgetState === "captureMenu" && (
         <MockSubMenu items={[
-          { icon: <CameraFill size={20} />, label: "Screenshot" },
-          { icon: <CamcorderFill size={20} />, label: "Record" },
+          { icon: <CameraFill size={20} />, label: "Screenshot", target: "screenshot" },
+          { icon: <CamcorderFill size={20} />, label: "Record", target: "record" },
         ]} />
       )}
       {widgetState === "noteMenu" && (
         <MockSubMenu items={[
-          { icon: <Message4Fill size={20} />, label: "Text" },
-          { icon: <VoiceFill size={20} />, label: "Voice" },
+          { icon: <Message4Fill size={20} />, label: "Text", target: "text" },
+          { icon: <VoiceFill size={20} />, label: "Voice", target: "voice" },
         ]} />
       )}
-      {widgetState === "capturePanel" && <MockCapturePanel typedChars={typedChars} />}
-      {widgetState === "textPanel" && <MockTextPanel typedChars={typedChars} />}
+      {widgetState === "capturePanel" && <MockCapturePanel typedChars={typedChars} priority={priority} />}
+      {widgetState === "textPanel" && <MockTextPanel typedChars={typedChars} priority={priority} />}
       {widgetState === "voiceRecording" && <MockVoiceRecording bars={voiceBars} time={voiceTime} />}
-      {widgetState === "voicePreview" && <MockVoicePreview bars={voiceBars} />}
+      {widgetState === "voicePreview" && <MockVoicePreview bars={voiceBars} priority={priority} />}
       {widgetState === "reviewing" && <MockReviewPanel itemCount={itemCount} />}
 
       {/* Toolbar bar */}
       <div
+        data-mock-target={isIdle ? "feedback-pill" : isCountOnly ? "count-pill" : undefined}
         className="flex items-center justify-end rounded-full overflow-hidden"
         style={{
           background: isSuccess ? "#22c55e" : isCountOnly ? ACCENT : PANEL_BG,
@@ -572,15 +708,15 @@ function MockFeedbackBar({ widgetState, itemCount, typedChars, voiceBars, voiceT
         {showToolbar && (
           <div className="flex items-center gap-[6px]">
             {/* Capture */}
-            <div className={`w-8 h-8 rounded-full flex items-center justify-center transition-colors ${captureActive ? "bg-white/25 text-white" : "text-white/50"}`}>
+            <div data-mock-target="capture" className={`w-8 h-8 rounded-full flex items-center justify-center transition-colors ${captureActive ? "bg-white/25 text-white" : "text-white/50"}`}>
               <ScanLine />
             </div>
             {/* Annotate */}
-            <div className="w-8 h-8 rounded-full flex items-center justify-center text-white/50">
+            <div data-mock-target="annotate" className={`w-8 h-8 rounded-full flex items-center justify-center transition-colors ${annotateActive ? "bg-white/25 text-white" : "text-white/50"}`}>
               <Cursor3Fill />
             </div>
             {/* Note */}
-            <div className={`w-8 h-8 rounded-full flex items-center justify-center transition-colors ${noteActive ? "bg-white/25 text-white" : "text-white/50"}`}>
+            <div data-mock-target="note" className={`w-8 h-8 rounded-full flex items-center justify-center transition-colors ${noteActive ? "bg-white/25 text-white" : "text-white/50"}`}>
               <PenFill />
             </div>
 
@@ -588,11 +724,11 @@ function MockFeedbackBar({ widgetState, itemCount, typedChars, voiceBars, voiceT
               <>
                 <div className="w-px h-4" style={{ background: FG05 }} />
                 {/* Delete */}
-                <div className="w-8 h-8 rounded-full flex items-center justify-center text-white/50">
+                <div data-mock-target="delete" className={`w-8 h-8 rounded-full flex items-center justify-center transition-colors ${hoveredIcon === "delete" ? "bg-white/25 text-white" : "text-white/50"}`}>
                   <Delete2Fill />
                 </div>
                 {/* Send + badge */}
-                <div className="w-8 h-8 rounded-full flex items-center justify-center text-white/50 relative">
+                <div data-mock-target="send" className={`w-8 h-8 rounded-full flex items-center justify-center transition-colors relative ${hoveredIcon === "send" ? "bg-white/25 text-white" : "text-white/50"}`}>
                   <SendFill />
                   <span
                     className="absolute -top-0.5 -right-0.5 min-w-[16px] h-4 flex items-center justify-center text-[11px] font-semibold rounded-full px-1 leading-none tabular-nums"
@@ -606,7 +742,7 @@ function MockFeedbackBar({ widgetState, itemCount, typedChars, voiceBars, voiceT
 
             <div className="w-px h-4" style={{ background: FG05 }} />
             {/* Close */}
-            <div className="w-8 h-8 rounded-full flex items-center justify-center text-white/50">
+            <div data-mock-target="close" className={`w-8 h-8 rounded-full flex items-center justify-center transition-colors ${hoveredIcon === "close" ? "bg-white/25 text-white" : "text-white/50"}`}>
               <CloseLine />
             </div>
           </div>
@@ -696,7 +832,7 @@ function PearSite() {
           Pear OS X Nectar
         </h1>
         <p className="text-[12px] text-[#555] mt-2 leading-relaxed max-w-[80%] mx-auto">
-          Over 150 new features. The world&apos;s juiciest operating system.
+          Over <span data-mock-target="annotation-target">150</span> new features. The world&apos;s juiciest operating system.
         </p>
         <span className="text-[11px] text-[#06c] underline mt-2 inline-block">Learn more &gt;</span>
         <img src="/pear-lineup.png" alt="Pear product lineup" className="mt-4 mx-auto w-full max-w-[420px]" />
@@ -899,7 +1035,10 @@ export function BrowserMockup() {
   const voiceAnimRef = useRef<ReturnType<typeof setInterval>>(undefined);
   const voiceTimerRef = useRef<ReturnType<typeof setInterval>>(undefined);
 
-  const step = ANIM_STEPS[stepIndex];
+  const params = typeof window !== "undefined" ? new URLSearchParams(window.location.search) : null;
+  const frozenStep = params?.get("step") ? Number(params.get("step")) : null;
+  const actualStepIndex = frozenStep !== null ? frozenStep : stepIndex;
+  const step = ANIM_STEPS[actualStepIndex];
 
   // Animate voice waveform when in voiceRecording state
   useEffect(() => {
@@ -928,6 +1067,8 @@ export function BrowserMockup() {
 
   // Step advancement
   useEffect(() => {
+    if (frozenStep !== null) return;
+
     function advance() {
       setStepIndex((prev) => (prev + 1) % ANIM_STEPS.length);
     }
@@ -948,7 +1089,7 @@ export function BrowserMockup() {
     return () => {
       if (timerRef.current) clearTimeout(timerRef.current);
     };
-  }, [stepIndex]);
+  }, [stepIndex, frozenStep]);
 
   
   // Scroll effect
@@ -963,10 +1104,18 @@ export function BrowserMockup() {
 
   const voiceTime = `${Math.floor(voiceSeconds / 60)}:${String(voiceSeconds % 60).padStart(2, "0")}`;
 
-  // Map states to what the bar sees
-  const barState = (step.state === "areaSelect" || step.state === "areaDragging" || step.state === "captured")
-    ? "expanded" as WidgetState
-    : step.state;
+  // Map states to what the bar sees. While annotating/hovering an element on the page or while a
+  // popover is open, the toolbar bar itself stays in its expanded layout (just with the annotate
+  // icon active) so the cursor positions remain stable for QA.
+  const barState: WidgetState =
+    step.state === "areaSelect" || step.state === "areaDragging" || step.state === "captured"
+      ? "expanded"
+      : step.state === "annotating" || step.state === "annotateHover" || step.state === "annotatePopover"
+      ? "expanded"
+      : step.state;
+
+  const showAnnotationPopover = step.state === "annotatePopover";
+  const isAnnotateCursor = step.state === "annotating" || step.state === "annotateHover";
 
   return (
     <div className="w-full h-full relative rounded-[12px] border-4 border-foreground/25">
@@ -977,7 +1126,7 @@ export function BrowserMockup() {
 
         {/* Aqua Kalahari window */}
         <div
-          className="mx-4 flex flex-col overflow-hidden origin-center absolute inset-x-4"
+          className="flex flex-col overflow-hidden origin-center absolute inset-x-1 lg:inset-x-4"
           style={{
             top: "50%",
             transform: "translateY(calc(-50% + 11px)) scale(0.87)",
@@ -1026,15 +1175,30 @@ export function BrowserMockup() {
               widgetState={barState}
               itemCount={step.itemCount ?? 0}
               typedChars={step.typedChars}
+              priority={step.priority}
+              hoveredIcon={step.hoveredIcon}
               voiceBars={voiceBars}
               voiceTime={voiceTime}
             />
 
+            {showAnnotationPopover && <MockAnnotationPopover typedChars={step.typedChars} priority={step.priority} />}
+
             {/* Cursor */}
-            <AnimatedCursor x={step.cursorX} y={step.cursorY} clicking={clicking} crosshair={step.state === "areaSelect" || step.state === "areaDragging"} />
+            <AnimatedCursor
+              x={step.cursorX}
+              y={step.cursorY}
+              clicking={clicking}
+              crosshair={step.state === "areaSelect" || step.state === "areaDragging" || isAnnotateCursor}
+            />
           </div>
         </div>
 
+        {/* Debug HUD */}
+        {frozenStep !== null && (
+          <div className="absolute bottom-2 left-2 z-50 pointer-events-none bg-black/80 text-white text-[10px] font-mono px-2 py-1 rounded">
+            Step {actualStepIndex} / {ANIM_STEPS.length - 1} — {step.state}
+          </div>
+        )}
       </div>
     </div>
   );

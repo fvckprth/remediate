@@ -8,7 +8,7 @@ export default function DocsLayout({ children }: { children: React.ReactNode }) 
     <SiteShell>
       <DocsBreadcrumbJsonLd />
       <DocsScrollArea>
-        <div className="max-w-[480px] min-h-full flex flex-col">
+        <div className="w-full lg:max-w-[480px] min-h-full flex flex-col">
           <DocsFadeIn>
             {children}
           </DocsFadeIn>

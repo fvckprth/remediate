@@ -118,6 +118,13 @@ article > div:has(> pre) + * {
   }
 }
 
+/* FAQ: blur siblings when one item is open */
+.faq-item[data-open] ~ .faq-item:not([data-open]),
+.faq-item:not([data-open]):has(~ .faq-item[data-open]) {
+  filter: blur(2px);
+  opacity: 0.5;
+}
+
 /* Agentation above Remediate widget */
 .agentation-top {
   z-index: 9999999 !important;

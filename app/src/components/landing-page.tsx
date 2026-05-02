@@ -1,6 +1,7 @@
 "use client";
 
 import { DocsNav } from "@/components/docs/docs-nav";
+import { MobileHeader } from "@/components/mobile-menu";
 import { HeroSection } from "@/components/hero-section";
 import { BrowserMockup } from "@/components/browser-mockup";
 
@@ -36,15 +37,20 @@ function Footer() {
 export function LandingPage() {
   return (
     <div className="h-screen overflow-hidden">
-      {/* Nav — pinned top-left */}
-      <div className="fixed top-10 left-10 z-30 h-[calc(100vh-80px)]">
+      {/* Desktop nav — hidden on mobile */}
+      <div className="hidden lg:block fixed top-10 left-10 z-30 h-[calc(100vh-80px)]">
         <DocsNav />
       </div>
 
+      {/* Mobile header — hidden on desktop */}
+      <div className="lg:hidden">
+        <MobileHeader />
+      </div>
+
       {/* Content */}
-      <main className="h-full flex items-center justify-center p-10">
+      <main className="h-full flex items-center justify-center p-5 pt-16 lg:p-10 lg:pt-10">
         <div className="flex gap-20 w-full max-w-3xl h-full">
-          <div className="shrink-0 w-[120px]" />
+          <div className="hidden lg:block shrink-0 w-[120px]" />
 
           <div className="flex flex-col flex-1 min-w-0 h-full justify-between">
             {/* Hero — top */}
@@ -52,10 +58,10 @@ export function LandingPage() {
               <HeroSection />
             </FadeIn>
 
-            {/* Mockup — scales to fit remaining space */}
-            <div className="flex-1 min-h-0 flex items-center justify-center py-6">
-              <FadeIn delay={200} className="h-full flex justify-center">
-                <div className="h-full max-w-[840px]" style={{ aspectRatio: "16 / 10" }}>
+            {/* Mockup — width-constrained on mobile, height-constrained on desktop */}
+            <div className="flex-1 min-h-0 flex items-center justify-center py-4 lg:py-6">
+              <FadeIn delay={200} className="w-full lg:h-full flex justify-center">
+                <div className="w-full lg:w-auto lg:h-full max-w-[840px] aspect-[3/4] lg:aspect-[16/10]">
                   <BrowserMockup />
                 </div>
               </FadeIn>
