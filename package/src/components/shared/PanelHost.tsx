@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback, useLayoutEffect, type ReactNode } from "react";
 import { useMeasure } from "../../utils/use-measure";
 
-const EXIT_MS = 150; // matches rm-fade-out duration
+const EXIT_MS = 200; // matches rm-fade-out duration
 
 interface PanelHostProps {
   panelKey: string | null;
@@ -32,12 +32,15 @@ function PanelMeasurer({
 }) {
   const [ref, bounds] = useMeasure<HTMLDivElement>();
 
-  // Synchronous measurement on mount to prevent 1-frame delay
+  // Synchronous measurement on mount to prevent 1-frame delay.
+  // Uses offsetWidth/offsetHeight instead of getBoundingClientRect so
+  // ancestor transforms (e.g. rm-fade-in's scale(0.96)) don't skew the value.
   useLayoutEffect(() => {
     if (ref.current && !isExiting) {
-      const rect = ref.current.getBoundingClientRect();
-      if (rect.width > 0 && rect.height > 0) {
-        onMeasure(panelKey, { width: rect.width, height: rect.height });
+      const w = ref.current.offsetWidth;
+      const h = ref.current.offsetHeight;
+      if (w > 0 && h > 0) {
+        onMeasure(panelKey, { width: w, height: h });
       }
     }
   }, [panelKey, isExiting, onMeasure]);
@@ -66,25 +69,18 @@ export function PanelHost({ panelKey, position, below, maxWidth, pill, children 
   const [measuredPanelKey, setMeasuredPanelKey] = useState<string | null>(panelKey);
   const prevPositionRef = useRef(position);
 
-  // Disable CSS transitions after panel swap settles so internal resizes
-  // (e.g. accordion toggle) don't fight the content's own transitions.
-  const [isSettled, setIsSettled] = useState(false);
-  const settleTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
-
-  useEffect(() => {
-    setIsSettled(false);
-    if (settleTimerRef.current) clearTimeout(settleTimerRef.current);
-    if (panelKey !== null) {
-      settleTimerRef.current = setTimeout(() => setIsSettled(true), 400);
-    }
-    return () => { if (settleTimerRef.current) clearTimeout(settleTimerRef.current); };
-  }, [panelKey]);
-
-  // Refs for shrink-delay: when morphing to a smaller panel, delay the
-  // container resize so the exit animation plays without clipping.
+  // Track host bounds and measured panel key
   const hostBoundsRef = useRef({ width: 0, height: 0 });
   const measuredKeyRef = useRef<string | null>(null);
-  const shrinkTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // During internal resizes (e.g. accordion toggle), we briefly disable transitions
+  // so the container snaps instead of fighting the content's own layout animations.
+  const [isSnapping, setIsSnapping] = useState(false);
+  const snapTimerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
+
+  useEffect(() => {
+    return () => { if (snapTimerRef.current) clearTimeout(snapTimerRef.current); };
+  }, []);
 
   const isHostClosed = hostBounds.width === 0;
   const isWaitingForMeasurement = panelKey !== null && panelKey !== measuredPanelKey;
@@ -99,16 +95,8 @@ export function PanelHost({ panelKey, position, below, maxWidth, pill, children 
   const activePosition = shouldUsePrevious ? prevPositionRef.current : position;
 
   const handleMeasure = useCallback((key: string, bounds: { width: number, height: number }) => {
-    if (shrinkTimerRef.current) {
-      clearTimeout(shrinkTimerRef.current);
-      shrinkTimerRef.current = null;
-    }
-
-    const current = hostBoundsRef.current;
     const isNewPanel = key !== measuredKeyRef.current;
-    const isShrinking = isNewPanel && current.width > 0 && current.height > 0 &&
-      (bounds.width < current.width || bounds.height < current.height);
-
+    
     const apply = () => {
       hostBoundsRef.current = bounds;
       measuredKeyRef.current = key;
@@ -116,15 +104,24 @@ export function PanelHost({ panelKey, position, below, maxWidth, pill, children 
       setMeasuredPanelKey(key);
     };
 
-    if (isShrinking) {
-      // Let exit animation play before container starts shrinking
-      shrinkTimerRef.current = setTimeout(apply, 80);
+    if (!isNewPanel) {
+      // Skip if dimensions haven't meaningfully changed — prevents the
+      // ResizeObserver's initial notification from triggering snapping mode
+      // and killing the in-progress CSS morph transition.
+      const prev = hostBoundsRef.current;
+      if (Math.abs(prev.width - bounds.width) < 1 && Math.abs(prev.height - bounds.height) < 1) {
+        return;
+      }
+      setIsSnapping(true);
+      apply();
+      if (snapTimerRef.current) clearTimeout(snapTimerRef.current);
+      snapTimerRef.current = setTimeout(() => setIsSnapping(false), 50);
     } else {
       apply();
     }
   }, []);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     setPanels((currentPanels) => {
       const nextPanels = currentPanels.map((p) =>
         p.isExiting ? p : { ...p, isExiting: true }
@@ -144,7 +141,7 @@ export function PanelHost({ panelKey, position, below, maxWidth, pill, children 
     });
   }, [panelKey]);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     setPanels((currentPanels) => {
       const activePanel = currentPanels.find((p) => !p.isExiting && p.key === panelKey);
       if (!activePanel || activePanel.content === children) return currentPanels;
@@ -170,12 +167,6 @@ export function PanelHost({ panelKey, position, below, maxWidth, pill, children 
     return () => clearTimeout(timer);
   }, [hasExiting, isHostExiting]);
 
-  useEffect(() => {
-    return () => {
-      if (shrinkTimerRef.current) clearTimeout(shrinkTimerRef.current);
-    };
-  }, []);
-
   if (panels.length === 0) return null;
 
   return (
@@ -184,7 +175,7 @@ export function PanelHost({ panelKey, position, below, maxWidth, pill, children 
       data-exiting={isHostExiting ? "" : undefined}
       data-below={below ? "" : undefined}
       data-pill={pill ? "" : undefined}
-      data-settled={isSettled ? "" : undefined}
+      data-snapping={isSnapping ? "" : undefined}
       style={{
         bottom: activePosition?.bottom,
         top: activePosition?.top,

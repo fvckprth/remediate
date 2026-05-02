@@ -18,7 +18,11 @@ export function TextNotePanel({ initialText, initialPriority, submitLabel = "Add
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
-    textareaRef.current?.focus();
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        textareaRef.current?.focus();
+      });
+    });
   }, []);
 
   const handleSubmit = useCallback(() => {

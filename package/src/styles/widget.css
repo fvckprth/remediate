@@ -1969,7 +1969,6 @@
   inset: 0;
   pointer-events: auto; /* Re-enable clicks on the panel itself */
   animation: rm-fade-in 220ms cubic-bezier(0.16, 1, 0.3, 1) forwards;
-  animation-delay: 80ms;
   opacity: 0;
   display: flex;
   align-items: center;
@@ -1977,7 +1976,7 @@
 }
 
 .rm-panel-wrapper[data-exiting] {
-  animation: rm-fade-out 100ms ease-out forwards !important;
+  animation: rm-fade-out 180ms cubic-bezier(0.16, 1, 0.3, 1) forwards !important;
   pointer-events: none;
 }
 
@@ -2107,14 +2106,12 @@
   will-change: width, height, left, right, border-radius;
 }
 
-.rm-panel-host[data-pill] {
-  border-radius: 32px;
+.rm-panel-host[data-snapping] {
+  transition: none !important;
 }
 
-/* After a panel swap settles, disable container transitions so
-   internal resizes (accordion toggle) use the content's own transitions. */
-.rm-panel-host[data-settled] {
-  transition: none;
+.rm-panel-host[data-pill] {
+  border-radius: 32px;
 }
 
 /* ── Panel below bar (bar near top of viewport) ── */

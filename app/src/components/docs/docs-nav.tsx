@@ -81,11 +81,16 @@ export function DocsNav() {
         </nav>
       </div>
       <div className="flex items-center gap-2 h-4 opacity-50">
-        <span className="text-sm font-medium leading-none tracking-tight text-foreground/25 underline decoration-dotted underline-offset-2">
-          v0.1.0
-        </span>
         <a
-          href="https://github.com/prtk-s/remediate"
+          href="https://www.npmjs.com/package/remediate"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-sm font-medium leading-none tracking-tight text-foreground/25 underline decoration-dotted underline-offset-2 transition-colors hover:text-foreground/50"
+        >
+          v0.1.0
+        </a>
+        <a
+          href="https://github.com/fvckprth/remediate"
           target="_blank"
           rel="noopener noreferrer"
           className="text-foreground/25 opacity-60 transition-colors hover:text-foreground/50"

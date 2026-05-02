@@ -100,6 +100,8 @@ export function CapturePanel({
     ? `${Math.round(area.width)} \u00d7 ${Math.round(area.height)} at (${Math.round(area.x)}, ${Math.round(area.y)})`
     : "No area selected";
 
+  const previewHeight = area ? Math.min(200, 252 * (area.height / Math.max(1, area.width))) : undefined;
+
   return (
     <div
       className="rm-capture-panel"
@@ -111,41 +113,40 @@ export function CapturePanel({
         </span>
       </div>
 
-      <div className={`rm-popover__details-wrapper${showPreview ? " rm-popover__details-wrapper--open" : ""}`}>
-        <div className="rm-popover__details-inner">
-          <div className="rm-capture-panel__preview">
-            {variant === "photo" && previewUrl ? (
-              <img
-                src={previewUrl}
-                alt="Screenshot preview"
-                className="rm-capture-panel__preview-img"
-              />
-            ) : variant === "video" && previewUrl ? (
-              <>
-                <video
-                  ref={videoRef}
-                  src={previewUrl}
-                  className="rm-capture-panel__preview-img"
-                  playsInline
-                  onEnded={() => setIsPlaying(false)}
-                />
-                <button
-                  className="rm-video-play-btn"
-                  onClick={togglePlayback}
-                  aria-label={isPlaying ? "Pause" : "Play"}
-                >
-                  {isPlaying ? <PauseFill size={16} /> : <PlayFill size={16} />}
-                </button>
-              </>
-            ) : (
-              <div className="rm-capture-panel__placeholder">
-                <span className="rm-capture-panel__placeholder-text">
-                  {variant === "photo" ? "Screenshot captured" : "Recording captured"}
-                </span>
-              </div>
-            )}
+      <div 
+        className="rm-capture-panel__preview"
+        style={previewHeight ? { height: previewHeight } : undefined}
+      >
+        {variant === "photo" && previewUrl ? (
+          <img
+            src={previewUrl}
+            alt="Screenshot preview"
+            className="rm-capture-panel__preview-img"
+          />
+        ) : variant === "video" && previewUrl ? (
+          <>
+            <video
+              ref={videoRef}
+              src={previewUrl}
+              className="rm-capture-panel__preview-img"
+              playsInline
+              onEnded={() => setIsPlaying(false)}
+            />
+            <button
+              className="rm-video-play-btn"
+              onClick={togglePlayback}
+              aria-label={isPlaying ? "Pause" : "Play"}
+            >
+              {isPlaying ? <PauseFill size={16} /> : <PlayFill size={16} />}
+            </button>
+          </>
+        ) : (
+          <div className="rm-capture-panel__placeholder">
+            <span className="rm-capture-panel__placeholder-text">
+              {variant === "photo" ? "Screenshot captured" : "Recording captured"}
+            </span>
           </div>
-        </div>
+        )}
       </div>
 
       <div className="rm-input-group">
