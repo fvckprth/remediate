@@ -64,6 +64,13 @@ export function Remediate({ onSubmit, endpoint, metadata: extraMetadata, onError
     }
   }, [state.mode, state.clearAfterSend, dispatch]);
 
+  // Bounce out of review when the list empties (last item removed) — no empty state.
+  useEffect(() => {
+    if (state.mode === "reviewing" && state.items.length === 0) {
+      dispatch({ type: "SET_MODE", mode: "active" });
+    }
+  }, [state.mode, state.items.length, dispatch]);
+
   useWidgetKeyboard({
     mode: state.mode,
     settingsOpen: state.settingsOpen,

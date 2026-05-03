@@ -1875,13 +1875,6 @@
   font-variant-numeric: tabular-nums;
 }
 
-.rm-review-panel__empty {
-  font-size: 13px;
-  color: var(--rm-fg-25);
-  text-align: center;
-  padding: 20px 0;
-}
-
 /* ── Badge pop (toolbar review count) ───── */
 
 @keyframes rm-badge-pop {

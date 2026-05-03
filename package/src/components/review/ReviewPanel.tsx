@@ -108,10 +108,6 @@ export function ReviewPanel({ items, isSubmitting, onRemoveItem, onPreviewItem, 
         ))}
       </div>
 
-      {items.length === 0 && (
-        <p className="rm-review-panel__empty">No feedback items yet. Go back and add some.</p>
-      )}
-
       <div className="rm-review-panel__footer">
         <span className="rm-review-panel__count">
           {items.length} item{items.length !== 1 ? "s" : ""}
