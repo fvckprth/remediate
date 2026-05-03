@@ -657,7 +657,7 @@ function MockFeedbackBar({ widgetState, itemCount, typedChars, priority, hovered
           boxShadow: PANEL_SHADOW,
           padding: 4,
           height: 40,
-          width: isCountOnly ? (itemCount > 9 ? 48 : 40) : isSuccess ? 48 : isIdle ? 90 : showSendBadge ? 236 : 158,
+          width: isCountOnly ? (itemCount > 9 ? 48 : 40) : isSuccess ? 48 : isIdle ? 90 : showSendBadge ? 242 : 164,
           fontFamily: FONT,
           transition: "width 400ms cubic-bezier(0.19,1,0.22,1), height 400ms cubic-bezier(0.19,1,0.22,1), background-color 400ms cubic-bezier(0.19,1,0.22,1)",
         }}
