@@ -3,13 +3,22 @@ import { ConvexHttpClient } from "convex/browser";
 import { api } from "../../../../convex/_generated/api";
 import type { Id } from "../../../../convex/_generated/dataModel";
 
-const convex = new ConvexHttpClient(process.env.NEXT_PUBLIC_CONVEX_URL!);
-
 export const runtime = "nodejs";
+
+function getConvex() {
+  const url = process.env.NEXT_PUBLIC_CONVEX_URL;
+  if (!url) {
+    throw new Error(
+      "NEXT_PUBLIC_CONVEX_URL is not set. Run `npx convex dev --once` locally or add it as an env var in your hosting provider."
+    );
+  }
+  return new ConvexHttpClient(url);
+}
 
 export async function POST(req: Request) {
   try {
     const { submission, files } = await parseFeedback(req);
+    const convex = getConvex();
 
     const uploaded: Array<{
       filename: string;
