@@ -118,9 +118,17 @@ async function run() {
       const visualX = xFromRight ? distFromRight : distFromLeft;
       const visualY = isBottomHalf ? cb.bottom - targetCenterY : targetCenterY - cb.top;
 
+      // Popover + marker live in centered layouts (popover: left:50%, marker: mx-auto p).
+      // Anchor X to the inner-frame center so cursors track the popover/marker on every
+      // viewport width instead of drifting on mobile.
+      const xFromCenter = isPopoverTarget
+        ? Math.round((targetCenterX - (cb.left + cb.width / 2)) / (scaleX || 1))
+        : undefined;
+
       return {
         x: Math.round(visualX / (scaleX || 1)),
         xFromRight,
+        xFromCenter,
         y: Math.round(visualY / (scaleY || 1)),
         isBottomHalf,
         scaleX: Number(scaleX.toFixed(3)),
@@ -130,7 +138,9 @@ async function run() {
     if (data) {
       results[step] = data;
       foundCount++;
-      const xLabel = data.xFromRight ? `right-${data.x}px` : `left-${data.x}px`;
+      const xLabel = data.xFromCenter !== undefined
+        ? (data.xFromCenter >= 0 ? `center+${data.xFromCenter}px` : `center${data.xFromCenter}px`)
+        : (data.xFromRight ? `right-${data.x}px` : `left-${data.x}px`);
       const yLabel = data.isBottomHalf ? `bottom-${data.y}px` : `top-${data.y}px`;
       console.log(`Step ${step.toString().padStart(3)} (${targetName.padEnd(20)}) ${xLabel.padEnd(14)} ${yLabel}`);
     } else {
@@ -177,9 +187,13 @@ async function run() {
     if (inAnimSteps && /\{\s*state:/.test(lines[i])) {
       const r = results[stepIndex];
       if (r) {
-        const newX = r.xFromRight
-          ? `"calc(100% - ${r.x}px)"`
-          : `"${r.x}px"`;
+        const newX = r.xFromCenter !== undefined
+          ? (r.xFromCenter >= 0
+              ? `"calc(50% + ${r.xFromCenter}px)"`
+              : `"calc(50% - ${Math.abs(r.xFromCenter)}px)"`)
+          : (r.xFromRight
+              ? `"calc(100% - ${r.x}px)"`
+              : `"${r.x}px"`);
         const newY = r.isBottomHalf
           ? `"calc(100% - ${r.y}px)"`
           : `"${r.y}px"`;
