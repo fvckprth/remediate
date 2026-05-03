@@ -80,14 +80,14 @@ cross-origin images and iframes render blank in screenshots. video recording is 
 
 ## docs
 
-[remediate.dev/docs](https://remediate.dev/docs)
+[www.remediate.ski/docs](https://www.remediate.ski/docs)
 
-- [getting started](https://remediate.dev/docs/getting-started)
-- [recipes](https://remediate.dev/docs/recipes): slack, discord, github issues, linear, email, postgres, vercel blob
-- [payload](https://remediate.dev/docs/payload): what's in the json
-- [privacy](https://remediate.dev/docs/privacy): what gets captured, masking, server-side handling
-- [reference](https://remediate.dev/docs/reference): every prop, runtime support, cors, csp, bundle size
-- [faq](https://remediate.dev/docs/faq)
+- [getting started](https://www.remediate.ski/docs/install)
+- [recipes](https://www.remediate.ski/docs/recipes): slack, discord, github issues, linear, email, postgres, vercel blob
+- [payload](https://www.remediate.ski/docs/payload): what's in the json
+- [privacy](https://www.remediate.ski/docs/privacy): what gets captured, masking, server-side handling
+- [reference](https://www.remediate.ski/docs/reference): every prop, runtime support, cors, csp, bundle size
+- [faq](https://www.remediate.ski/docs/faq)
 
 ## license
 
