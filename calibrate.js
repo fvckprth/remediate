@@ -64,7 +64,7 @@ const STEP_TARGETS = {
 };
 
 async function run() {
-  const browser = await puppeteer.launch({ headless: "new" });
+  const browser = await puppeteer.launch({ headless: "new", args: ["--no-sandbox"] });
   const page = await browser.newPage();
   await page.setViewport({ width: 1200, height: 800 });
 
