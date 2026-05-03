@@ -324,14 +324,6 @@ const PRIORITY_LABELS: Record<Priority, string> = {
   urgent: "Urgent",
 };
 
-const PRIORITY_BG: Record<Priority, string> = {
-  none: "rgba(255,255,255,0.06)",
-  low: "rgba(69,255,100,0.12)",
-  medium: "rgba(255,237,45,0.14)",
-  high: "rgba(255,136,45,0.16)",
-  urgent: "rgba(255,69,69,0.18)",
-};
-
 const PRIORITY_FG: Record<Priority, string> = {
   none: FG50,
   low: "#45ff64",
@@ -349,17 +341,17 @@ function MockPriorityButton({ priority = "none", targetPrefix }: { priority?: Pr
   return (
     <button
       data-mock-target={`${targetPrefix}-priority`}
-      className="inline-flex items-center gap-1.5 rounded-full px-2 py-1 text-[11px] font-medium"
-      style={{ background: PRIORITY_BG[priority], color: PRIORITY_FG[priority], letterSpacing: "-0.3px", transition: "background 200ms ease, color 200ms ease" }}
+      className="inline-flex items-center gap-1 text-[13px] font-medium"
+      style={{ color: PRIORITY_FG[priority], letterSpacing: "-0.48px", transition: "color 200ms ease" }}
     >
       {isUrgent ? (
-        <svg width={14} height={14} viewBox="0 0 16 16" fill="none">
+        <svg width={16} height={16} viewBox="0 0 16 16" fill="none">
           <circle cx="8" cy="8" r="7" fill="#ff4545" />
           <path d="M8 4.5v4" stroke="#fff" strokeWidth="1.8" strokeLinecap="round" />
           <circle cx="8" cy="11" r="0.9" fill="#fff" />
         </svg>
       ) : (
-        <svg width={14} height={14} viewBox="0 0 16 16" fill="none">
+        <svg width={16} height={16} viewBox="0 0 16 16" fill="none">
           <rect x="3" y="10" width="3" height="4" rx="1.5" fill={c1} />
           <rect x="7" y="6" width="3" height="8" rx="1.5" fill={c2} />
           <rect x="11" y="2" width="3" height="12" rx="1.5" fill={c3} />
@@ -665,7 +657,7 @@ function MockFeedbackBar({ widgetState, itemCount, typedChars, priority, hovered
           boxShadow: PANEL_SHADOW,
           padding: 4,
           height: 40,
-          width: isCountOnly ? (itemCount > 9 ? 48 : 36) : isSuccess ? 48 : isIdle ? 90 : showSendBadge ? 236 : 158,
+          width: isCountOnly ? (itemCount > 9 ? 48 : 40) : isSuccess ? 48 : isIdle ? 90 : showSendBadge ? 236 : 158,
           fontFamily: FONT,
           transition: "width 400ms cubic-bezier(0.19,1,0.22,1), height 400ms cubic-bezier(0.19,1,0.22,1), background-color 400ms cubic-bezier(0.19,1,0.22,1)",
         }}
@@ -1128,7 +1120,7 @@ export function BrowserMockup() {
           <AquaTitleBar />
           <AquaToolbar />
           <div className="relative flex-1 overflow-hidden bg-white">
-            <div ref={scrollContainerRef} className="absolute inset-0 overflow-y-auto scrollbar-none" style={{ scrollBehavior: "smooth" }}>
+            <div ref={scrollContainerRef} className="absolute inset-0 overflow-hidden scrollbar-none" style={{ scrollBehavior: "smooth" }}>
               <PearSite />
             </div>
 

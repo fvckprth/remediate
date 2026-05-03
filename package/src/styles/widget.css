@@ -892,6 +892,12 @@
   transform: scale(0.90);
 }
 
+@media (hover: none) {
+  .rm-priority {
+    font-size: 16px;
+  }
+}
+
 .rm-priority--low {
   color: #45ff64;
 }

@@ -180,10 +180,6 @@ export async function POST(req: Request) {
 
 ## convex
 
-for teams already on convex. uploads land directly in convex storage, then a mutation links them to the submission row.
-
-convex storage is a three-step dance: a mutation hands you a one-shot upload url, you `POST` the blob to it, and the response gives you a `storageId` that you persist on your row. the route below does all three.
-
 ```ts
 // convex/schema.ts
 import { defineSchema, defineTable } from "convex/server";
