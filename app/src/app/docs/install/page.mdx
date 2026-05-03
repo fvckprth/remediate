@@ -49,7 +49,13 @@ claude plugin install remediate@fvckprth
 
 then run `/remediate` in your project. it'll detect your framework, pick a backend, install the package, scaffold the server route, and wire the component into your layout.
 
-to pull a new version later: `claude plugin marketplace update fvckprth && claude plugin update remediate@fvckprth`. the marketplace step is required — `plugin update` alone reads from a stale local clone ([anthropics/claude-code#25244](https://github.com/anthropics/claude-code/issues/25244)).
+to pull a new version later:
+
+```bash
+claude plugin marketplace update fvckprth && claude plugin update remediate@fvckprth
+```
+
+the marketplace step is required — `plugin update` alone reads from a stale local clone ([anthropics/claude-code#25244](https://github.com/anthropics/claude-code/issues/25244)).
 
 ## add the server route
 
