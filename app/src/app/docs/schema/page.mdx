@@ -238,4 +238,21 @@ interface SelectionArea {
 
 the `blob` property is only populated in the `onSubmit` path. when using `endpoint` mode, blobs are stripped from the json and uploaded as separate `FormData` parts. on the server, call `parseFeedback(req)` from `remediate/server` to get a `ParsedFeedback` with a `submission` and a `files` map.
 
+```ts
+interface ParsedFile {
+  blob: Blob;
+  filename: string;
+  type: string;
+  itemId: string;
+  category: "screenshot" | "recording" | "voice";
+}
+
+interface ParsedFeedback {
+  submission: FeedbackSubmission;
+  files: Map<string, ParsedFile>;
+}
+```
+
+see [payload › blobs on the wire](/docs/payload#blobs-on-the-wire) for full usage.
+
 </article>

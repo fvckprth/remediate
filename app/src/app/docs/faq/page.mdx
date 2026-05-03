@@ -110,7 +110,7 @@ use `<RemediateTrigger asChild>`. see [reference](/docs/reference).
 </FaqItem>
 
 <FaqItem question="testing the server route?">
-post a multipart body with a `submission` field and zero or more file parts.
+the wire format is a multipart `POST` with a `metadata` field (the json envelope, stringified) plus zero or more file parts named `screenshot-{itemId}`, `recording-{itemId}`, or `voice-{itemId}`. easiest way to generate one is to point the widget at your local route and submit — inspect the request in the network tab to capture a real fixture. building it by hand is fiddly; let the widget do it.
 </FaqItem>
 
 <FaqItem question="iframe embedding?">

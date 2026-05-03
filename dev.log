@@ -6535,3 +6535,5 @@ web:dev:  GET /manifest.webmanifest 200 in 312ms (compile: 295ms, render: 16ms)
 web:dev:  GET / 200 in 909ms (compile: 79ms, render: 830ms)
 remediate-demo:dev: [?25h
 web:dev: [?25h
+ ELIFECYCLE  Command failed.
+ ERROR  run failed: command  exited (1)

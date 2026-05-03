@@ -111,7 +111,11 @@ export async function POST(req: Request) {
 
   const urls: Record<string, string> = {};
   for (const [name, file] of files) {
-    const blob = await put(`feedback/${submission.id}/${name}`, file, { access: "public" });
+    const blob = await put(
+      `feedback/${submission.id}/${file.filename}`,
+      file.blob,
+      { access: "public", contentType: file.type },
+    );
     urls[name] = blob.url;
   }
 
@@ -174,6 +178,130 @@ export async function POST(req: Request) {
 }
 ```
 
+## convex
+
+for teams already on convex. uploads land directly in convex storage, then a mutation links them to the submission row.
+
+convex storage is a three-step dance: a mutation hands you a one-shot upload url, you `POST` the blob to it, and the response gives you a `storageId` that you persist on your row. the route below does all three.
+
+```ts
+// convex/schema.ts
+import { defineSchema, defineTable } from "convex/server";
+import { v } from "convex/values";
+
+export default defineSchema({
+  feedback: defineTable({
+    submissionId: v.string(),
+    url: v.string(),
+    timestamp: v.string(),
+    itemCount: v.number(),
+    metadata: v.any(),
+    payload: v.any(),
+    files: v.array(
+      v.object({
+        filename: v.string(),
+        storageId: v.id("_storage"),
+        contentType: v.string(),
+        size: v.number(),
+      }),
+    ),
+  })
+    .index("by_submissionId", ["submissionId"])
+    .index("by_url", ["url"]),
+});
+```
+
+```ts
+// convex/feedback.ts
+import { mutation } from "./_generated/server";
+import { v } from "convex/values";
+
+export const generateUploadUrl = mutation({
+  args: {},
+  returns: v.string(),
+  handler: async (ctx) => ctx.storage.generateUploadUrl(),
+});
+
+export const insert = mutation({
+  args: {
+    submissionId: v.string(),
+    url: v.string(),
+    timestamp: v.string(),
+    itemCount: v.number(),
+    metadata: v.any(),
+    payload: v.any(),
+    files: v.array(
+      v.object({
+        filename: v.string(),
+        storageId: v.id("_storage"),
+        contentType: v.string(),
+        size: v.number(),
+      }),
+    ),
+  },
+  returns: v.id("feedback"),
+  handler: async (ctx, args) => ctx.db.insert("feedback", args),
+});
+```
+
+```ts
+// app/api/feedback/route.ts
+// .env: NEXT_PUBLIC_CONVEX_URL
+import { parseFeedback } from "remediate/server";
+import { ConvexHttpClient } from "convex/browser";
+import { api } from "../../../convex/_generated/api";
+import type { Id } from "../../../convex/_generated/dataModel";
+
+const convex = new ConvexHttpClient(process.env.NEXT_PUBLIC_CONVEX_URL!);
+
+export const runtime = "nodejs";
+
+export async function POST(req: Request) {
+  const { submission, files } = await parseFeedback(req);
+
+  const uploaded: Array<{
+    filename: string;
+    storageId: Id<"_storage">;
+    contentType: string;
+    size: number;
+  }> = [];
+
+  for (const [, file] of files) {
+    const uploadUrl = await convex.mutation(api.feedback.generateUploadUrl, {});
+
+    const res = await fetch(uploadUrl, {
+      method: "POST",
+      headers: { "Content-Type": file.type },
+      body: file.blob,
+    });
+    if (!res.ok) throw new Error(`convex upload failed: ${res.status}`);
+
+    const { storageId } = (await res.json()) as { storageId: Id<"_storage"> };
+
+    uploaded.push({
+      filename: file.filename,
+      storageId,
+      contentType: file.type,
+      size: file.blob.size,
+    });
+  }
+
+  const id = await convex.mutation(api.feedback.insert, {
+    submissionId: submission.id,
+    url: submission.url,
+    timestamp: submission.timestamp,
+    itemCount: submission.items.length,
+    metadata: submission.metadata,
+    payload: submission,
+    files: uploaded,
+  });
+
+  return Response.json({ ok: true, id });
+}
+```
+
+run `npx convex dev` in another terminal to keep the codegen current. files render in the convex dashboard via `storage.getUrl(storageId)` from any query or mutation.
+
 ## vercel blob + database
 
 for beta programs. store the payload, store the files, query later.
@@ -197,7 +325,11 @@ export async function POST(req: Request) {
 
   const urls: Record<string, string> = {};
   for (const [name, file] of files) {
-    const blob = await put(`feedback/${submission.id}/${name}`, file, { access: "public" });
+    const blob = await put(
+      `feedback/${submission.id}/${file.filename}`,
+      file.blob,
+      { access: "public", contentType: file.type },
+    );
     urls[name] = blob.url;
   }
 
@@ -233,8 +365,8 @@ export async function POST(req: Request) {
 
   const dir = join(process.cwd(), "uploads", submission.id);
   await mkdir(dir, { recursive: true });
-  for (const [name, file] of files) {
-    await writeFile(join(dir, name), Buffer.from(await file.arrayBuffer()));
+  for (const [, file] of files) {
+    await writeFile(join(dir, file.filename), Buffer.from(await file.blob.arrayBuffer()));
   }
 
   await db.insert(feedback).values({
@@ -262,8 +394,8 @@ export async function POST(req: Request) {
   const dir = join(process.cwd(), ".feedback", submission.id);
   await mkdir(dir, { recursive: true });
   await writeFile(join(dir, "submission.json"), JSON.stringify(submission, null, 2));
-  for (const [name, file] of files) {
-    await writeFile(join(dir, name), Buffer.from(await file.arrayBuffer()));
+  for (const [, file] of files) {
+    await writeFile(join(dir, file.filename), Buffer.from(await file.blob.arrayBuffer()));
   }
   return Response.json({ ok: true });
 }

@@ -12,6 +12,16 @@ export const metadata = {
   description="every prop, every option."
 />
 
+## naming
+
+three things in remediate are called `metadata`. they're related but not the same:
+
+- **`metadata` (prop)** — `<Remediate metadata={{...}}>`. extra data you attach to every submission. ends up at `submission.metadata` on the server, verbatim.
+- **`metadata` (form field)** — internal name of the json envelope inside the multipart `POST`. you only see this if you build FormData by hand or curl the route; `parseFeedback` hides it.
+- **`submission.metadata` (json field)** — the value of the `metadata` prop, sitting on the parsed `FeedbackSubmission`.
+
+day-to-day you only touch the prop. the form field is a wire-format detail.
+
 ## `<Remediate />`
 
 all props optional. omit `endpoint` and `onSubmit` and the widget renders but submissions go nowhere.

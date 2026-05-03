@@ -219,13 +219,21 @@ interface VoiceNoteItem extends FeedbackItemBase {
 `blob` is only populated in the `onSubmit` path. with `endpoint`, blobs are stripped from the json and uploaded as separate FormData parts. on the server, `parseFeedback(req)` returns:
 
 ```ts
+interface ParsedFile {
+  blob: Blob;
+  filename: string;                     // e.g. "screenshot-itm_abc123.png"
+  type: string;                         // mime type, e.g. "image/png"
+  itemId: string;                       // matches the FeedbackItem.id
+  category: "screenshot" | "recording" | "voice";
+}
+
 interface ParsedFeedback {
   submission: FeedbackSubmission;       // blobs not present
-  files: Map<string, File>;             // blobs here, keyed by filename
+  files: Map<string, ParsedFile>;       // keyed by FormData field name
 }
 ```
 
-filenames look like `screenshot-${item.id}`, `recording-${item.id}`, `voice-${item.id}`.
+map keys look like `screenshot-${item.id}`, `recording-${item.id}`, `voice-${item.id}`. the `.blob` property is the raw `Blob` you pass to your storage layer.
 
 ## working with the payload
 
@@ -258,16 +266,23 @@ const { submission, files } = await parseFeedback(req);
 
 const urls: Record<string, string> = {};
 for (const [name, file] of files) {
-  urls[name] = await uploadSomewhere(name, file);
+  urls[name] = await uploadSomewhere(file.filename, file.blob, file.type);
 }
 ```
+
+this assumes a one-shot uploader (vercel blob, s3 `PutObject`, r2 single-part). for two/three-step uploads — convex, signed s3 urls, r2 multipart — see [recipes › convex](/docs/recipes#convex) for the canonical three-step pattern.
 
 ### get the file for a specific item
 
 ```ts
-const photoFile = files.get(`screenshot-${itemId}`);
-const videoFile = files.get(`recording-${itemId}`);
-const voiceFile = files.get(`voice-${itemId}`);
+const photo = files.get(`screenshot-${itemId}`);   // ParsedFile | undefined
+const video = files.get(`recording-${itemId}`);
+const voice = files.get(`voice-${itemId}`);
+
+if (photo) {
+  const { blob, type, filename } = photo;
+  // hand `blob` to your storage layer
+}
 ```
 
 ### derive a title from first text-like item

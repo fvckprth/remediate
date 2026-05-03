@@ -40,11 +40,17 @@ npm install remediate
 
 ### or set up with claude code
 
+drop the skill into your local skills folder:
+
 ```bash
-claude install-skill fvckprth/remediate
+mkdir -p ~/.claude/skills/remediate
+curl -fsSL https://raw.githubusercontent.com/fvckprth/remediate/main/skills/remediate/SKILL.md \
+  -o ~/.claude/skills/remediate/SKILL.md
 ```
 
-then run `/remediate`. detects your framework, installs the package, creates the server route, wires it into your layout.
+then ask claude to "set up remediate" in your project. it'll detect your framework, install the package, create the server route, and wire it into your layout.
+
+a proper claude code plugin marketplace is in progress — for now, this manual step is the bridge.
 
 ## add the server route
 
@@ -61,7 +67,7 @@ export async function POST(req: Request) {
 }
 ```
 
-`submission` is the json. `files` is a `Map<string, File>` of screenshots, recordings, and voice notes.
+`submission` is the json. `files` is a `Map<string, ParsedFile>` of screenshots, recordings, and voice notes — see [payload › blobs on the wire](/docs/payload#blobs-on-the-wire) for the shape.
 
 works anywhere you have a web `Request`: app router, remix, hono, bun, deno, cloudflare workers.
 

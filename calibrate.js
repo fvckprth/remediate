@@ -105,8 +105,12 @@ async function run() {
       // page elements like annotation-target / annotation popover.
       const distFromRight = cb.right - targetCenterX;
       const distFromLeft = targetCenterX - cb.left;
-      const xFromRight = distFromRight <= distFromLeft;
-      const isBottomHalf = targetCenterY > (cb.top + cb.height / 2);
+      // Annotation popover lives at top:130 / left:50% absolute. Force its
+      // contents into a single top-left coordinate frame so the cursor doesn't
+      // jump between coordinate systems across consecutive popover steps.
+      const isPopoverTarget = name.startsWith("annot-") || name === "annotation-target";
+      const xFromRight = isPopoverTarget ? false : (distFromRight <= distFromLeft);
+      const isBottomHalf = isPopoverTarget ? false : (targetCenterY > (cb.top + cb.height / 2));
 
       const visualX = xFromRight ? distFromRight : distFromLeft;
       const visualY = isBottomHalf ? cb.bottom - targetCenterY : targetCenterY - cb.top;
