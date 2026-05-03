@@ -61,10 +61,11 @@ open devtools, capture something, watch the payload.
 ## claude code
 
 ```bash
-claude install-skill fvckprth/remediate
+claude plugin marketplace add fvckprth/remediate
+claude plugin install remediate@fvckprth
 ```
 
-then run `/remediate`. detects your framework, installs the package, creates the server route, wires it into your layout.
+then run `/remediate` in any react project. detects your framework, picks a backend, installs the package, scaffolds the server route, and wires the component into your layout.
 
 ## what gets captured
 

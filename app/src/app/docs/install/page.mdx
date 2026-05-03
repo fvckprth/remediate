@@ -40,17 +40,16 @@ npm install remediate
 
 ### or set up with claude code
 
-drop the skill into your local skills folder:
+install the plugin once, then run `/remediate` in any react project.
 
 ```bash
-mkdir -p ~/.claude/skills/remediate
-curl -fsSL https://raw.githubusercontent.com/fvckprth/remediate/main/skills/remediate/SKILL.md \
-  -o ~/.claude/skills/remediate/SKILL.md
+claude plugin marketplace add fvckprth/remediate
+claude plugin install remediate@fvckprth
 ```
 
-then ask claude to "set up remediate" in your project. it'll detect your framework, install the package, create the server route, and wire it into your layout.
+then run `/remediate` in your project. it'll detect your framework, pick a backend, install the package, scaffold the server route, and wire the component into your layout.
 
-a proper claude code plugin marketplace is in progress — for now, this manual step is the bridge.
+to pull a new version later: `claude plugin marketplace update fvckprth && claude plugin update remediate@fvckprth`. the marketplace step is required — `plugin update` alone reads from a stale local clone ([anthropics/claude-code#25244](https://github.com/anthropics/claude-code/issues/25244)).
 
 ## add the server route
 

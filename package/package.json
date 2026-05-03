@@ -82,7 +82,6 @@
   },
   "files": [
     "dist",
-    ".claude",
     "README.md",
     "LICENSE"
   ],
