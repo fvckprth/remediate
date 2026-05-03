@@ -835,6 +835,12 @@
   line-height: 1.5;
 }
 
+@media (hover: none) {
+  .rm-input-group__textarea {
+    font-size: 16px;
+  }
+}
+
 .rm-input-group__textarea::placeholder {
   color: var(--rm-fg-35);
 }

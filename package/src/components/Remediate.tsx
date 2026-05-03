@@ -190,7 +190,7 @@ export function Remediate({ onSubmit, endpoint, metadata: extraMetadata, onError
           <SubMenu
             items={[
               { id: "photo", label: "Screenshot", icon: <CameraFill size={20} />, onClick: () => dispatch({ type: "SET_MODE", mode: "capturePhoto" }) },
-              { id: "video", label: "Record", icon: <CamcorderFill size={20} />, onClick: () => dispatch({ type: "SET_MODE", mode: "captureVideo" }), disabled: !isVideoRecordingSupported(), disabledReason: "Not supported in this browser" },
+              { id: "video", label: "Record", icon: <CamcorderFill size={20} />, onClick: () => dispatch({ type: "SET_MODE", mode: "captureVideo" }), disabled: !isVideoRecordingSupported() },
             ]}
             onDismiss={() => dispatch({ type: "SET_MODE", mode: "active" })}
           />
