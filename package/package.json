@@ -1,6 +1,6 @@
 {
   "name": "remediate",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "Drop-in feedback widget for React apps. Screenshot, video, voice, text, and element annotation.",
   "type": "module",
   "main": "./dist/index.cjs",
