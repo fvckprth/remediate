@@ -594,7 +594,7 @@
 .rm-popover {
   position: fixed;
   z-index: 999999;
-  width: 280px;
+  width: min(280px, calc(100vw - 32px));
   padding: 12px 16px 14px;
   display: flex;
   flex-direction: column;
@@ -964,7 +964,7 @@
 /* ── Text Mode Panel ─────────────────────── */
 
 .rm-text-panel {
-  width: 280px;
+  width: min(280px, calc(100vw - 32px));
   padding: 12px 16px 14px;
 }
 
@@ -1205,7 +1205,7 @@
 /* ── Capture Panel ──────────────────────── */
 
 .rm-capture-panel {
-  width: 280px;
+  width: min(280px, calc(100vw - 32px));
   padding: 14px;
   display: flex;
   flex-direction: column;
@@ -1398,7 +1398,7 @@
   display: grid;
   grid-template-areas: "stack";
   align-items: center;
-  width: 240px;
+  width: min(240px, calc(100vw - 32px));
   box-sizing: border-box;
 }
 
@@ -1607,7 +1607,7 @@
 /* ── Review Panel ───────────────────────── */
 
 .rm-review-panel {
-  width: 280px;
+  width: min(280px, calc(100vw - 32px));
   max-height: 360px;
   padding: 12px;
   display: flex;
