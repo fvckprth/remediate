@@ -140,7 +140,7 @@ export function MobileHeader() {
               rel="noopener noreferrer"
               className="text-sm font-medium leading-none tracking-tight underline decoration-dotted underline-offset-2 hover:text-foreground/70"
             >
-              v0.1.0
+              v0.1.2
             </a>
             <a href="https://github.com/fvckprth/remediate" target="_blank" rel="noopener noreferrer" className="hover:text-foreground/70">
               <GithubIcon />
