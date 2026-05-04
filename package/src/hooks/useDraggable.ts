@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useLayoutEffect, useCallback } from "react";
+import { useState, useRef, useEffect, useLayoutEffect, useCallback, type RefObject } from "react";
 
 const DRAG_THRESHOLD = 5;
 const VIEWPORT_PADDING = 20;
@@ -12,21 +12,17 @@ interface DragPosition {
 
 export function useDraggable({
   enabled,
-  onPositionChange,
+  barRef,
 }: {
   enabled: boolean;
-  onPositionChange?: (pos: { x: number; y: number } | null) => void;
+  barRef: RefObject<HTMLDivElement | null>;
 }) {
   const [position, setPosition] = useState<DragPosition | null>(null);
   const [isDragging, setIsDragging] = useState(false);
-  const barRef = useRef<HTMLDivElement>(null);
   const dragStartRef = useRef<{ mouseX: number; mouseY: number; barX: number; barY: number } | null>(null);
   const didDragRef = useRef(false);
   const justFinishedDragRef = useRef(false);
   const dragCleanupRef = useRef<(() => void) | null>(null);
-
-  const onPositionChangeRef = useRef(onPositionChange);
-  onPositionChangeRef.current = onPositionChange;
 
   // Read saved position from localStorage before first paint
   useLayoutEffect(() => {
@@ -38,45 +34,9 @@ export function useDraggable({
           parsed.r = window.innerWidth - parsed.x - 90;
         }
         setPosition(parsed);
-        onPositionChangeRef.current?.(parsed);
-        return;
       } catch {}
     }
-    requestAnimationFrame(() => {
-      const bar = barRef.current;
-      if (bar) {
-        const rect = bar.getBoundingClientRect();
-        onPositionChangeRef.current?.({ x: rect.left, y: rect.top });
-      }
-    });
   }, []);
-
-  // Re-report position on viewport resize/zoom so the panel tracks the bar.
-  // Skipped while dragging — the drag handler updates inline left/top directly.
-  useEffect(() => {
-    if (isDragging) return;
-
-    let rafId: number | null = null;
-
-    const reportPosition = () => {
-      rafId = null;
-      const bar = barRef.current;
-      if (!bar) return;
-      const rect = bar.getBoundingClientRect();
-      onPositionChangeRef.current?.({ x: rect.left, y: rect.top });
-    };
-
-    const handleResize = () => {
-      if (rafId !== null) return;
-      rafId = requestAnimationFrame(reportPosition);
-    };
-
-    window.addEventListener("resize", handleResize);
-    return () => {
-      window.removeEventListener("resize", handleResize);
-      if (rafId !== null) cancelAnimationFrame(rafId);
-    };
-  }, [isDragging]);
 
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
     if (!enabled) return;
@@ -135,7 +95,6 @@ export function useDraggable({
         setPosition(finalPos);
         setIsDragging(false);
         localStorage.setItem(STORAGE_KEY, JSON.stringify(finalPos));
-        onPositionChangeRef.current?.(finalPos);
 
         justFinishedDragRef.current = true;
         requestAnimationFrame(() => {
@@ -156,7 +115,7 @@ export function useDraggable({
       document.removeEventListener("mousemove", handleMouseMove);
       document.removeEventListener("mouseup", handleMouseUp);
     };
-  }, [enabled]);
+  }, [enabled, barRef]);
 
   // Clean up drag listeners on unmount
   useEffect(() => {
@@ -166,7 +125,6 @@ export function useDraggable({
   }, []);
 
   return {
-    barRef,
     position,
     isDragging,
     /** True for one frame after a drag ends — use to suppress click handlers */

@@ -1,4 +1,5 @@
-import { useRef } from "react";
+import { useRef, type RefObject } from "react";
+import { useViewportTick } from "./useViewportTick";
 
 const BAR_HEIGHT = 40;
 const GAP = 4;
@@ -7,30 +8,43 @@ const PADDING = 20;
 export function usePanelPosition({
   panelKey,
   panelWidth,
-  barPosition,
-  anchorX,
+  barRef,
+  anchorAriaLabel,
 }: {
   panelKey: string | null;
   panelWidth: number;
-  barPosition: { x: number; y: number } | null;
-  anchorX: number | null;
+  barRef: RefObject<HTMLDivElement | null>;
+  anchorAriaLabel: string | null;
 }) {
-  // Calculate position centered on the triggering button, clamped to viewport
-  const isBrowser = typeof window !== "undefined";
-  let panelLeft = barPosition ? barPosition.x : (isBrowser ? window.innerWidth - 20 - panelWidth : 0);
+  // Re-render whenever the viewport changes so the live DOM reads below
+  // pick up the new bar / button positions on the same tick as innerHeight.
+  useViewportTick();
 
-  if (anchorX !== null && isBrowser) {
-    const desiredLeft = anchorX - (panelWidth / 2);
+  const isBrowser = typeof window !== "undefined";
+
+  // Live read — same tick as window.innerHeight, no cached state to go stale.
+  const barRect = isBrowser ? barRef.current?.getBoundingClientRect() ?? null : null;
+  const anchorBtn = isBrowser && anchorAriaLabel
+    ? (document.querySelector(
+        `[data-remediate-widget] button[aria-label="${anchorAriaLabel}"]`
+      ) as HTMLElement | null)
+    : null;
+  const anchorRect = anchorBtn ? anchorBtn.getBoundingClientRect() : null;
+
+  let panelLeft = barRect ? barRect.left : (isBrowser ? window.innerWidth - 20 - panelWidth : 0);
+
+  if (anchorRect && isBrowser) {
+    const desiredLeft = (anchorRect.left + anchorRect.width / 2) - (panelWidth / 2);
     panelLeft = Math.max(PADDING, Math.min(window.innerWidth - panelWidth - PADDING, desiredLeft));
   }
 
-  const panelBelow = barPosition ? barPosition.y < window.innerHeight / 2 : false;
+  const panelBelow = barRect ? barRect.top < window.innerHeight / 2 : false;
 
-  const panelPosition = barPosition
+  const panelPosition = barRect
     ? panelBelow
-      ? { top: barPosition.y + BAR_HEIGHT + GAP, left: panelLeft }
-      : { bottom: isBrowser ? window.innerHeight - barPosition.y + GAP : 0, left: panelLeft }
-    : { bottom: 72, right: 20 }; // Default when no position is set
+      ? { top: barRect.top + BAR_HEIGHT + GAP, left: panelLeft }
+      : { bottom: isBrowser ? window.innerHeight - barRect.top + GAP : 0, left: panelLeft }
+    : { bottom: 72, right: 20 }; // Default when bar isn't measured yet
 
   // Freeze panel position, direction & width during exit so panels don't shift while fading out
   const lastPanelPosition = useRef(panelPosition);

@@ -1,4 +1,4 @@
-import { useReducer, useCallback, useState, useEffect, useMemo } from "react";
+import { useReducer, useCallback, useState, useEffect, useMemo, useRef } from "react";
 import type {
   WidgetMode, FeedbackItem,
   AnnotationItem, AnnotationPriority, RemediateProps, CaptureType,
@@ -112,9 +112,11 @@ export function Remediate({
     cancelVideoRecording,
   });
 
-  // Bar position (synced from FeedbackBar via callback)
-  const [barPosition, setBarPosition] = useState<{ x: number; y: number } | null>(null);
-  const [anchorX, setAnchorX] = useState<number | null>(null);
+  // Bar element ref + anchor button aria-label.
+  // usePanelPosition reads positions live from the DOM via these — no cached
+  // x/y state to go stale on viewport resize / browser zoom.
+  const barRef = useRef<HTMLDivElement>(null);
+  const [anchorAriaLabel, setAnchorAriaLabel] = useState<string | null>(null);
 
   const showAreaSelector =
     state.mode === "capturePhoto" ||
@@ -128,7 +130,7 @@ export function Remediate({
   const hasContent = state.items.length > 0;
 
   const { panelPosition, panelBelow } = usePanelPosition({
-    panelKey, panelWidth: panelKey ? PANEL_WIDTHS[panelKey] : 176, barPosition, anchorX,
+    panelKey, panelWidth: panelKey ? PANEL_WIDTHS[panelKey] : 176, barRef, anchorAriaLabel,
   });
 
   const annotations = state.items.filter(
@@ -151,11 +153,7 @@ export function Remediate({
   }, []);
 
   const anchorToButton = useCallback((ariaLabel: string) => {
-    const btn = document.querySelector(`[data-remediate-widget] button[aria-label="${ariaLabel}"]`) as HTMLElement | null;
-    if (btn) {
-      const rect = btn.getBoundingClientRect();
-      setAnchorX(rect.left + rect.width / 2);
-    }
+    setAnchorAriaLabel(ariaLabel);
   }, []);
 
   // --- Preview helpers ---
@@ -195,9 +193,9 @@ export function Remediate({
             onClose={() => dispatch({ type: "CLOSE" })}
             onReview={() => dispatch({ type: "REVIEW" })}
             onDeleteAll={() => dispatch({ type: "CLEAR_ALL" })}
-            onPositionChange={setBarPosition}
-            onAnchorX={setAnchorX}
+            onAnchorAriaLabel={setAnchorAriaLabel}
             panelOpen={panelKey !== null}
+            barRef={barRef}
           />
         )}
 

@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, type RefObject } from "react";
 import type { WidgetMode } from "../../types";
 import { isCaptureMode, isNoteMode } from "../../types";
 import { useDraggable } from "../../hooks/useDraggable";
@@ -24,9 +24,9 @@ interface FeedbackBarProps {
   onClose: () => void;
   onReview: () => void;
   onDeleteAll: () => void;
-  onPositionChange?: (pos: { x: number; y: number } | null) => void;
-  onAnchorX?: (x: number) => void;
+  onAnchorAriaLabel?: (ariaLabel: string) => void;
   panelOpen?: boolean;
+  barRef: RefObject<HTMLDivElement | null>;
 }
 
 export function FeedbackBar({
@@ -40,9 +40,9 @@ export function FeedbackBar({
   onClose,
   onReview,
   onDeleteAll,
-  onPositionChange,
-  onAnchorX,
+  onAnchorAriaLabel,
   panelOpen,
+  barRef,
 }: FeedbackBarProps) {
   const isSuccess = mode === "success";
   const captureActive = isCaptureMode(mode);
@@ -53,9 +53,9 @@ export function FeedbackBar({
   const hideTooltips = () => setTooltipsHidden(true);
   const showTooltips = () => setTooltipsHidden(false);
 
-  const { barRef, position, isDragging, justDragged, handleMouseDown } = useDraggable({
+  const { position, isDragging, justDragged, handleMouseDown } = useDraggable({
     enabled: !panelOpen,
-    onPositionChange,
+    barRef,
   });
 
   // Measure tools width and set bar width dynamically
@@ -96,8 +96,8 @@ export function FeedbackBar({
   };
 
   const reportAnchor = (e: React.MouseEvent<HTMLButtonElement>) => {
-    const rect = e.currentTarget.getBoundingClientRect();
-    onAnchorX?.(rect.left + rect.width / 2);
+    const label = e.currentTarget.getAttribute("aria-label");
+    if (label) onAnchorAriaLabel?.(label);
   };
 
   return (
