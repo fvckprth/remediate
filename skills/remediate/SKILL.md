@@ -36,10 +36,23 @@ set up the remediate feedback widget in this project. one component on the clien
    - **vercel blob** — `@vercel/blob` in dependencies, or `BLOB_READ_WRITE_TOKEN` in `.env*`
    - **postgres + drizzle** — `drizzle-orm` in dependencies
    - **slack webhook** — `SLACK_WEBHOOK_URL` in `.env*`, or `@slack/webhook` in dependencies
+   - **discord webhook** — `DISCORD_WEBHOOK_URL` in `.env*`
+   - **github issues** — `GITHUB_TOKEN` in `.env*`, or `@octokit` in dependencies
    - **email (resend)** — `resend` in dependencies, or `RESEND_API_KEY` in `.env*`
-   - **none of the above** — offer the full list (`convex`, `vercel blob`, `postgres + drizzle`, `slack webhook`, `email`, `local disk`) and ask the user to pick. if they're unsure, default to `local disk` so they can see submissions immediately.
+   - **none of the above** — offer the full list (`convex`, `vercel blob`, `postgres + drizzle`, `slack webhook`, `discord webhook`, `github issues`, `email`, `local disk`) and ask the user to pick. if they're unsure, default to `local disk` so they can see submissions immediately.
 
    ask the user something like: "i found `convex` in your project — scaffold the convex recipe? (yes / pick another)". don't pick silently.
+
+5b. **detect auth, then suggest metadata + headers**
+   check the project for auth libraries:
+   - `next-auth` or `@auth/core` in dependencies
+   - `@clerk/nextjs` in dependencies
+   - `@supabase/auth-helpers-nextjs` or `@supabase/ssr` in dependencies
+
+   if found, suggest wiring user context:
+   - ask: "i see `@clerk/nextjs` — want me to pass the user id and email via metadata and auth token via headers?"
+   - if yes, add `metadata={{ userId: user.id, email: user.email }}` and `headers={{ Authorization: \`Bearer ${token}\` }}` to the component mount, with the appropriate auth hook imports for the detected library
+   - if no, skip — the user can add it later
 
 6. **create the server route**
    pick the path based on framework:
@@ -169,7 +182,11 @@ set up the remediate feedback widget in this project. one component on the clien
      const { submission } = await parseFeedback(req);
      const lines = submission.items.map((item) => {
        const tag = item.priority !== "none" ? ` *[${item.priority}]*` : "";
-       return `• ${item.type}${tag} — ${item.additionalText || (item as any).note || (item as any).text || ""}`;
+       const text =
+         item.type === "textNote" ? item.text :
+         item.type === "annotation" ? item.note :
+         item.additionalText || "";
+       return `• ${item.type}${tag} — ${text}`;
      });
      await fetch(process.env.SLACK_WEBHOOK_URL!, {
        method: "POST",
@@ -181,6 +198,73 @@ set up the remediate feedback widget in this project. one component on the clien
    ```
 
    tell the user to set `SLACK_WEBHOOK_URL` in `.env`.
+
+   ### template: discord webhook
+
+   ```ts
+   import { parseFeedback } from "remediate/server";
+
+   export async function POST(req: Request) {
+     const { submission } = await parseFeedback(req);
+     const body = submission.items
+       .map((item) => {
+         if (item.type === "textNote") return item.text;
+         if (item.type === "annotation") return item.note;
+         return item.additionalText;
+       })
+       .filter(Boolean)
+       .join("\n");
+
+     await fetch(process.env.DISCORD_WEBHOOK_URL!, {
+       method: "POST",
+       headers: { "Content-Type": "application/json" },
+       body: JSON.stringify({
+         content: `**feedback on ${submission.url}** — ${submission.items.length} items`,
+         embeds: body ? [{ description: body }] : [],
+       }),
+     });
+     return Response.json({ ok: true, id: submission.id });
+   }
+   ```
+
+   tell the user to set `DISCORD_WEBHOOK_URL` in `.env`.
+
+   ### template: github issues
+
+   ```ts
+   import { parseFeedback } from "remediate/server";
+
+   export async function POST(req: Request) {
+     const { submission } = await parseFeedback(req);
+     const body = submission.items
+       .map((item) => {
+         if (item.type === "textNote") return item.text;
+         if (item.type === "annotation") return `${item.note} (${item.element.selector})`;
+         return item.additionalText;
+       })
+       .filter(Boolean)
+       .join("\n\n");
+
+     await fetch(
+       `https://api.github.com/repos/${process.env.GITHUB_OWNER}/${process.env.GITHUB_REPO}/issues`,
+       {
+         method: "POST",
+         headers: {
+           Authorization: `Bearer ${process.env.GITHUB_TOKEN}`,
+           "Content-Type": "application/json",
+         },
+         body: JSON.stringify({
+           title: `feedback on ${submission.url}`,
+           body: body || "no text content",
+           labels: ["feedback"],
+         }),
+       },
+     );
+     return Response.json({ ok: true, id: submission.id });
+   }
+   ```
+
+   tell the user to set `GITHUB_TOKEN`, `GITHUB_OWNER`, and `GITHUB_REPO` in `.env`.
 
    ### template: email (resend)
 
@@ -226,10 +310,28 @@ set up the remediate feedback widget in this project. one component on the clien
    add `.feedback/` to `.gitignore`.
 
 7. **add the component**
-   - **next.js app router** → root `app/layout.tsx`, inside `<body>`, after `{children}`
-   - **next.js pages router** → `pages/_app.tsx`, after the `<Component>`
-   - **remix** → `app/root.tsx`, inside `<body>`
-   - **vite / other** → root app component
+
+   `Remediate` is a client component. in next.js app router, `layout.tsx` is a server component by default — you can't add `<Remediate>` directly. create a wrapper:
+
+   **next.js app router:**
+   1. create `app/components/feedback-widget.tsx` (or wherever the project keeps components):
+      ```tsx
+      "use client";
+      import { Remediate } from "remediate";
+
+      export function FeedbackWidget() {
+        return <Remediate endpoint="/api/feedback" />;
+      }
+      ```
+   2. import and render `<FeedbackWidget />` in `app/layout.tsx`, inside `<body>`, after `{children}`
+
+   if step 5b detected auth and the user said yes, add `metadata` and `headers` props to the `<Remediate>` call inside the wrapper, with the appropriate auth hook (e.g. `useUser()` from clerk, `useSession()` from next-auth).
+
+   **next.js pages router** → `pages/_app.tsx`, after the `<Component>` (no wrapper needed, pages router is client by default)
+
+   **remix** → `app/root.tsx`, inside `<body>` (remix components are client-capable)
+
+   **vite / other** → root app component
 
    ```tsx
    import { Remediate } from "remediate";
@@ -243,7 +345,10 @@ set up the remediate feedback widget in this project. one component on the clien
    - tell the user remediate is configured with the backend they chose
    - tell them to start their dev server and look for the floating button in the bottom corner
    - if backend is `convex`, also tell them to run `npx convex dev` in another terminal
+   - if backend is `local disk`, confirm `.feedback/` was added to `.gitignore`
+   - if auth was detected and wired, confirm which user fields are being passed via `metadata` and that the auth token is sent via `headers`
    - mention that submissions land via the route they just created
+   - mention `submission.items` is where the content lives (text notes, annotations, photos, videos, voice notes) and `files` is a `Map<string, ParsedFile>` of blobs
    - point them to the docs:
      - [recipes](https://www.remediate.ski/docs/recipes) — copy-pasteable backends (slack, github issues, discord, email, convex, postgres, vercel blob, local disk)
      - [payload](https://www.remediate.ski/docs/payload) — what's in the json
@@ -252,10 +357,14 @@ set up the remediate feedback widget in this project. one component on the clien
 ## notes
 
 - remediate requires react 18+
+- `Remediate` is a client component — in next.js app router it must be inside a `"use client"` boundary
 - styles inject automatically, no css import needed
 - video and voice recording require https (localhost is fine for dev)
 - video recording is desktop-only (no mobile safari support)
-- the `metadata` prop attaches user context (userId, email, etc.) to every submission
+- the `metadata` prop attaches user context (userId, email, etc.) to every submission — arrives as `submission.metadata` on the server
+- the `headers` prop sends custom headers on the POST (e.g. `Authorization: Bearer ...`) — cleaner than putting auth tokens in metadata
 - `parseFeedback` works with any web-standard `Request` object — app router, remix, hono, bun, deno, cloudflare workers
+- `submission.items` is the actual content array (not `submission.body`) — narrow on `item.type` to get type-specific fields
+- `files` is a `Map<string, ParsedFile>` (not an array) — iterate with `for (const [, file] of files)`
 - if the project uses typescript, the types ship with the package
 - if the user already has a `<Remediate>` mount, do NOT add a second one — the widget assumes a single instance per app
