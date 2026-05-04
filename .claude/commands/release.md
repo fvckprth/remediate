@@ -32,8 +32,7 @@ publish a new version of remediate.
    - push to origin
 
 6. **update the marketing site version display**
-   - in `/Users/parthpatel/Desktop/Projects/remediate-mktg/src/components/docs/docs-nav.tsx`, replace the old version string with the new one
-   - in `/Users/parthpatel/Desktop/Projects/remediate-mktg/src/components/mobile-menu.tsx`, replace the old version string with the new one
+   - in `/Users/parthpatel/Desktop/Projects/remediate-mktg/src/components/nav-config.ts`, update the `VERSION` constant to the new version
    - commit with message: `chore: bump version display to vX.Y.Z`
    - push to origin (vercel auto-deploys from the push)
 
