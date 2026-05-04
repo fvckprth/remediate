@@ -1,7 +1,6 @@
 packages:
   - package
   - package/example
-  - app
 
 ignoredBuiltDependencies:
   - sharp
