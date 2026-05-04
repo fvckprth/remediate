@@ -61,11 +61,12 @@ open devtools, capture something, watch the payload.
 ## claude code
 
 ```bash
-claude plugin marketplace add fvckprth/remediate
-claude plugin install remediate@fvckprth
+npx skills add fvckprth/remediate
 ```
 
 then run `/remediate` in any react project. detects your framework, picks a backend, installs the package, scaffolds the server route, and wires the component into your layout.
+
+works for any agent that reads agent skills — claude code, codex, cursor, opencode, cline, and the rest.
 
 ## what gets captured
 

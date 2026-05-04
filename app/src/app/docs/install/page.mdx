@@ -38,22 +38,17 @@ npm install remediate
 
 <AltInstall />
 
-### or set up with claude code
+### or set up with an agent
 
-install the plugin once, then run `/remediate` in any react project.
-
-```bash
-claude plugin marketplace add fvckprth/remediate
-claude plugin install remediate@fvckprth
-```
-
-then run `/remediate` in your project. it'll detect your framework, pick a backend, install the package, scaffold the server route, and wire the component into your layout.
-
-to pull a new version later:
+install the skill once, then run `/remediate` in any react project.
 
 ```bash
-claude plugin marketplace update fvckprth && claude plugin update remediate@fvckprth
+npx skills add fvckprth/remediate
 ```
+
+then run `/remediate`. it'll detect your framework, pick a backend, install the package, scaffold the server route, and wire the component into your layout.
+
+works for any agent that reads agent skills — claude code, codex, cursor, opencode, cline, and the rest. the installer auto-detects which agents you have and drops the skill in the right place. add `-g` for a global install across all your projects.
 
 ## add the server route
 
