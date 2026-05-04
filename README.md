@@ -23,6 +23,8 @@ export default function App() {
 }
 ```
 
+> **next.js app router:** `Remediate` is a client component. wrap it in a `"use client"` file or place it inside a component that already has one.
+
 a floating button appears in the corner. click it, capture, submit. styles inject themselves.
 
 ## add the server route
@@ -86,12 +88,12 @@ works for any agent that reads agent skills — claude code, codex, cursor, open
 
 ## what gets captured
 
-- screenshots: png from the dom. no permission prompt.
-- screen recordings: real video via getDisplayMedia. desktop only. requires https.
-- voice notes: microphone audio via getUserMedia. requires https.
-- annotations: css selector, dom path, computed styles, bounding rect, nearby text.
-- text notes: whatever the user types.
-- environment: browser, os, viewport, screen, language, timezone, color scheme.
+- **photo** — screenshot of a selected region, rendered from the dom. no permission prompt.
+- **video** — screen recording via getDisplayMedia. desktop only. requires https.
+- **voiceNote** — microphone audio via getUserMedia. requires https.
+- **annotation** — pin on a dom element. captures css selector, dom path, computed styles, bounding rect, nearby text.
+- **textNote** — whatever the user types.
+- **environment** — browser, os, viewport, screen, language, timezone, color scheme (auto-captured).
 
 cross-origin images and iframes render blank in screenshots. video recording is not available on mobile safari.
 
