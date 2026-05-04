@@ -4,13 +4,11 @@ import { isCaptureMode, isNoteMode } from "../types";
 
 export function useWidgetKeyboard({
   mode,
-  settingsOpen,
   previewingItemId,
   dispatch,
   cancelVideoRecording,
 }: {
   mode: WidgetMode;
-  settingsOpen: boolean;
   previewingItemId: string | null;
   dispatch: React.Dispatch<WidgetAction>;
   cancelVideoRecording: () => void;
@@ -18,9 +16,7 @@ export function useWidgetKeyboard({
   useEffect(() => {
     function handleKeydown(e: KeyboardEvent) {
       if (e.key === "Escape" && mode !== "idle") {
-        if (settingsOpen) {
-          dispatch({ type: "CLOSE_SETTINGS" });
-        } else if (mode === "videoRecording") {
+        if (mode === "videoRecording") {
           cancelVideoRecording();
         } else if (mode === "captureMenu" || mode === "noteMenu") {
           dispatch({ type: "SET_MODE", mode: "active" });
@@ -36,5 +32,5 @@ export function useWidgetKeyboard({
     }
     window.addEventListener("keydown", handleKeydown);
     return () => window.removeEventListener("keydown", handleKeydown);
-  }, [mode, settingsOpen, previewingItemId, dispatch, cancelVideoRecording]);
+  }, [mode, previewingItemId, dispatch, cancelVideoRecording]);
 }

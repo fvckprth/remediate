@@ -1,12 +1,12 @@
 import type { WidgetMode, WidgetState } from "../types";
 
 export type PanelKey =
-  | "settings" | "captureMenu" | "noteMenu"
+  | "captureMenu" | "noteMenu"
   | "capturePhoto" | "captureVideo" | "textNote"
   | "voicePanel" | "review" | "submitError";
 
 export const PANEL_WIDTHS: Record<PanelKey, number> = {
-  settings: 240, captureMenu: 176, noteMenu: 176,
+  captureMenu: 176, noteMenu: 176,
   capturePhoto: 280, captureVideo: 280, textNote: 280,
   voicePanel: 240, review: 280, submitError: 200,
 };
@@ -26,16 +26,11 @@ const MODE_PANEL: Partial<Record<WidgetMode, PanelKey>> = {
 /**
  * Derive the active panel key from widget state.
  *
- * Handles settings overlay priority and the capturePreview variant split.
+ * Handles the capturePreview variant split.
  * Returns null when no panel should be shown.
  */
-export function derivePanelKey(state: Pick<WidgetState, "mode" | "settingsOpen" | "pendingCapture">): PanelKey | null {
-  const { mode, settingsOpen, pendingCapture } = state;
-
-  // Settings overlay takes priority (except in terminal states)
-  if (settingsOpen && mode !== "idle" && mode !== "success" && mode !== "submitError") {
-    return "settings";
-  }
+export function derivePanelKey(state: Pick<WidgetState, "mode" | "pendingCapture">): PanelKey | null {
+  const { mode, pendingCapture } = state;
 
   // capturePreview depends on the pending capture variant
   if (mode === "capturePreview") {

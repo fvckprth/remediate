@@ -48,7 +48,6 @@ interface PendingElement {
 interface AnnotateModeProps {
   annotations: AnnotationItem[];
   markerColor: string;
-  blockInteractions: boolean;
   nextIndex: number;
   onAddAnnotation: (annotation: AnnotationItem) => void;
 }
@@ -56,7 +55,6 @@ interface AnnotateModeProps {
 export function AnnotateMode({
   annotations,
   markerColor,
-  blockInteractions,
   nextIndex,
   onAddAnnotation,
 }: AnnotateModeProps) {
@@ -276,11 +274,6 @@ export function AnnotateMode({
       const el = getElementAtPoint(e.clientX, e.clientY);
       if (!el) return;
 
-      if (blockInteractions) {
-        e.preventDefault();
-        e.stopPropagation();
-      }
-
       const isMultiSelect = (e.metaKey || e.ctrlKey) && e.shiftKey;
 
       if (isMultiSelect) {
@@ -308,7 +301,7 @@ export function AnnotateMode({
       setShowPopover(true);
       setHoverInfo(null);
     },
-    [isDragging, showPopover, pendingElements, blockInteractions, getElementAtPoint]
+    [isDragging, showPopover, pendingElements, getElementAtPoint]
   );
 
   // Add annotations from popover

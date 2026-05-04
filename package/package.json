@@ -27,56 +27,6 @@
         "default": "./dist/server.cjs"
       }
     },
-    "./slack": {
-      "import": {
-        "types": "./dist/integrations/slack.d.ts",
-        "default": "./dist/integrations/slack.js"
-      },
-      "require": {
-        "types": "./dist/integrations/slack.d.cts",
-        "default": "./dist/integrations/slack.cjs"
-      }
-    },
-    "./linear": {
-      "import": {
-        "types": "./dist/integrations/linear.d.ts",
-        "default": "./dist/integrations/linear.js"
-      },
-      "require": {
-        "types": "./dist/integrations/linear.d.cts",
-        "default": "./dist/integrations/linear.cjs"
-      }
-    },
-    "./github": {
-      "import": {
-        "types": "./dist/integrations/github.d.ts",
-        "default": "./dist/integrations/github.js"
-      },
-      "require": {
-        "types": "./dist/integrations/github.d.cts",
-        "default": "./dist/integrations/github.cjs"
-      }
-    },
-    "./webhook": {
-      "import": {
-        "types": "./dist/integrations/webhook.d.ts",
-        "default": "./dist/integrations/webhook.js"
-      },
-      "require": {
-        "types": "./dist/integrations/webhook.d.cts",
-        "default": "./dist/integrations/webhook.cjs"
-      }
-    },
-    "./email": {
-      "import": {
-        "types": "./dist/integrations/email.d.ts",
-        "default": "./dist/integrations/email.js"
-      },
-      "require": {
-        "types": "./dist/integrations/email.d.cts",
-        "default": "./dist/integrations/email.cjs"
-      }
-    },
     "./styles.css": "./dist/index.css",
     "./widget": "./dist/widget.js"
   },

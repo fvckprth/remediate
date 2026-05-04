@@ -108,17 +108,10 @@ export interface PendingCapture {
   recordingDuration?: number;
 }
 
-export type OutputDetail = "standard" | "detailed";
-
 export interface WidgetState {
   mode: WidgetMode;
   items: FeedbackItem[];
   markerColor: string;
-  blockInteractions: boolean;
-  widgetTheme: "light" | "dark";
-  clearAfterSend: boolean;
-  outputDetail: OutputDetail;
-  settingsOpen: boolean;
   activePopoverAnnotationId: string | null;
   pendingCapture: PendingCapture | null;
   previewingItemId: string | null;
@@ -127,17 +120,11 @@ export interface WidgetState {
 export type WidgetAction =
   | { type: "ACTIVATE" }
   | { type: "SET_MODE"; mode: WidgetMode }
-  | { type: "TOGGLE_SETTINGS" }
-  | { type: "CLOSE_SETTINGS" }
   | { type: "CLOSE" }
   | { type: "ADD_ITEM"; item: FeedbackItem }
   | { type: "REMOVE_ITEM"; id: string }
   | { type: "SET_ACTIVE_POPOVER"; id: string | null }
   | { type: "SET_PENDING_CAPTURE"; capture: PendingCapture | null }
-  | { type: "SET_BLOCK_INTERACTIONS"; blocked: boolean }
-  | { type: "SET_THEME"; theme: "light" | "dark" }
-  | { type: "SET_CLEAR_AFTER_SEND"; enabled: boolean }
-  | { type: "SET_OUTPUT_DETAIL"; level: OutputDetail }
   | { type: "UPDATE_ANNOTATION"; id: string; note: string; priority: AnnotationPriority }
   | { type: "UPDATE_ITEM"; id: string; item: Partial<FeedbackItem> }
   | { type: "PREVIEW_ITEM"; id: string }

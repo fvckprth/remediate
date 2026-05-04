@@ -15,7 +15,6 @@ import { useConsoleCapture } from "../hooks/useConsoleCapture";
 import { useWidgetKeyboard } from "../hooks/useWidgetKeyboard";
 import { usePanelPosition } from "../hooks/usePanelPosition";
 import { FeedbackBar } from "./toolbar/FeedbackBar";
-import { SettingsPanel } from "./settings/SettingsPanel";
 import { SubMenu } from "./shared/SubMenu";
 import { AnnotateMode } from "./annotate/AnnotateMode";
 import { AnnotationMarkers } from "./annotate/AnnotationMarkers";
@@ -27,7 +26,7 @@ import { VoicePanel } from "./notes/VoicePanel";
 import { TextNotePanel } from "./notes/TextNotePanel";
 import { ReviewPanel } from "./review/ReviewPanel";
 import { PanelHost } from "./shared/PanelHost";
-import { CheckLine, CameraFill, CamcorderFill, Message4Fill, VoiceFill } from "./icons";
+import { CameraFill, CamcorderFill, Message4Fill, VoiceFill } from "./icons";
 import "../styles/widget.css";
 
 export function Remediate({ onSubmit, endpoint, metadata: extraMetadata, onError }: RemediateProps) {
@@ -62,7 +61,7 @@ export function Remediate({ onSubmit, endpoint, metadata: extraMetadata, onError
       const timer = setTimeout(() => dispatch({ type: "SET_MODE", mode: "reviewing" }), 3000);
       return () => clearTimeout(timer);
     }
-  }, [state.mode, state.clearAfterSend, dispatch]);
+  }, [state.mode, dispatch]);
 
   // Bounce out of review when the list empties (last item removed) — no empty state.
   useEffect(() => {
@@ -73,7 +72,6 @@ export function Remediate({ onSubmit, endpoint, metadata: extraMetadata, onError
 
   useWidgetKeyboard({
     mode: state.mode,
-    settingsOpen: state.settingsOpen,
     previewingItemId: state.previewingItemId,
     dispatch,
     cancelVideoRecording,
@@ -156,7 +154,7 @@ export function Remediate({ onSubmit, endpoint, metadata: extraMetadata, onError
   }
 
   return (
-    <div data-remediate-widget="" data-remediate-theme={state.widgetTheme} style={{ '--rm-accent': state.markerColor } as React.CSSProperties} suppressHydrationWarning>
+    <div data-remediate-widget="" data-remediate-theme="dark" style={{ '--rm-accent': state.markerColor } as React.CSSProperties} suppressHydrationWarning>
       <AnnotationMarkers
         annotations={annotations}
         markerColor={state.markerColor}
@@ -183,16 +181,6 @@ export function Remediate({ onSubmit, endpoint, metadata: extraMetadata, onError
       )}
 
       <PanelHost panelKey={panelKey} position={panelPosition} below={panelBelow} pill={state.mode === "voiceRecording"}>
-        {panelKey === "settings" && (
-          <SettingsPanel
-            blockInteractions={state.blockInteractions}
-            widgetTheme={state.widgetTheme}
-
-            onSetBlock={(blocked: boolean) => dispatch({ type: "SET_BLOCK_INTERACTIONS", blocked })}
-            onSetTheme={(theme: "light" | "dark") => dispatch({ type: "SET_THEME", theme })}
-          />
-        )}
-
         {panelKey === "captureMenu" && (
           <SubMenu
             items={[
@@ -333,7 +321,6 @@ export function Remediate({ onSubmit, endpoint, metadata: extraMetadata, onError
         <AnnotateMode
           annotations={annotations}
           markerColor={state.markerColor}
-          blockInteractions={state.blockInteractions}
           nextIndex={state.items.length + 1}
           onAddAnnotation={handleAddAnnotation}
         />

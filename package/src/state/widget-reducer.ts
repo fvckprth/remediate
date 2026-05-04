@@ -1,41 +1,13 @@
 import type {
   WidgetState, WidgetAction, FeedbackItem,
 } from "../types";
-import type { OutputDetail } from "../types";
 import { DEFAULT_MARKER_COLOR } from "../types";
 
-const STORAGE_KEY_BLOCK = "rm_block_interactions";
-const STORAGE_KEY_CLEAR = "rm_clear_after_send";
-const STORAGE_KEY_OUTPUT = "rm_output_detail";
-const STORAGE_KEY_THEME = "rm_theme";
-
 export function getInitialState(): WidgetState {
-  const markerColor = DEFAULT_MARKER_COLOR;
-  let blockInteractions = false;
-  let clearAfterSend = false;
-  let outputDetail: OutputDetail = "standard";
-  let widgetTheme: "light" | "dark" = "dark";
-
-  if (typeof window !== "undefined") {
-    const savedBlock = localStorage.getItem(STORAGE_KEY_BLOCK);
-    if (savedBlock === "true") blockInteractions = true;
-    const savedClear = localStorage.getItem(STORAGE_KEY_CLEAR);
-    if (savedClear === "true") clearAfterSend = true;
-    const savedOutput = localStorage.getItem(STORAGE_KEY_OUTPUT);
-    if (savedOutput === "detailed") outputDetail = "detailed";
-    const savedTheme = localStorage.getItem(STORAGE_KEY_THEME);
-    if (savedTheme === "light" || savedTheme === "dark") widgetTheme = savedTheme;
-  }
-
   return {
     mode: "idle",
     items: [],
-    markerColor,
-    blockInteractions,
-    clearAfterSend,
-    outputDetail,
-    widgetTheme,
-    settingsOpen: false,
+    markerColor: DEFAULT_MARKER_COLOR,
     activePopoverAnnotationId: null,
     pendingCapture: null,
     previewingItemId: null,
@@ -45,32 +17,20 @@ export function getInitialState(): WidgetState {
 export function widgetReducer(state: WidgetState, action: WidgetAction): WidgetState {
   switch (action.type) {
     case "ACTIVATE":
-      return { ...state, mode: "active", settingsOpen: false };
+      return { ...state, mode: "active" };
 
     case "SET_MODE":
       return {
         ...state,
         mode: action.mode,
-        settingsOpen: false,
         activePopoverAnnotationId: null,
         previewingItemId: action.mode === "reviewing" || action.mode === "active" ? null : state.previewingItemId,
       };
-
-    case "TOGGLE_SETTINGS":
-      return {
-        ...state,
-        settingsOpen: !state.settingsOpen,
-        mode: !state.settingsOpen ? "active" : state.mode,
-      };
-
-    case "CLOSE_SETTINGS":
-      return { ...state, settingsOpen: false };
 
     case "CLOSE":
       return {
         ...state,
         mode: "idle" as const,
-        settingsOpen: false,
         activePopoverAnnotationId: null,
         pendingCapture: null,
         previewingItemId: null,
@@ -115,24 +75,8 @@ export function widgetReducer(state: WidgetState, action: WidgetAction): WidgetS
     case "SET_PENDING_CAPTURE":
       return { ...state, pendingCapture: action.capture };
 
-    case "SET_BLOCK_INTERACTIONS":
-      if (typeof window !== "undefined") localStorage.setItem(STORAGE_KEY_BLOCK, String(action.blocked));
-      return { ...state, blockInteractions: action.blocked };
-
-    case "SET_THEME":
-      if (typeof window !== "undefined") localStorage.setItem(STORAGE_KEY_THEME, action.theme);
-      return { ...state, widgetTheme: action.theme };
-
-    case "SET_CLEAR_AFTER_SEND":
-      if (typeof window !== "undefined") localStorage.setItem(STORAGE_KEY_CLEAR, String(action.enabled));
-      return { ...state, clearAfterSend: action.enabled };
-
-    case "SET_OUTPUT_DETAIL":
-      if (typeof window !== "undefined") localStorage.setItem(STORAGE_KEY_OUTPUT, action.level);
-      return { ...state, outputDetail: action.level };
-
     case "REVIEW":
-      return { ...state, mode: "reviewing", settingsOpen: false, activePopoverAnnotationId: null };
+      return { ...state, mode: "reviewing", activePopoverAnnotationId: null };
 
     case "SUBMIT_SUCCESS":
       return { ...state, mode: "success", items: [], pendingCapture: null, previewingItemId: null };
@@ -176,10 +120,6 @@ export function widgetReducer(state: WidgetState, action: WidgetAction): WidgetS
       return {
         ...getInitialState(),
         markerColor: state.markerColor,
-        blockInteractions: state.blockInteractions,
-        clearAfterSend: state.clearAfterSend,
-        outputDetail: state.outputDetail,
-        widgetTheme: state.widgetTheme,
       };
 
     default:

@@ -73,11 +73,6 @@ export default defineConfig([
   {
     entry: {
       server: "src/server/index.ts",
-      "integrations/slack": "src/integrations/slack.ts",
-      "integrations/linear": "src/integrations/linear.ts",
-      "integrations/github": "src/integrations/github.ts",
-      "integrations/webhook": "src/integrations/webhook.ts",
-      "integrations/email": "src/integrations/email.ts",
     },
     format: ["esm", "cjs"],
     dts: true,
