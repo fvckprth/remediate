@@ -31,10 +31,8 @@ function itemLabel(item: FeedbackItem) {
       return `${Math.round(item.area.width)} \u00d7 ${Math.round(item.area.height)} at (${Math.round(item.area.x)}, ${Math.round(item.area.y)})`;
     case "video":
       return `${item.duration} seconds`;
-    case "annotation": {
-      const suffix = item.priority && item.priority !== "none" ? ` [${item.priority}]` : "";
-      return item.element.name + suffix;
-    }
+    case "annotation":
+      return item.element.name;
     case "textNote":
       return item.text;
     case "voiceNote":
