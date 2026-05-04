@@ -3,7 +3,7 @@
   "private": true,
   "packageManager": "pnpm@10.12.4",
   "scripts": {
-    "dev": "turbo dev --filter=remediate --filter=remediate-demo",
+    "dev": "turbo dev --filter=remediate",
     "build": "turbo build",
     "build:example": "pnpm --filter remediate-demo build"
   },
