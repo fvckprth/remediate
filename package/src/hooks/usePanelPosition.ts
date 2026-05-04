@@ -1,7 +1,7 @@
 import { useRef } from "react";
 
 const BAR_HEIGHT = 40;
-const GAP = 2;
+const GAP = 4;
 const PADDING = 20;
 
 export function usePanelPosition({
