@@ -60,12 +60,30 @@ import { parseFeedback } from "remediate/server";
 
 export async function POST(req: Request) {
   const { submission, files } = await parseFeedback(req);
-  console.log(submission);
+
+  // submission.items is the actual content — not submission.body
+  const body = submission.items
+    .map((item) => {
+      if (item.type === "textNote") return item.text;
+      if (item.type === "annotation") return item.note;
+      return item.additionalText;
+    })
+    .filter(Boolean)
+    .join("\n");
+
+  // files is a Map<string, ParsedFile>, not an array
+  for (const [, file] of files) {
+    // file.blob   — raw Blob for your storage layer
+    // file.type   — mime type, e.g. "image/png"
+    // file.category — "screenshot" | "recording" | "voice"
+    console.log(file.filename, file.category, file.blob.size);
+  }
+
   return Response.json({ ok: true, id: submission.id });
 }
 ```
 
-`submission` is the json. `files` is a `Map<string, ParsedFile>` of screenshots, recordings, and voice notes — see [payload › blobs on the wire](/docs/payload#blobs-on-the-wire) for the shape.
+`submission` is the structured json. the content lives in `submission.items` — a mixed array of text notes, annotations, photos, videos, and voice notes. `files` is a `Map<string, ParsedFile>` keyed by field name (e.g. `screenshot-itm_abc123`). see [payload](/docs/payload) for the full shape.
 
 works anywhere you have a web `Request`: app router, remix, hono, bun, deno, cloudflare workers.
 
@@ -84,7 +102,26 @@ export default function App() {
 }
 ```
 
+> **next.js app router:** `Remediate` is a client component. if you add it to a server component (like `layout.tsx`), wrap it in a file with `"use client"` at the top, or place it in a client component that already has one.
+
 a floating button appears in the corner. click it, capture, submit. styles inject themselves.
+
+## passing user context
+
+use `metadata` to attach user identity, session info, or anything else to every submission. it arrives verbatim as `submission.metadata` on the server.
+
+```tsx
+<Remediate
+  endpoint="/api/feedback"
+  metadata={{ userId: user.id, email: user.email }}
+/>
+```
+
+```ts
+// on the server
+const { submission } = await parseFeedback(req);
+console.log(submission.metadata.userId); // whatever you passed
+```
 
 ## try it without a backend
 
