@@ -1,15 +1,13 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import type { WidgetMode, AnnotationPriority } from "../../types";
+import type { WidgetMode, AnnotationPriority, VoiceNoteItem } from "../../types";
 import type { AudioRecorder } from "../../utils/capture-audio";
 import { StopFill, PlayFill, PauseFill } from "../icons";
 import { PriorityButton } from "../shared/PriorityButton";
+import { usePreview, useWidget } from "../../state/WidgetContext";
 
 interface VoicePanelProps {
   mode: WidgetMode;
   recorder: AudioRecorder | null;
-  initialText?: string;
-  initialPriority?: AnnotationPriority;
-  submitLabel?: string;
   onSetMode: (mode: WidgetMode) => void;
   onAdd: (duration: number, blob: Blob, text: string, priority: AnnotationPriority) => void;
   onCancel: () => void;
@@ -58,7 +56,11 @@ function Waveform({ bars, isAnimating }: { bars: number[]; isAnimating: boolean 
   );
 }
 
-export function VoicePanel({ mode, recorder, initialText, initialPriority, submitLabel = "Add", onSetMode, onAdd, onCancel }: VoicePanelProps) {
+export function VoicePanel({ mode, recorder, onSetMode, onAdd, onCancel }: VoicePanelProps) {
+  const { state } = useWidget();
+  const preview = usePreview<VoiceNoteItem>("voiceNote");
+  const submitLabel = state.previewingItemId ? "Save" : "Add";
+
   const isRecording = mode === "voiceRecording";
   const isPreview = mode === "voicePreview";
 
@@ -67,8 +69,8 @@ export function VoicePanel({ mode, recorder, initialText, initialPriority, submi
   const [isPlaying, setIsPlaying] = useState(false);
   const [finalDuration, setFinalDuration] = useState(0);
   const [previewBars, setPreviewBars] = useState<number[]>([]);
-  const [text, setText] = useState(initialText ?? "");
-  const [priority, setPriority] = useState<AnnotationPriority>(initialPriority ?? "none");
+  const [text, setText] = useState(preview?.additionalText ?? "");
+  const [priority, setPriority] = useState<AnnotationPriority>(preview?.priority ?? "none");
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const animRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const seedRef = useRef(0);

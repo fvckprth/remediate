@@ -1,16 +1,14 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import type { SelectionArea, AnnotationPriority } from "../../types";
+import type { SelectionArea, AnnotationPriority, PhotoCapture, VideoCapture } from "../../types";
 import { StopLine, PlayFill, PauseFill } from "../icons";
 import { PriorityButton } from "../shared/PriorityButton";
+import { usePreview, useWidget } from "../../state/WidgetContext";
 
 interface CapturePanelProps {
   variant: "photo" | "video";
   area: SelectionArea | null;
   isRecording: boolean;
   screenshotBlob: Blob | null;
-  initialText?: string;
-  initialPriority?: AnnotationPriority;
-  submitLabel?: string;
   onStartRecording: () => void;
   onStopRecording: (duration: number) => void;
   onAdd: (additionalText: string, priority: AnnotationPriority) => void;
@@ -30,14 +28,17 @@ export function CapturePanel({
   screenshotBlob,
   onStartRecording,
   onStopRecording,
-  initialText,
-  initialPriority,
-  submitLabel = "Add",
   onAdd,
   onCancel,
 }: CapturePanelProps) {
-  const [additionalText, setAdditionalText] = useState(initialText ?? "");
-  const [priority, setPriority] = useState<AnnotationPriority>(initialPriority ?? "none");
+  const { state } = useWidget();
+  const preview = variant === "photo"
+    ? usePreview<PhotoCapture>("photo")
+    : usePreview<VideoCapture>("video");
+  const submitLabel = state.previewingItemId ? "Save" : "Add";
+
+  const [additionalText, setAdditionalText] = useState(preview?.additionalText ?? "");
+  const [priority, setPriority] = useState<AnnotationPriority>(preview?.priority ?? "none");
   const [recordingTime, setRecordingTime] = useState(0);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const showPreview = true;
@@ -110,7 +111,7 @@ export function CapturePanel({
         </span>
       </div>
 
-      <div 
+      <div
         className="rm-capture-panel__preview"
         style={previewHeight ? { height: previewHeight } : undefined}
       >

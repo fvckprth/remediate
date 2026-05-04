@@ -80,7 +80,6 @@ export function AnnotateMode({
       if (current.classList?.contains("rm-popover")) return true;
       if (current.classList?.contains("rm-badge")) return true;
       if (current.classList?.contains("rm-toolbar")) return true;
-      if (current.classList?.contains("rm-settings")) return true;
       if (current.classList?.contains("rm-bar")) return true;
       current = current.parentElement;
     }

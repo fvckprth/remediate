@@ -1,20 +1,22 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { PriorityButton } from "../shared/PriorityButton";
 import { Delete2Fill } from "../icons";
-import type { AnnotationPriority } from "../../types";
+import type { AnnotationPriority, TextNoteItem } from "../../types";
+import { usePreview, useWidget } from "../../state/WidgetContext";
 
 interface TextNotePanelProps {
-  initialText?: string;
-  initialPriority?: AnnotationPriority;
-  submitLabel?: string;
   onAdd: (text: string, priority: AnnotationPriority) => void;
   onCancel: () => void;
   onDelete?: () => void;
 }
 
-export function TextNotePanel({ initialText, initialPriority, submitLabel = "Add", onAdd, onCancel, onDelete }: TextNotePanelProps) {
-  const [text, setText] = useState(initialText ?? "");
-  const [priority, setPriority] = useState<AnnotationPriority>(initialPriority ?? "none");
+export function TextNotePanel({ onAdd, onCancel, onDelete }: TextNotePanelProps) {
+  const { state } = useWidget();
+  const preview = usePreview<TextNoteItem>("textNote");
+  const submitLabel = state.previewingItemId ? "Save" : "Add";
+
+  const [text, setText] = useState(preview?.text ?? "");
+  const [priority, setPriority] = useState<AnnotationPriority>(preview?.priority ?? "none");
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {

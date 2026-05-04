@@ -1,7 +1,7 @@
 import { useRef, useCallback } from "react";
-import type { WidgetAction, FeedbackItem, AnnotationPriority } from "../types";
+import type { WidgetAction, AnnotationPriority } from "../types";
 import { startAudioRecording, type AudioRecorder } from "../utils/capture-audio";
-import { nanoid } from "../utils/nanoid";
+import { createItem } from "../utils/create-item";
 
 export function useVoiceRecording({
   dispatch,
@@ -10,7 +10,6 @@ export function useVoiceRecording({
 }) {
   const voiceRecorderRef = useRef<AudioRecorder | null>(null);
 
-  /** Explicitly start voice recording. Requests mic permission and transitions mode. */
   const startVoice = useCallback(() => {
     startAudioRecording()
       .then((recorder) => {
@@ -24,17 +23,7 @@ export function useVoiceRecording({
   }, [dispatch]);
 
   const handleAddVoiceNote = useCallback((duration: number, blob: Blob, text: string, priority: AnnotationPriority) => {
-    const item: FeedbackItem = {
-      id: `voc_${nanoid(8)}`,
-      index: 0,
-      type: "voiceNote",
-      duration,
-      timestamp: Date.now(),
-      additionalText: text,
-      priority,
-      blob,
-    };
-    dispatch({ type: "ADD_ITEM", item });
+    dispatch({ type: "ADD_ITEM", item: createItem("voiceNote", { duration, additionalText: text, priority, blob }) });
   }, [dispatch]);
 
   return { voiceRecorderRef, startVoice, handleAddVoiceNote };

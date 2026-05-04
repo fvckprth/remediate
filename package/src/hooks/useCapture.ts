@@ -2,7 +2,7 @@ import { useRef, useCallback } from "react";
 import type { WidgetMode, WidgetAction, FeedbackItem, AnnotationPriority, PendingCapture, SelectionArea } from "../types";
 import { captureScreenshot } from "../utils/capture-screenshot";
 import { useVideoRecorder } from "./useVideoRecorder";
-import { nanoid } from "../utils/nanoid";
+import { createItem } from "../utils/create-item";
 
 export function useCapture({
   mode,
@@ -14,6 +14,7 @@ export function useCapture({
   dispatch: React.Dispatch<WidgetAction>;
 }) {
   const screenshotBlobRef = useRef<Blob | null>(null);
+  const videoBlobRef = useRef<Blob | null>(null);
   const pendingAreaRef = useRef<SelectionArea | null>(null);
   const video = useVideoRecorder();
 
@@ -40,7 +41,8 @@ export function useCapture({
       dispatch({ type: "SET_MODE", mode: "videoRecording" });
 
       try {
-        await video.start(area, () => {
+        await video.start(area, (blob) => {
+          videoBlobRef.current = blob;
           const saved = pendingAreaRef.current;
           if (saved) {
             dispatch({ type: "SET_PENDING_CAPTURE", capture: { area: saved, variant: "video" } });
@@ -57,6 +59,7 @@ export function useCapture({
   const handleStopVideoRecording = useCallback(async (duration: number) => {
     const blob = await video.stop();
     if (!blob) return;
+    videoBlobRef.current = blob;
 
     const area = pendingAreaRef.current;
     if (area) {
@@ -72,47 +75,39 @@ export function useCapture({
   const handleAddCapture = useCallback((additionalText: string, priority: AnnotationPriority) => {
     if (!pendingCapture) return;
     const item: FeedbackItem = pendingCapture.variant === "photo"
-      ? {
-          id: `cap_${nanoid(8)}`,
-          index: 0,
-          type: "photo",
+      ? createItem("photo", {
           area: pendingCapture.area,
-          timestamp: Date.now(),
           additionalText,
           priority,
           blob: screenshotBlobRef.current ?? undefined,
-        }
-      : {
-          id: `cap_${nanoid(8)}`,
-          index: 0,
-          type: "video",
+        })
+      : createItem("video", {
           area: pendingCapture.area,
           duration: pendingCapture.recordingDuration ?? 0,
-          timestamp: Date.now(),
           additionalText,
           priority,
-          blob: video.blobRef.current ?? undefined,
-        };
+          blob: videoBlobRef.current ?? undefined,
+        });
     dispatch({ type: "ADD_ITEM", item });
     screenshotBlobRef.current = null;
-    video.blobRef.current = null;
-  }, [pendingCapture, video, dispatch]);
+    videoBlobRef.current = null;
+  }, [pendingCapture, dispatch]);
 
   /** Set the appropriate blob ref for previewing an existing item from review. */
   const preparePreview = useCallback((item: FeedbackItem) => {
     if (item.type === "photo") screenshotBlobRef.current = item.blob ?? null;
-    if (item.type === "video") video.blobRef.current = item.blob ?? null;
-  }, [video]);
+    if (item.type === "video") videoBlobRef.current = item.blob ?? null;
+  }, []);
 
   /** Clear all blob refs (used when cancelling a capture). */
   const clearBlobs = useCallback(() => {
     screenshotBlobRef.current = null;
-    video.blobRef.current = null;
-  }, [video]);
+    videoBlobRef.current = null;
+  }, []);
 
   return {
     screenshotBlobRef,
-    videoBlobRef: video.blobRef,
+    videoBlobRef,
     isVideoReady: video.isReady,
     cancelVideoRecording,
     handleAreaSelected,

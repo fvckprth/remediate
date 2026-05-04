@@ -4,7 +4,6 @@ import type { SelectionArea } from "../types";
 
 export interface VideoRecorderHandle {
   isReady: boolean;
-  blobRef: React.RefObject<Blob | null>;
   start: (area: SelectionArea, onEnded: (blob: Blob) => void) => Promise<void>;
   stop: () => Promise<Blob | null>;
   cancel: () => void;
@@ -12,7 +11,6 @@ export interface VideoRecorderHandle {
 
 export function useVideoRecorder(): VideoRecorderHandle {
   const [isReady, setIsReady] = useState(false);
-  const blobRef = useRef<Blob | null>(null);
   const recorderRef = useRef<VideoRecorder | null>(null);
 
   const start = useCallback(async (area: SelectionArea, onEnded: (blob: Blob) => void) => {
@@ -24,7 +22,6 @@ export function useVideoRecorder(): VideoRecorderHandle {
         setIsReady(false);
         rec.stop().then((b) => {
           recorderRef.current = null;
-          blobRef.current = b;
           onEnded(b);
         });
       },
@@ -39,7 +36,6 @@ export function useVideoRecorder(): VideoRecorderHandle {
     setIsReady(false);
     const b = await recorder.stop();
     recorderRef.current = null;
-    blobRef.current = b;
     return b;
   }, []);
 
@@ -49,5 +45,5 @@ export function useVideoRecorder(): VideoRecorderHandle {
     setIsReady(false);
   }, []);
 
-  return { isReady, blobRef, start, stop, cancel };
+  return { isReady, start, stop, cancel };
 }
