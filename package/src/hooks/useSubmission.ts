@@ -1,7 +1,8 @@
 import { useState, useCallback } from "react";
 import type { WidgetState, WidgetAction, FeedbackSubmission } from "../types";
 import type { ConsoleCapture } from "../utils/console-capture";
-import { buildPayload } from "../utils/build-payload";
+import { collectEnvironment } from "../utils/metadata";
+import { nanoid } from "../utils/nanoid";
 import { serializeToFormData } from "../utils/serialize";
 
 export function useSubmission({
@@ -10,21 +11,41 @@ export function useSubmission({
   onSubmit,
   endpoint,
   extraMetadata,
+  headers,
   onError,
   consoleCaptureRef,
+  debug,
 }: {
   state: WidgetState;
   dispatch: React.Dispatch<WidgetAction>;
   onSubmit?: (payload: FeedbackSubmission) => void | Promise<void>;
   endpoint?: string;
   extraMetadata?: Record<string, unknown>;
+  headers?: Record<string, string> | (() => Record<string, string>);
   onError?: (error: Error) => void;
   consoleCaptureRef: React.RefObject<ConsoleCapture | null>;
+  debug?: boolean;
 }) {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleSubmit = useCallback(async () => {
-    const submission = buildPayload(state, extraMetadata, consoleCaptureRef);
+    const metadata: Record<string, unknown> = { ...extraMetadata };
+    if (consoleCaptureRef?.current) {
+      metadata.consoleLog = [...consoleCaptureRef.current.entries];
+    }
+
+    const submission: FeedbackSubmission = {
+      id: `fb_${nanoid(12)}`,
+      url: window.location.href,
+      timestamp: new Date().toISOString(),
+      environment: collectEnvironment(),
+      items: state.items,
+      metadata,
+    };
+
+    if (debug) {
+      console.log("[Remediate] submitting", { endpoint, items: submission.items.length, metadata: submission.metadata });
+    }
 
     if (endpoint) {
       setIsSubmitting(true);
@@ -32,9 +53,11 @@ export function useSubmission({
         const formData = serializeToFormData(submission);
         const controller = new AbortController();
         const timeout = setTimeout(() => controller.abort(), 30_000);
+        const extraHeaders = typeof headers === "function" ? headers() : headers;
         const res = await fetch(endpoint, {
           method: "POST",
           body: formData,
+          headers: extraHeaders,
           signal: controller.signal,
         });
         clearTimeout(timeout);
@@ -67,7 +90,7 @@ export function useSubmission({
       );
     }
     dispatch({ type: "SUBMIT_SUCCESS" });
-  }, [state, onSubmit, endpoint, extraMetadata, onError, dispatch, consoleCaptureRef]);
+  }, [state, onSubmit, endpoint, extraMetadata, headers, onError, dispatch, consoleCaptureRef, debug]);
 
   return { isSubmitting, handleSubmit };
 }

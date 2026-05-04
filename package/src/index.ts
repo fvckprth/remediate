@@ -11,4 +11,6 @@ export type {
   VoiceNoteItem,
   ElementCapture,
   SelectionArea,
+  CaptureType,
+  WidgetMessages,
 } from "./types";

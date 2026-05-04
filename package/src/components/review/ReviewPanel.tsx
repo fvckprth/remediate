@@ -9,6 +9,7 @@ import { PriorityIcon } from "../shared/PriorityButton";
 interface ReviewPanelProps {
   items: FeedbackItem[];
   isSubmitting?: boolean;
+  messages?: { submitButton: string; submittingButton: string; cancelButton: string };
   onRemoveItem: (id: string) => void;
   onPreviewItem: (id: string) => void;
   onBack: () => void;
@@ -40,7 +41,7 @@ function itemLabel(item: FeedbackItem) {
   }
 }
 
-export function ReviewPanel({ items, isSubmitting, onRemoveItem, onPreviewItem, onBack, onSubmit }: ReviewPanelProps) {
+export function ReviewPanel({ items, isSubmitting, messages, onRemoveItem, onPreviewItem, onBack, onSubmit }: ReviewPanelProps) {
   const listRef = useRef<HTMLDivElement>(null);
   const [scrollMask, setScrollMask] = useState({ top: false, bottom: false });
 
@@ -112,14 +113,14 @@ export function ReviewPanel({ items, isSubmitting, onRemoveItem, onPreviewItem, 
         </span>
         <div className="rm-popover__actions">
           <button className="rm-popover__cancel" onClick={onBack}>
-            Cancel
+            {messages?.cancelButton ?? "Cancel"}
           </button>
           <button
             className="rm-popover__submit"
             onClick={onSubmit}
             disabled={items.length === 0 || isSubmitting}
           >
-            {isSubmitting ? "Sending\u2026" : "Submit"}
+            {isSubmitting ? (messages?.submittingButton ?? "Sending\u2026") : (messages?.submitButton ?? "Submit")}
           </button>
         </div>
       </div>

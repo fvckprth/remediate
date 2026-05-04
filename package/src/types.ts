@@ -171,13 +171,35 @@ export const DEFAULT_MARKER_COLOR = "#3B82F6";
 
 // --- Props ---
 
+export type CaptureType = "photo" | "video" | "annotation" | "textNote" | "voiceNote";
+
 export interface RemediateProps {
-  /** Called when the user submits feedback. Receives the full payload including any captured blobs. */
-  onSubmit?: (payload: FeedbackSubmission) => void | Promise<void>;
   /** URL to POST feedback as FormData. If set, the widget auto-submits to this endpoint. */
   endpoint?: string;
-  /** Extra metadata merged into the submission (e.g. project ID, user info). */
-  metadata?: Record<string, unknown>;
+  /** Called when the user submits feedback. Receives the full payload including any captured blobs. */
+  onSubmit?: (payload: FeedbackSubmission) => void | Promise<void>;
   /** Called if the endpoint POST fails. */
   onError?: (error: Error) => void;
+  /** Extra metadata merged into the submission (e.g. project ID, user info). */
+  metadata?: Record<string, unknown>;
+  /** Extra headers on the POST. Use a function for auth tokens that may refresh. */
+  headers?: Record<string, string> | (() => Record<string, string>);
+  /** Which capture modes to expose. Defaults to all. */
+  captureTypes?: CaptureType[];
+  /** Controlled open state. Pair with onOpenChange. */
+  open?: boolean;
+  /** Called when the user opens or closes the widget. */
+  onOpenChange?: (open: boolean) => void;
+  /** Log lifecycle events to the console. */
+  debug?: boolean;
+  /** Override any user-visible string. */
+  messages?: Partial<WidgetMessages>;
+}
+
+export interface WidgetMessages {
+  submitButton: string;
+  submittingButton: string;
+  cancelButton: string;
+  successMessage: string;
+  errorMessage: string;
 }
