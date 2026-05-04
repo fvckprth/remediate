@@ -30,10 +30,9 @@ Pick one based on the primary area changed. Multi-area tickets use the primary a
 - `review:` — review panel / submission flow
 - `server:` — server-side parsing, API routes
 - `integrations:` — linear, slack, github, email, webhook
-- `dashboard:` — dashboard app (feedback viewing)
-- `docs:` — docs, readme, landing
 - `infra:` — build, deploy, env, tsup config
 - `repo:` — cross-cutting cleanup, tooling, CI
+- `skill:` — agent skill (SKILL.md)
 - `misc:` — nothing else fits
 
 Examples:

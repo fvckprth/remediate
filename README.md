@@ -32,12 +32,27 @@ import { parseFeedback } from "remediate/server";
 
 export async function POST(req: Request) {
   const { submission, files } = await parseFeedback(req);
-  console.log(submission);
+
+  // submission.items is the actual content
+  const body = submission.items
+    .map((item) => {
+      if (item.type === "textNote") return item.text;
+      if (item.type === "annotation") return item.note;
+      return item.additionalText;
+    })
+    .filter(Boolean)
+    .join("\n");
+
+  // files is a Map<string, ParsedFile>, not an array
+  for (const [, file] of files) {
+    console.log(file.filename, file.category, file.blob.size);
+  }
+
   return Response.json({ ok: true, id: submission.id });
 }
 ```
 
-`submission` is the structured json. `files` is a `Map<string, File>` of screenshots, recordings, and voice notes.
+`submission.items` is the content — a mixed array of text notes, annotations, photos, videos, and voice notes. `files` is a `Map<string, ParsedFile>` keyed by field name.
 
 works anywhere you have a web `Request`: next.js, remix, hono, bun, deno, cloudflare workers.
 
@@ -56,6 +71,7 @@ open devtools, capture something, watch the payload.
 | `endpoint` | `string` | url to POST feedback as FormData |
 | `onSubmit` | `(payload: FeedbackSubmission) => void` | called on submit with the full payload |
 | `metadata` | `Record<string, unknown>` | extra data merged into the submission |
+| `headers` | `Record<string, string> \| () => Record<string, string>` | custom headers on the POST (e.g. auth tokens) |
 | `onError` | `(error: Error) => void` | called if the POST fails |
 
 ## claude code
@@ -66,7 +82,7 @@ npx skills add fvckprth/remediate
 
 then run `/remediate` in any react project. detects your framework, picks a backend, installs the package, scaffolds the server route, and wires the component into your layout.
 
-works for any agent that reads agent skills — claude code, codex, cursor, opencode, cline, and the rest.
+works for any agent that reads agent skills — claude code, codex, cursor, opencode, and the rest.
 
 ## what gets captured
 
