@@ -51,6 +51,33 @@ export function useDraggable({
     });
   }, []);
 
+  // Re-report position on viewport resize/zoom so the panel tracks the bar.
+  // Skipped while dragging — the drag handler updates inline left/top directly.
+  useEffect(() => {
+    if (isDragging) return;
+
+    let rafId: number | null = null;
+
+    const reportPosition = () => {
+      rafId = null;
+      const bar = barRef.current;
+      if (!bar) return;
+      const rect = bar.getBoundingClientRect();
+      onPositionChangeRef.current?.({ x: rect.left, y: rect.top });
+    };
+
+    const handleResize = () => {
+      if (rafId !== null) return;
+      rafId = requestAnimationFrame(reportPosition);
+    };
+
+    window.addEventListener("resize", handleResize);
+    return () => {
+      window.removeEventListener("resize", handleResize);
+      if (rafId !== null) cancelAnimationFrame(rafId);
+    };
+  }, [isDragging]);
+
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
     if (!enabled) return;
     const bar = barRef.current;
