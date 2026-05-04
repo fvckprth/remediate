@@ -205,29 +205,41 @@ set up the remediate feedback widget in this project. one component on the clien
    import { parseFeedback } from "remediate/server";
 
    export async function POST(req: Request) {
-     const { submission } = await parseFeedback(req);
+     const { submission, files } = await parseFeedback(req);
+
      const body = submission.items
        .map((item) => {
          if (item.type === "textNote") return item.text;
-         if (item.type === "annotation") return item.note;
+         if (item.type === "annotation") return `${item.note} (${item.element.selector})`;
          return item.additionalText;
        })
        .filter(Boolean)
        .join("\n");
 
-     await fetch(process.env.DISCORD_WEBHOOK_URL!, {
-       method: "POST",
-       headers: { "Content-Type": "application/json" },
-       body: JSON.stringify({
+     const form = new FormData();
+     form.append(
+       "payload_json",
+       JSON.stringify({
          content: `**feedback on ${submission.url}** — ${submission.items.length} items`,
          embeds: body ? [{ description: body }] : [],
        }),
+     );
+
+     let i = 0;
+     for (const [, file] of files) {
+       form.append(`files[${i}]`, file.blob, file.filename);
+       i++;
+     }
+
+     await fetch(process.env.DISCORD_WEBHOOK_URL!, {
+       method: "POST",
+       body: form,
      });
      return Response.json({ ok: true, id: submission.id });
    }
    ```
 
-   tell the user to set `DISCORD_WEBHOOK_URL` in `.env`.
+   tell the user to set `DISCORD_WEBHOOK_URL` in `.env`. screenshots and recordings attach inline. discord allows up to 10 files per message.
 
    ### template: github issues
 
@@ -275,18 +287,26 @@ set up the remediate feedback widget in this project. one component on the clien
    const resend = new Resend(process.env.RESEND_API_KEY);
 
    export async function POST(req: Request) {
-     const { submission } = await parseFeedback(req);
+     const { submission, files } = await parseFeedback(req);
+
+     const attachments = [];
+     for (const [, file] of files) {
+       const buffer = Buffer.from(await file.blob.arrayBuffer());
+       attachments.push({ filename: file.filename, content: buffer });
+     }
+
      await resend.emails.send({
        from: "feedback@yourdomain.com",
        to: "you@yourdomain.com",
        subject: `feedback on ${submission.url}`,
        text: JSON.stringify(submission, null, 2),
+       attachments,
      });
      return Response.json({ ok: true, id: submission.id });
    }
    ```
 
-   if `resend` is missing, install it. tell the user to set `RESEND_API_KEY` and update the `from`/`to` addresses.
+   if `resend` is missing, install it. tell the user to set `RESEND_API_KEY` and update the `from`/`to` addresses. screenshots and recordings arrive as email attachments.
 
    ### template: local disk (default for local-only setups)
 
