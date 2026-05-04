@@ -9,8 +9,6 @@ const labels: Record<string, string> = {
   privacy: "Privacy & Capture",
   reference: "API Reference",
   faq: "FAQ",
-  examples: "Examples",
-  schema: "Schema",
   "use-cases": "Use Cases",
 };
 
