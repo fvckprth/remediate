@@ -36,7 +36,6 @@ const DEFAULT_MESSAGES = {
   submittingButton: "Sending\u2026",
   cancelButton: "Cancel",
   successMessage: "Sent!",
-  errorMessage: "Failed to send",
 };
 
 export function Remediate({
@@ -93,7 +92,7 @@ export function Remediate({
       return () => clearTimeout(timer);
     }
     if (state.mode === "submitError") {
-      const timer = setTimeout(() => dispatch({ type: "SET_MODE", mode: "reviewing" }), 3000);
+      const timer = setTimeout(() => dispatch({ type: "SET_MODE", mode: "reviewing" }), 2000);
       return () => clearTimeout(timer);
     }
   }, [state.mode, dispatch]);
@@ -124,7 +123,6 @@ export function Remediate({
     state.mode === "captureDragging";
   const isVideoFlow = state.mode === "videoRecording";
   const isIdle = state.mode === "idle";
-  const isError = state.mode === "submitError";
 
   const panelKey = derivePanelKey(state);
   const hasContent = state.items.length > 0;
@@ -181,23 +179,21 @@ export function Remediate({
           onBadgeClick={(id: string) => dispatch({ type: "SET_ACTIVE_POPOVER", id: id || null })}
         />
 
-        {!isError && (
-          <FeedbackBar
-            isIdle={isIdle}
-            onActivate={() => dispatch({ type: "ACTIVATE" })}
-            mode={state.mode}
-            markerColor={state.markerColor}
-            itemCount={state.items.length}
-            hasContent={hasContent}
-            onSetMode={(mode: WidgetMode) => dispatch({ type: "SET_MODE", mode })}
-            onClose={() => dispatch({ type: "CLOSE" })}
-            onReview={() => dispatch({ type: "REVIEW" })}
-            onDeleteAll={() => dispatch({ type: "CLEAR_ALL" })}
-            onAnchorAriaLabel={setAnchorAriaLabel}
-            panelOpen={panelKey !== null}
-            barRef={barRef}
-          />
-        )}
+        <FeedbackBar
+          isIdle={isIdle}
+          onActivate={() => dispatch({ type: "ACTIVATE" })}
+          mode={state.mode}
+          markerColor={state.markerColor}
+          itemCount={state.items.length}
+          hasContent={hasContent}
+          onSetMode={(mode: WidgetMode) => dispatch({ type: "SET_MODE", mode })}
+          onClose={() => dispatch({ type: "CLOSE" })}
+          onReview={() => dispatch({ type: "REVIEW" })}
+          onDeleteAll={() => dispatch({ type: "CLEAR_ALL" })}
+          onAnchorAriaLabel={setAnchorAriaLabel}
+          panelOpen={panelKey !== null}
+          barRef={barRef}
+        />
 
         <PanelHost panelKey={panelKey} position={panelPosition} below={panelBelow} pill={state.mode === "voiceRecording"}>
           {panelKey === "captureMenu" && (
@@ -300,12 +296,6 @@ export function Remediate({
             />
           )}
 
-          {panelKey === "submitError" && (
-            <div className="rm-success rm-submit-error">
-              <div className="rm-success__icon rm-submit-error__icon">!</div>
-              <span className="rm-success__text">{msgs.errorMessage}</span>
-            </div>
-          )}
         </PanelHost>
 
         {showAreaSelector && (

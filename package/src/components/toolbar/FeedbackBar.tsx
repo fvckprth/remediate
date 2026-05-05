@@ -10,6 +10,7 @@ import {
   Delete2Fill,
   SendFill,
   CheckLine,
+  AlertDiamondFill,
 } from "../icons";
 import { Tooltip } from "../shared/Tooltip";
 
@@ -45,6 +46,7 @@ export function FeedbackBar({
   barRef,
 }: FeedbackBarProps) {
   const isSuccess = mode === "success";
+  const isError = mode === "submitError";
   const captureActive = isCaptureMode(mode);
   const annotateActive = mode === "annotating";
   const noteActive = isNoteMode(mode);
@@ -70,6 +72,11 @@ export function FeedbackBar({
       bar.style.height = "40px";
       return;
     }
+    if (isError) {
+      bar.style.width = "172px";
+      bar.style.height = "40px";
+      return;
+    }
     if (isIdle) {
       if (itemCount > 0) {
         bar.style.width = itemCount > 9 ? "48px" : "36px";
@@ -88,7 +95,7 @@ export function FeedbackBar({
       bar.style.height = "40px";
     });
     return () => cancelAnimationFrame(id);
-  }, [isIdle, isSuccess, hasContent, itemCount, barRef]);
+  }, [isIdle, isSuccess, isError, hasContent, itemCount, barRef]);
 
   const guardClick = (fn: () => void) => {
     if (justDragged.current) return;
@@ -110,6 +117,7 @@ export function FeedbackBar({
       }
       data-has-content={hasContent}
       data-success={isSuccess ? "" : undefined}
+      data-error={isError ? "" : undefined}
       onMouseDown={handleMouseDown}
       style={{
         position: "fixed",
@@ -145,9 +153,16 @@ export function FeedbackBar({
         </div>
       )}
 
+      {isError && (
+        <div className="rm-bar__error">
+          <AlertDiamondFill size={20} />
+          <span className="rm-bar__error-text">Submission Failed</span>
+        </div>
+      )}
+
       <div
         ref={toolsRef}
-        className={`rm-bar__tools ${!isIdle && !isSuccess ? "rm-bar__tools--visible" : ""}`}
+        className={`rm-bar__tools ${!isIdle && !isSuccess && !isError ? "rm-bar__tools--visible" : ""}`}
         onMouseLeave={showTooltips}
       >
         <div className="rm-toolbar__actions">

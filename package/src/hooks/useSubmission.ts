@@ -81,14 +81,27 @@ export function useSubmission({
     }
 
     if (onSubmit) {
-      onSubmit(submission);
-    } else {
-      console.log(
-        "%c[Remediate] Feedback Submission",
-        "background: #3B82F6; color: white; padding: 4px 8px; border-radius: 4px; font-weight: 600;",
-        submission
-      );
+      setIsSubmitting(true);
+      try {
+        await onSubmit(submission);
+        dispatch({ type: "SUBMIT_SUCCESS" });
+      } catch (err) {
+        const error = err instanceof Error ? err : new Error(String(err));
+        if (onError) onError(error);
+        else console.error("[Remediate] Submission failed:", error);
+        dispatch({ type: "SUBMIT_ERROR" });
+      } finally {
+        setIsSubmitting(false);
+      }
+      return;
     }
+
+    console.log(
+      "%c[Remediate] Feedback Submission",
+      "background: #3B82F6; color: white; padding: 4px 8px; border-radius: 4px; font-weight: 600;",
+      submission
+    );
+    console.warn("[Remediate] No endpoint or onSubmit configured — feedback was logged to console only.");
     dispatch({ type: "SUBMIT_SUCCESS" });
   }, [state, onSubmit, endpoint, extraMetadata, headers, onError, dispatch, consoleCaptureRef, debug]);
 

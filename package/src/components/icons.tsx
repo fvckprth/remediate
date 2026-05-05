@@ -10,6 +10,10 @@ function Icon({ size = 24, d }: IconProps & { d: string }) {
   );
 }
 
+export function AlertDiamondFill({ size }: IconProps) {
+  return <Icon size={size} d="m13.414 2.807 7.778 7.779a2 2 0 0 1 0 2.828l-7.778 7.778a2 2 0 0 1-2.828 0l-7.778-7.778a2 2 0 0 1 0-2.828l7.778-7.779a2 2 0 0 1 2.828 0M12.002 15a1 1 0 0 0-.119 1.993l.12.007a1 1 0 0 0 0-2ZM12 8a1.44 1.44 0 0 0-1.44 1.485l.01.135.438 3.504a1 1 0 0 0 1.964.113l.02-.113.438-3.504A1.441 1.441 0 0 0 12 8" />;
+}
+
 export function CheckLine({ size }: IconProps) {
   return <Icon size={size} d="M21.192 5.465a1 1 0 0 1 0 1.414L9.95 18.122a1.1 1.1 0 0 1-1.556 0l-5.586-5.586a1 1 0 1 1 1.415-1.415l4.95 4.95L19.777 5.465a1 1 0 0 1 1.414 0Z" />;
 }

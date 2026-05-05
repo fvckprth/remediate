@@ -3,12 +3,12 @@ import type { WidgetMode, WidgetState } from "../types";
 export type PanelKey =
   | "captureMenu" | "noteMenu"
   | "capturePhoto" | "captureVideo" | "textNote"
-  | "voicePanel" | "review" | "submitError";
+  | "voicePanel" | "review";
 
 export const PANEL_WIDTHS: Record<PanelKey, number> = {
   captureMenu: 176, noteMenu: 176,
   capturePhoto: 280, captureVideo: 280, textNote: 280,
-  voicePanel: 240, review: 280, submitError: 200,
+  voicePanel: 240, review: 280,
 };
 
 /** Mode → panel key for modes with a static mapping. */
@@ -20,7 +20,6 @@ const MODE_PANEL: Partial<Record<WidgetMode, PanelKey>> = {
   voiceRecording: "voicePanel",
   voicePreview: "voicePanel",
   reviewing: "review",
-  submitError: "submitError",
 };
 
 /**

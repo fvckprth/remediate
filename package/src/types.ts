@@ -201,5 +201,4 @@ export interface WidgetMessages {
   submittingButton: string;
   cancelButton: string;
   successMessage: string;
-  errorMessage: string;
 }
