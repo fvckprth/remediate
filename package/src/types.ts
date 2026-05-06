@@ -7,6 +7,8 @@ export interface ElementCapture {
   cssClasses: string;
   attributes: Record<string, string>;
   computedStyles: Record<string, string>;
+  componentChain?: string[];
+  sourceLocation?: { fileName: string; lineNumber: number };
 }
 
 export interface SelectionArea {

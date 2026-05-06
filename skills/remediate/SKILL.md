@@ -207,11 +207,15 @@ set up the remediate feedback widget in this project. one component on the clien
          item.additionalText || "";
        return `• ${item.type}${tag} — ${text}`;
      });
-     await fetch(process.env.SLACK_WEBHOOK_URL!, {
-       method: "POST",
-       headers: { "Content-Type": "application/json" },
-       body: JSON.stringify({ text: [`*feedback on ${submission.url}*`, "", ...lines].join("\n") }),
-     });
+     try {
+       await fetch(process.env.SLACK_WEBHOOK_URL!, {
+         method: "POST",
+         headers: { "Content-Type": "application/json" },
+         body: JSON.stringify({ text: [`*feedback on ${submission.url}*`, "", ...lines].join("\n") }),
+       });
+     } catch (err) {
+       console.error("[feedback] slack delivery failed:", err);
+     }
      return Response.json({ ok: true, id: submission.id });
    }
    ```
@@ -250,10 +254,14 @@ set up the remediate feedback widget in this project. one component on the clien
        i++;
      }
 
-     await fetch(process.env.DISCORD_WEBHOOK_URL!, {
-       method: "POST",
-       body: form,
-     });
+     try {
+       await fetch(process.env.DISCORD_WEBHOOK_URL!, {
+         method: "POST",
+         body: form,
+       });
+     } catch (err) {
+       console.error("[feedback] discord delivery failed:", err);
+     }
      return Response.json({ ok: true, id: submission.id });
    }
    ```
@@ -276,21 +284,25 @@ set up the remediate feedback widget in this project. one component on the clien
        .filter(Boolean)
        .join("\n\n");
 
-     await fetch(
-       `https://api.github.com/repos/${process.env.GITHUB_OWNER}/${process.env.GITHUB_REPO}/issues`,
-       {
-         method: "POST",
-         headers: {
-           Authorization: `Bearer ${process.env.GITHUB_TOKEN}`,
-           "Content-Type": "application/json",
+     try {
+       await fetch(
+         `https://api.github.com/repos/${process.env.GITHUB_OWNER}/${process.env.GITHUB_REPO}/issues`,
+         {
+           method: "POST",
+           headers: {
+             Authorization: `Bearer ${process.env.GITHUB_TOKEN}`,
+             "Content-Type": "application/json",
+           },
+           body: JSON.stringify({
+             title: `feedback on ${submission.url}`,
+             body: body || "no text content",
+             labels: ["feedback"],
+           }),
          },
-         body: JSON.stringify({
-           title: `feedback on ${submission.url}`,
-           body: body || "no text content",
-           labels: ["feedback"],
-         }),
-       },
-     );
+       );
+     } catch (err) {
+       console.error("[feedback] github issue creation failed:", err);
+     }
      return Response.json({ ok: true, id: submission.id });
    }
    ```
@@ -314,13 +326,17 @@ set up the remediate feedback widget in this project. one component on the clien
        attachments.push({ filename: file.filename, content: buffer });
      }
 
-     await resend.emails.send({
-       from: "feedback@yourdomain.com",
-       to: "you@yourdomain.com",
-       subject: `feedback on ${submission.url}`,
-       text: JSON.stringify(submission, null, 2),
-       attachments,
-     });
+     try {
+       await resend.emails.send({
+         from: "feedback@yourdomain.com",
+         to: "you@yourdomain.com",
+         subject: `feedback on ${submission.url}`,
+         text: JSON.stringify(submission, null, 2),
+         attachments,
+       });
+     } catch (err) {
+       console.error("[feedback] email delivery failed:", err);
+     }
      return Response.json({ ok: true, id: submission.id });
    }
    ```
@@ -347,6 +363,36 @@ set up the remediate feedback widget in this project. one component on the clien
    ```
 
    add `.feedback/` to `.gitignore`.
+
+   ### formatting with `toMarkdown()`
+
+   all the templates above handle storage and delivery. for destinations that display text (slack, discord, github issues, linear, email), use `toMarkdown()` to format the submission as structured markdown instead of hand-building it:
+
+   ```ts
+   import { parseFeedback, toMarkdown } from "remediate/server";
+
+   const { submission, files } = await parseFeedback(req);
+   const body = toMarkdown(submission);
+   // body is structured markdown: grouped by type, numbered items, priority badges, environment line
+   ```
+
+   if files were uploaded to a public URL first, pass them in to get inline images and download links:
+
+   ```ts
+   const body = toMarkdown(submission, {
+     fileUrls: {
+       "screenshot-cap_abc123": "https://storage.example.com/screenshot-cap_abc123.png",
+       "voice-voc_def456": "https://storage.example.com/voice-voc_def456.webm",
+     },
+   });
+   ```
+
+   `toMarkdown()` works directly for github issues, linear, discord embeds, and email (as plain text). for slack, the output is readable as plain text but doesn't use slack's `mrkdwn` syntax — use the hand-built slack template above if you want native slack formatting.
+
+   options:
+   - `fileUrls` — map of file key → public URL (screenshots render as inline images, recordings/voice as links)
+   - `environment` — include the browser/os/viewport line (default: `true`)
+   - `metadata` — include the metadata as a fenced JSON block (default: `false`)
 
 7. **add the component**
 
@@ -383,6 +429,7 @@ set up the remediate feedback widget in this project. one component on the clien
 8. **confirm setup**
    - tell the user remediate is configured with the backend they chose
    - tell them to start their dev server and look for the floating button in the bottom corner
+   - if env vars were added (e.g. `SLACK_WEBHOOK_URL`, `RESEND_API_KEY`), remind the user to **restart the dev server** — next.js and most frameworks don't hot-reload `.env` changes
    - if backend is `convex`, also tell them to run `npx convex dev` in another terminal
    - if backend is `local disk`, confirm `.feedback/` was added to `.gitignore`
    - if auth was detected and wired, confirm which user fields are being passed via `metadata` and that the auth token is sent via `headers`
@@ -405,6 +452,7 @@ set up the remediate feedback widget in this project. one component on the clien
 - `parseFeedback` works with any web-standard `Request` object — app router, remix, hono, bun, deno, cloudflare workers
 - `submission.items` is the actual content array (not `submission.body`) — narrow on `item.type` to get type-specific fields
 - `files` is a `Map<string, ParsedFile>` (not an array) — iterate with `for (const [, file] of files)`
+- `toMarkdown(submission)` formats a submission as structured markdown (grouped sections, numbered items, priority badges, environment). pass `fileUrls` to embed screenshots inline. works for github issues, linear, discord, email.
 - if the project uses typescript, the types ship with the package
 - if the user already has a `<Remediate>` mount, do NOT add a second one — the widget assumes a single instance per app
 

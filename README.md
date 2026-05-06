@@ -75,6 +75,11 @@ open devtools, capture something, watch the payload.
 | `metadata` | `Record<string, unknown>` | extra data merged into the submission |
 | `headers` | `Record<string, string> \| () => Record<string, string>` | custom headers on the POST (e.g. auth tokens) |
 | `onError` | `(error: Error) => void` | called if the POST fails |
+| `captureTypes` | `CaptureType[]` | which capture modes to expose (defaults to all) |
+| `open` | `boolean` | controlled open state. pair with `onOpenChange` |
+| `onOpenChange` | `(open: boolean) => void` | called when the user opens or closes the widget |
+| `debug` | `boolean` | log lifecycle events to the console |
+| `messages` | `Partial<WidgetMessages>` | override any user-visible string |
 
 ## claude code
 
@@ -83,6 +88,16 @@ npx skills add fvckprth/remediate
 ```
 
 then run `/remediate` in any react project. detects your framework, picks a backend, installs the package, scaffolds the server route, and wires the component into your layout.
+
+after setup, the skill also handles the full lifecycle — just ask:
+
+- **add integration** — add or replace a backend (fan-out to multiple destinations)
+- **wire auth** — detect clerk/nextauth/supabase and wire `metadata` + `headers`
+- **test endpoint** — send a synthetic submission to verify the route works
+- **upgrade** — check npm for latest and handle breaking changes
+- **scaffold dashboard** — generate an admin page to view submitted feedback
+- **capture gating** — configure `captureTypes` (static or conditional by role)
+- **remove** — clean uninstall, preserving captured data
 
 works for any agent that reads agent skills — claude code, codex, cursor, opencode, and the rest.
 

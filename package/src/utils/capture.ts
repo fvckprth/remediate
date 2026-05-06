@@ -1,5 +1,6 @@
 import { generateSelector } from "./selector";
 import { identifyElement, getNearbyText, getElementClasses, getDetailedComputedStyles } from "./element-identify";
+import { getReactComponentChain } from "./react-fiber";
 import type { ElementCapture } from "../types";
 
 const CAPTURE_ATTRIBUTES = [
@@ -23,6 +24,7 @@ function filterAttributes(el: HTMLElement): Record<string, string> {
 export function captureElement(el: HTMLElement): ElementCapture {
   const rect = el.getBoundingClientRect();
   const { name, path } = identifyElement(el);
+  const { chain, sourceLocation } = getReactComponentChain(el);
 
   return {
     selector: generateSelector(el),
@@ -38,5 +40,7 @@ export function captureElement(el: HTMLElement): ElementCapture {
     cssClasses: getElementClasses(el),
     attributes: filterAttributes(el),
     computedStyles: getDetailedComputedStyles(el),
+    ...(chain.length > 0 && { componentChain: chain }),
+    ...(sourceLocation && { sourceLocation }),
   };
 }

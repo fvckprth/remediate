@@ -14,7 +14,7 @@ export async function captureScreenshot(area: SelectionArea): Promise<Blob | nul
       canvasHeight: area.height,
       pixelRatio: window.devicePixelRatio,
       style: {
-        transform: `translate(-${area.x}px, -${area.y}px)`,
+        transform: `translate(-${area.x + window.scrollX}px, -${area.y + window.scrollY}px)`,
         transformOrigin: "top left",
       },
       filter: (node: HTMLElement) => {
