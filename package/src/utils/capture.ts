@@ -1,6 +1,7 @@
 import { generateSelector } from "./selector";
 import { identifyElement, getNearbyText, getElementClasses, getDetailedComputedStyles } from "./element-identify";
 import { getReactComponentChain } from "./react-fiber";
+import { getDocumentOffset } from "./viewport-offset";
 import type { ElementCapture } from "../types";
 
 const CAPTURE_ATTRIBUTES = [
@@ -23,6 +24,7 @@ function filterAttributes(el: HTMLElement): Record<string, string> {
 
 export function captureElement(el: HTMLElement): ElementCapture {
   const rect = el.getBoundingClientRect();
+  const offset = getDocumentOffset(el);
   const { name, path } = identifyElement(el);
   const { chain, sourceLocation } = getReactComponentChain(el);
 
@@ -31,8 +33,8 @@ export function captureElement(el: HTMLElement): ElementCapture {
     name,
     elementPath: path,
     boundingRect: {
-      x: rect.x + window.scrollX,
-      y: rect.y + window.scrollY,
+      x: rect.x + offset.x,
+      y: rect.y + offset.y,
       width: rect.width,
       height: rect.height,
     },

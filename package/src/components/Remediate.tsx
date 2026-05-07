@@ -6,7 +6,7 @@ import type {
 import { isVideoRecordingSupported } from "../utils/capture-video";
 import { createItem } from "../utils/create-item";
 import { widgetReducer, getInitialState } from "../state/widget-reducer";
-import { derivePanelKey, PANEL_WIDTHS } from "../state/widget-machine";
+import { derivePanelKey, PANEL_WIDTHS } from "../state/panel-layout";
 import { WidgetProvider } from "../state/WidgetContext";
 import { useCapture } from "../hooks/useCapture";
 import { useVoiceRecording } from "../hooks/useVoiceRecording";
