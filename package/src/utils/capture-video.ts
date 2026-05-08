@@ -81,6 +81,11 @@ export async function startVideoRecording({
   ]);
   const chunks: Blob[] = [];
   const mimeType = getSupportedMimeType();
+  // Codec params (e.g. ";codecs=vp9,opus") embed a comma — some storage
+  // backends reject Content-Type with commas (Convex returns 400 BadHeader).
+  // Drop the parameters from the blob's type so consumers get a header-safe
+  // value; codec info is still encoded inside the WebM container.
+  const blobType = mimeType.split(";")[0];
   const recorder = new MediaRecorder(combinedStream, { mimeType });
   recorder.ondataavailable = (e) => {
     if (e.data.size > 0) chunks.push(e.data);
@@ -108,20 +113,20 @@ export async function startVideoRecording({
     stop(): Promise<Blob> {
       return new Promise((resolve) => {
         if (stopped) {
-          resolve(new Blob(chunks, { type: mimeType }));
+          resolve(new Blob(chunks, { type: blobType }));
           return;
         }
 
         recorder.onstop = () => {
           teardown();
-          resolve(new Blob(chunks, { type: mimeType }));
+          resolve(new Blob(chunks, { type: blobType }));
         };
 
         if (recorder.state !== "inactive") {
           recorder.stop();
         } else {
           teardown();
-          resolve(new Blob(chunks, { type: mimeType }));
+          resolve(new Blob(chunks, { type: blobType }));
         }
       });
     },
