@@ -9,7 +9,7 @@ function getFiber(el: HTMLElement): unknown | null {
   const key = Object.keys(el).find(
     (k) => k.startsWith("__reactFiber$") || k.startsWith("__reactInternalInstance$"),
   );
-  return key ? (el as Record<string, unknown>)[key] : null;
+  return key ? (el as unknown as Record<string, unknown>)[key] : null;
 }
 
 export function getReactComponentChain(el: HTMLElement): ReactFiberResult {
@@ -19,7 +19,7 @@ export function getReactComponentChain(el: HTMLElement): ReactFiberResult {
 
     const chain: string[] = [];
     let sourceLocation: ReactFiberResult["sourceLocation"] = null;
-    let current = fiber;
+    let current: Record<string, unknown> | null = fiber;
 
     while (current) {
       const type = current.type;

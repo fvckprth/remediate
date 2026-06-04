@@ -41,6 +41,7 @@ const DEFAULT_MESSAGES = {
 export function Remediate({
   endpoint, onSubmit, onError, metadata: extraMetadata,
   headers, captureTypes, open: controlledOpen, onOpenChange, debug, messages: messageOverrides,
+  snapToEdge, collapsible,
 }: RemediateProps) {
   const [state, dispatch] = useReducer(widgetReducer, undefined, getInitialState);
   const enabledTypes = captureTypes ?? ALL_CAPTURE_TYPES;
@@ -192,6 +193,8 @@ export function Remediate({
           onDeleteAll={() => dispatch({ type: "CLEAR_ALL" })}
           onAnchorAriaLabel={setAnchorAriaLabel}
           panelOpen={panelKey !== null}
+          snapToEdge={snapToEdge}
+          collapsible={collapsible}
           barRef={barRef}
         />
 

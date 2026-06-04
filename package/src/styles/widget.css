@@ -24,6 +24,11 @@
   --rm-fg-15: rgba(231, 231, 231, 0.15);
   --rm-fg-10: rgba(231, 231, 231, 0.1);
   --rm-fg-05: rgba(231, 231, 231, 0.05);
+  --rm-bar-width: 90px;
+  --rm-chevron-size: 18px;
+  --rm-bar-collapsible-width: calc(var(--rm-bar-width) + 6px);
+  --rm-bar-collapsed-size: 36px;
+  --rm-bar-tab-peek: 24px;
 }
 
 [data-remediate-widget][data-remediate-theme="light"]:not([data-remediate-widget] [data-remediate-widget]) {
@@ -36,6 +41,11 @@
   --rm-fg-15: rgba(28, 28, 28, 0.15);
   --rm-fg-10: rgba(28, 28, 28, 0.1);
   --rm-fg-05: rgba(28, 28, 28, 0.05);
+  --rm-bar-width: 90px;
+  --rm-chevron-size: 18px;
+  --rm-bar-collapsible-width: calc(var(--rm-bar-width) + 6px);
+  --rm-bar-collapsed-size: 36px;
+  --rm-bar-tab-peek: 24px;
 }
 
 /* Reset host page styles so the widget renders identically everywhere */
@@ -79,8 +89,13 @@
   align-items: center;
   justify-content: flex-end;
   overflow: hidden;
+  /* Drag is a custom gesture: never let a fast flick start a text selection
+     (desktop) or a scroll/pan that fires pointercancel (touch). */
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: none;
   /* Explicit width/height transition */
-  width: 90px;
+  width: var(--rm-bar-width);
   height: 40px;
   transition: 
     width 400ms cubic-bezier(0.19, 1, 0.22, 1), 
@@ -103,12 +118,25 @@
 }
 
 .rm-bar--dragging {
-  user-select: none;
   will-change: transform;
 }
 
 .rm-bar--dragging * {
   pointer-events: none !important;
+}
+
+.rm-bar[data-collapsible] {
+  width: var(--rm-bar-collapsible-width);
+}
+
+.rm-bar__content {
+  position: absolute;
+  inset: 0;
+}
+
+.rm-toolbar__content-actions {
+  display: flex;
+  align-items: center;
 }
 
 /* Width is set dynamically via JS measurement — no hardcoded expanded widths */
@@ -193,7 +221,7 @@
 }
 
 .rm-bar__text {
-  padding: 0 8px;
+  padding: 0 10px 0 8px;
   height: 32px;
   display: flex;
   align-items: center;
@@ -209,8 +237,8 @@
 }
 
 .rm-bar__trigger:focus-visible {
-  outline: 2px solid var(--rm-fg);
-  outline-offset: 2px;
+  outline: none;
+  background: var(--rm-fg-15);
 }
 
 @media (hover: hover) {
@@ -285,6 +313,130 @@
 .rm-pos-bl { bottom: 20px; left: 20px; }
 .rm-pos-br { bottom: 20px; right: 20px; }
 
+/* ── Collapse control (chevron on the idle bar) ── */
+
+.rm-bar__collapse {
+  position: absolute;
+  left: 4px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: var(--rm-chevron-size);
+  height: var(--rm-chevron-size);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  border-radius: 9999px;
+  cursor: pointer;
+  color: var(--rm-fg-50);
+  z-index: 2;
+  transition: color 150ms ease, background-color 150ms ease;
+}
+
+.rm-bar__collapse:hover {
+  color: var(--rm-fg);
+  background: var(--rm-fg-10);
+}
+
+.rm-bar__collapse:focus-visible {
+  outline: none;
+  color: var(--rm-fg);
+  background: var(--rm-fg-15);
+}
+
+/* When the chevron is present (collapsible + idle), pack the label snugly
+   to its right so there is no dead space on the left of "Feedback". */
+.rm-bar__collapse ~ .rm-bar__trigger {
+  left: calc(var(--rm-chevron-size) + 4px);
+  justify-content: flex-start;
+}
+
+.rm-bar__collapse ~ .rm-bar__trigger .rm-bar__text {
+  padding-left: 3px;
+}
+
+/* Point the chevron toward the docked edge. */
+.rm-bar[data-edge="right"] .rm-bar__collapse svg { transform: rotate(0deg); }
+.rm-bar[data-edge="left"] .rm-bar__collapse svg { transform: rotate(180deg); }
+.rm-bar[data-edge="top"] .rm-bar__collapse svg { transform: rotate(-90deg); }
+.rm-bar[data-edge="bottom"] .rm-bar__collapse svg { transform: rotate(90deg); }
+
+/* ── Collapsed state (thin tab on the docked edge) ── */
+
+.rm-bar--collapsed {
+  cursor: pointer;
+}
+
+.rm-bar__tab {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  transition: background-color 150ms ease;
+}
+
+.rm-bar__tab svg {
+  color: var(--rm-fg-50);
+  transition: color 150ms ease;
+}
+
+.rm-bar__tab:hover svg {
+  color: var(--rm-fg);
+}
+
+.rm-bar__tab:focus,
+.rm-bar__tab:focus-visible {
+  outline: none;
+  background: var(--rm-fg-15);
+}
+
+.rm-bar__tab:focus svg,
+.rm-bar__tab:focus-visible svg {
+  color: var(--rm-fg);
+}
+
+/* Point the collapsed tab chevron toward the viewport, where it expands. */
+.rm-bar--collapsed[data-edge="right"] .rm-bar__tab svg { transform: rotate(180deg); }
+.rm-bar--collapsed[data-edge="left"] .rm-bar__tab svg { transform: rotate(0deg); }
+.rm-bar--collapsed[data-edge="top"] .rm-bar__tab svg { transform: rotate(90deg); }
+.rm-bar--collapsed[data-edge="bottom"] .rm-bar__tab svg { transform: rotate(-90deg); }
+
+.rm-bar--collapsed[data-edge="right"] { border-radius: 9999px 0 0 9999px; }
+.rm-bar--collapsed[data-edge="left"] { border-radius: 0 9999px 9999px 0; }
+.rm-bar--collapsed[data-edge="top"] { border-radius: 0 0 9999px 9999px; }
+.rm-bar--collapsed[data-edge="bottom"] { border-radius: 9999px 9999px 0 0; }
+
+.rm-bar--collapsed[data-edge="top"],
+.rm-bar--collapsed[data-edge="bottom"] {
+  width: var(--rm-bar-collapsed-size);
+}
+
+.rm-bar--collapsed[data-edge="right"] .rm-bar__tab {
+  justify-content: flex-start;
+  padding-left: calc((var(--rm-bar-tab-peek) - var(--rm-chevron-size)) / 2);
+}
+
+.rm-bar--collapsed[data-edge="left"] .rm-bar__tab {
+  justify-content: flex-end;
+  padding-right: calc((var(--rm-bar-tab-peek) - var(--rm-chevron-size)) / 2);
+}
+
+.rm-bar--collapsed[data-edge="top"] .rm-bar__tab {
+  align-items: flex-end;
+  padding-bottom: calc((var(--rm-bar-tab-peek) - var(--rm-chevron-size)) / 2);
+}
+
+.rm-bar--collapsed[data-edge="bottom"] .rm-bar__tab {
+  align-items: flex-start;
+  padding-top: calc((var(--rm-bar-tab-peek) - var(--rm-chevron-size)) / 2);
+}
+
 /* ── Toolbar buttons ─────────────────────── */
 
 .rm-toolbar__actions {
@@ -316,6 +468,8 @@
 
 .rm-toolbar-btn:focus-visible {
   outline: none;
+  color: var(--rm-fg);
+  background: var(--rm-fg-15);
 }
 
 @media (hover: hover) {
@@ -554,8 +708,8 @@
 }
 
 .rm-badge:focus-visible {
-  outline: 2px solid var(--rm-fg);
-  outline-offset: 2px;
+  outline: none;
+  background: color-mix(in srgb, var(--rm-accent), var(--rm-fg) 18%);
 }
 
 .rm-badge-wrap--multi {
@@ -699,12 +853,12 @@
   border: 1px solid var(--rm-fg-15);
   border-radius: 8px;
   background: var(--rm-fg-05);
-  transition: border-color 0.15s ease;
+  transition: background-color 0.15s ease;
   overflow: hidden;
 }
 
 .rm-input-group:focus-within {
-  border-color: var(--rm-accent);
+  background: var(--rm-fg-15);
 }
 
 .rm-input-group__textarea {
@@ -937,8 +1091,8 @@
 }
 
 .rm-btn:focus-visible {
-  outline: 2px solid var(--rm-fg-50);
-  outline-offset: 2px;
+  outline: none;
+  background: var(--rm-fg-15);
 }
 
 .rm-btn:active {
@@ -948,6 +1102,10 @@
 .rm-btn--primary {
   background: var(--rm-fg);
   color: var(--rm-bg);
+}
+
+.rm-btn--primary:focus-visible {
+  background: color-mix(in srgb, var(--rm-fg), transparent 10%);
 }
 
 @media (hover: hover) {
@@ -1138,8 +1296,9 @@
 }
 
 .rm-submenu__tile:focus-visible {
-  outline: 2px solid var(--rm-fg-50);
-  outline-offset: 2px;
+  outline: none;
+  background: var(--rm-fg-15);
+  color: var(--rm-fg);
 }
 
 @media (hover: hover) {
@@ -1401,8 +1560,8 @@
 }
 
 .rm-video-recording-bar__stop:focus-visible {
-  outline: 2px solid var(--rm-fg);
-  outline-offset: 2px;
+  outline: none;
+  background: rgba(255, 69, 69, 0.15);
 }
 
 .rm-video-recording-bar__stop:active {
@@ -1482,8 +1641,8 @@
 }
 
 .rm-voice__play:focus-visible {
-  outline: 2px solid var(--rm-fg);
-  outline-offset: 2px;
+  outline: none;
+  background: var(--rm-fg-15);
 }
 
 /* Waveform */
@@ -1547,8 +1706,8 @@
 }
 
 .rm-voice__stop:focus-visible {
-  outline: 2px solid var(--rm-fg);
-  outline-offset: 2px;
+  outline: none;
+  background: rgba(255, 69, 69, 0.15);
 }
 
 .rm-voice__stop:active {

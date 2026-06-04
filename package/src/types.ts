@@ -175,6 +175,9 @@ export const DEFAULT_MARKER_COLOR = "#3B82F6";
 
 export type CaptureType = "photo" | "video" | "annotation" | "textNote" | "voiceNote";
 
+/** Screen edge the launcher can dock to. */
+export type BarEdge = "left" | "right" | "top" | "bottom";
+
 export interface RemediateProps {
   /** URL to POST feedback as FormData. If set, the widget auto-submits to this endpoint. */
   endpoint?: string;
@@ -196,6 +199,10 @@ export interface RemediateProps {
   debug?: boolean;
   /** Override any user-visible string. */
   messages?: Partial<WidgetMessages>;
+  /** Snap the launcher to the nearest screen edge after dragging. Default false. */
+  snapToEdge?: boolean;
+  /** Allow collapsing the launcher into a thin tab on its docked edge. Default false. */
+  collapsible?: boolean;
 }
 
 export interface WidgetMessages {
