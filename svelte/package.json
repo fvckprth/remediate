@@ -1,0 +1,67 @@
+{
+  "name": "remediate-svelte",
+  "version": "0.1.8",
+  "description": "Drop-in feedback widget for Svelte apps. Screenshot, video, voice, text, and element annotation.",
+  "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "svelte": "./dist/index.js",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "svelte": "./dist/index.js",
+      "default": "./dist/index.js"
+    },
+    "./server": {
+      "types": "./dist/server.d.ts",
+      "default": "./dist/server.js"
+    },
+    "./styles.css": "./dist/index.css",
+    "./widget": "./dist/widget.js"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "vite build && vite build --config vite.embed.config.ts",
+    "dev": "vite build --watch",
+    "check": "svelte-check --tsconfig ./tsconfig.json"
+  },
+  "peerDependencies": {
+    "svelte": ">=5"
+  },
+  "dependencies": {
+    "html-to-image": "^1.11.11"
+  },
+  "devDependencies": {
+    "@sveltejs/vite-plugin-svelte": "^5.0.0",
+    "@types/node": "^26.2.0",
+    "svelte": "^5.0.0",
+    "svelte-check": "^4.0.0",
+    "typescript": "^5",
+    "vite": "^6.0.0"
+  },
+  "sideEffects": [
+    "*.css",
+    "./dist/index.js"
+  ],
+  "license": "MIT",
+  "keywords": [
+    "feedback",
+    "widget",
+    "screenshot",
+    "annotation",
+    "bug-report",
+    "svelte",
+    "screen-recording",
+    "voice-note"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/fvckprth/remediate.git"
+  },
+  "homepage": "https://remediate.ski"
+}

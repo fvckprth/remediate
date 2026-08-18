@@ -1,49 +1,65 @@
-# remediate
+# remediate Svelte
 
-feedback widget for react. screenshots, screen recordings, voice notes, element annotations. one component on the client, one helper on the server. no accounts, no saas, no storage.
+feedback widget for svelte. screenshots, screen recordings, voice notes, element annotations. one component on the client, one helper on the server. no accounts, no saas, no storage.
+
+ported to svelte by [Nidheesh Vakharia](https://github.com/nidheesh-m-vakharia).
 
 ## install
 
 ```bash
-npm install remediate
+npm install remediate-svelte
 ```
 
 ## add the component
 
-```tsx
-import { Remediate } from "remediate";
+```svelte
+<script>
+  import { Remediate } from "remediate-svelte";
+</script>
 
-export default function App() {
-  return (
-    <>
-      <YourApp />
-      <Remediate endpoint="/api/feedback" />
-    </>
-  );
-}
+<YourApp />
+<Remediate endpoint="/api/feedback" />
 ```
+
+> **sveltekit:** `Remediate` is a browser-only widget — it no-ops during SSR and renders on the client. drop it once in your root `+layout.svelte`.
 
 a floating button appears in the corner. click it, capture, submit. styles inject themselves.
 
 ## add the server route
 
 ```ts
-import { parseFeedback } from "remediate/server";
+import { parseFeedback } from "remediate-svelte/server";
+import { json } from "@sveltejs/kit";
 
-export async function POST(req: Request) {
-  const { submission, files } = await parseFeedback(req);
-  console.log(submission);
-  return Response.json({ ok: true, id: submission.id });
+export async function POST({ request }) {
+  const { submission, files } = await parseFeedback(request);
+
+  // submission.items is the actual content
+  const body = submission.items
+    .map((item) => {
+      if (item.type === "textNote") return item.text;
+      if (item.type === "annotation") return item.note;
+      return item.additionalText;
+    })
+    .filter(Boolean)
+    .join("\n");
+
+  // files is a Map<string, ParsedFile>, not an array
+  for (const [, file] of files) {
+    console.log(file.filename, file.category, file.blob.size);
+  }
+
+  return json({ ok: true, id: submission.id });
 }
 ```
 
-`submission` is the structured json. `files` is a `Map<string, File>` of screenshots, recordings, and voice notes.
+`submission.items` is the content — a mixed array of text notes, annotations, photos, videos, and voice notes. `files` is a `Map<string, ParsedFile>` keyed by field name.
 
-works anywhere you have a web `Request`: next.js, remix, hono, bun, deno, cloudflare workers.
+`parseFeedback` takes any web `Request`, so the same route works in sveltekit, hono, bun, deno, and cloudflare workers.
 
 ## try it without a backend
 
-```tsx
+```svelte
 <Remediate onSubmit={(payload) => console.log(payload)} />
 ```
 
@@ -56,39 +72,43 @@ open devtools, capture something, watch the payload.
 | `endpoint` | `string` | url to POST feedback as FormData |
 | `onSubmit` | `(payload: FeedbackSubmission) => void` | called on submit with the full payload |
 | `metadata` | `Record<string, unknown>` | extra data merged into the submission |
+| `headers` | `Record<string, string> \| () => Record<string, string>` | custom headers on the POST (e.g. auth tokens) |
 | `onError` | `(error: Error) => void` | called if the POST fails |
+| `captureTypes` | `CaptureType[]` | which capture modes to expose (defaults to all) |
+| `open` | `boolean` | controlled open state. pair with `onOpenChange` |
+| `onOpenChange` | `(open: boolean) => void` | called when the user opens or closes the widget |
+| `debug` | `boolean` | log lifecycle events to the console |
+| `messages` | `Partial<WidgetMessages>` | override any user-visible string |
 
-## claude code
+## script tag
 
-```bash
-npx skills add fvckprth/remediate
+no build step? drop in the self-contained widget and point it at your endpoint:
+
+```html
+<script
+  src="https://cdn.jsdelivr.net/npm/remediate-svelte/dist/widget.js"
+  data-endpoint="/api/feedback"
+></script>
 ```
-
-then run `/remediate` in any react project. detects your framework, picks a backend, installs the package, scaffolds the server route, and wires the component into your layout.
-
-works for any agent that reads agent skills — claude code, codex, cursor, opencode, cline, and the rest.
 
 ## what gets captured
 
-- screenshots: png from the dom. no permission prompt.
-- screen recordings: real video via getDisplayMedia. desktop only. requires https.
-- voice notes: microphone audio via getUserMedia. requires https.
-- annotations: css selector, dom path, computed styles, bounding rect, nearby text.
-- text notes: whatever the user types.
-- environment: browser, os, viewport, screen, language, timezone, color scheme.
+- **photo** — screenshot of a selected region, rendered from the dom. no permission prompt.
+- **video** — screen recording via getDisplayMedia. desktop only. requires https.
+- **voiceNote** — microphone audio via getUserMedia. requires https.
+- **annotation** — pin on a dom element. captures css selector, dom path, computed styles, bounding rect, nearby text.
+- **textNote** — whatever the user types.
+- **environment** — browser, os, viewport, screen, language, timezone, color scheme (auto-captured).
 
 cross-origin images and iframes render blank in screenshots. video recording is not available on mobile safari.
 
-## docs
+## about this port
 
-[www.remediate.ski/docs](https://www.remediate.ski/docs)
+`remediate-svelte` is a faithful svelte 5 port of [remediate](https://www.remediate.ski) — same widget, same capture flows, same server helpers, rebuilt with runes. the upstream docs describe the shared api and payload shape:
 
-- [getting started](https://www.remediate.ski/docs/install)
-- [recipes](https://www.remediate.ski/docs/recipes): slack, discord, github issues, linear, email, postgres, vercel blob
 - [payload](https://www.remediate.ski/docs/payload): what's in the json
 - [privacy](https://www.remediate.ski/docs/privacy): what gets captured, masking, server-side handling
 - [reference](https://www.remediate.ski/docs/reference): every prop, runtime support, cors, csp, bundle size
-- [faq](https://www.remediate.ski/docs/faq)
 
 ## license
 

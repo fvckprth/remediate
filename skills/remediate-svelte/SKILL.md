@@ -1,6 +1,6 @@
 ---
-name: remediate
-description: Set up and manage the Remediate feedback widget in a React project. Install, add integrations, wire auth, test the endpoint, upgrade, scaffold a feedback dashboard, configure capture types, or cleanly uninstall.
+name: remediate-svelte
+description: Set up and manage the Remediate feedback widget in a Svelte project. Install, add integrations, wire auth, test the endpoint, upgrade, scaffold a feedback dashboard, configure capture types, or cleanly uninstall.
 ---
 
 ## tool index
@@ -9,22 +9,22 @@ use this section to decide which tool to run. if the user's intent is ambiguous,
 
 | tool | trigger | section |
 |---|---|---|
-| setup | first-time install of remediate in a project | [remediate setup](#remediate-setup) |
+| setup | first-time install of remediate-svelte in a project | [remediate setup](#remediate-setup) |
 | add integration | add or replace a backend integration in an existing setup | [add integration](#add-integration) |
-| wire auth | add user identity (clerk/nextauth/supabase) to the widget | [wire auth](#wire-auth) |
+| wire auth | add user identity (auth.js/lucia/supabase) to the widget | [wire auth](#wire-auth) |
 | test endpoint | send a synthetic submission to verify the route works | [test endpoint](#test-endpoint) |
 | upgrade | check for updates and upgrade to latest version | [upgrade](#upgrade) |
 | scaffold dashboard | create an admin page to view submitted feedback | [scaffold feedback dashboard](#scaffold-feedback-dashboard) |
 | capture gating | configure which capture modes are available | [add capture type gating](#add-capture-type-gating) |
-| remove | clean uninstall of remediate from the project | [remove remediate](#remove-remediate) |
+| remove | clean uninstall of remediate-svelte from the project | [remove remediate](#remove-remediate) |
 
-if `remediate` is not yet in `package.json`, always run **setup** first. if it is already installed, route to the matching tool above.
+if `remediate-svelte` is not yet in `package.json`, always run **setup** first. if it is already installed, route to the matching tool above.
 
 ---
 
 # Remediate Setup
 
-set up the remediate feedback widget in this project. one component on the client, one route on the server. the route content depends on which backend the project already uses.
+set up the remediate-svelte feedback widget in this project. one component on the client, one route on the server. the route content depends on which backend the project already uses.
 
 ## steps
 
@@ -34,19 +34,17 @@ set up the remediate feedback widget in this project. one component on the clien
    - default to npm if none found
 
 2. **check if already installed**
-   - look for `remediate` in `package.json` dependencies
-   - if not found, install it: `pnpm add remediate` (or the matching `npm`/`yarn`/`bun` command)
+   - look for `remediate-svelte` in `package.json` dependencies
+   - if not found, install it: `pnpm add remediate-svelte` (or the matching `npm`/`yarn`/`bun` command)
    - if found, skip install and continue
 
 3. **check if already configured**
-   - search for `<Remediate`, `import { Remediate }`, or `from "remediate"` in `src/` or `app/`
+   - search for `<Remediate`, `import { Remediate }`, or `from "remediate-svelte"` in `src/`
    - if found, report that remediate is already set up and exit (don't double-mount)
 
 4. **detect framework** (in this order)
-   - **next.js app router**: has `app/layout.tsx` or `app/layout.js` (and no `pages/_app`)
-   - **next.js pages router**: has `pages/_app.tsx` or `pages/_app.js`
-   - **remix**: has `app/root.tsx` and `remix.config` or `@remix-run` in `package.json`
-   - **vite + react**: has `vite.config.ts` and `react` in `package.json`
+   - **sveltekit**: has `svelte.config.js` and `@sveltejs/kit` in `package.json` (routes under `src/routes/`)
+   - **vite + svelte**: has `vite.config.*` and `svelte` in `package.json` but no `@sveltejs/kit`
    - **other**: none of the above matched
 
 5. **detect backend, then ask**
@@ -64,38 +62,36 @@ set up the remediate feedback widget in this project. one component on the clien
 
 5b. **detect auth, then suggest metadata + headers**
    check the project for auth libraries:
-   - `next-auth` or `@auth/core` in dependencies
-   - `@clerk/nextjs` in dependencies
-   - `@supabase/auth-helpers-nextjs` or `@supabase/ssr` in dependencies
+   - `@auth/sveltekit` in dependencies (auth.js)
+   - `lucia` in dependencies
+   - `@supabase/ssr` or `@supabase/supabase-js` in dependencies
 
    if found, suggest wiring user context:
-   - ask: "i see `@clerk/nextjs` — want me to pass the user id and email via metadata and auth token via headers?"
-   - if yes, add `metadata={{ userId: user.id, email: user.email }}` and `headers={{ Authorization: \`Bearer ${token}\` }}` to the component mount, with the appropriate auth hook imports for the detected library
+   - ask: "i see `@auth/sveltekit` — want me to pass the user id and email via metadata?"
+   - if yes, add `metadata={{ userId: page.data.session?.user?.id, email: page.data.session?.user?.email }}` to the component mount, reading session from `$app/state`'s `page` (populated by your layout load — see wire auth)
    - if no, skip — the user can add it later
 
 6. **create the server route**
    pick the path based on framework:
-   - next.js app router → `app/api/feedback/route.ts`
-   - next.js pages router → `pages/api/feedback.ts`
-   - remix → `app/routes/api.feedback.ts`
+   - sveltekit → `src/routes/api/feedback/+server.ts`
    - vite / other → `src/api/feedback.ts` (and tell the user to wire it into their server)
 
-   write the route body using the backend chosen in step 5. use the templates below as the starting point. they target next.js app router; for other frameworks, the body is the same — only the export wrapper changes.
+   write the route body using the backend chosen in step 5. use the templates below as the starting point. they target a sveltekit `+server.ts` handler; for other frameworks, the handler body is the same — only the export wrapper changes (`parseFeedback` takes any web `Request`).
 
    ### template: convex
 
    ```ts
-   import { parseFeedback } from "remediate/server";
+   import { parseFeedback } from "remediate-svelte/server";
+   import { json } from "@sveltejs/kit";
    import { ConvexHttpClient } from "convex/browser";
-   import { api } from "../../../convex/_generated/api";
-   import type { Id } from "../../../convex/_generated/dataModel";
+   import { api } from "$lib/../convex/_generated/api";
+   import type { Id } from "$lib/../convex/_generated/dataModel";
+   import { PUBLIC_CONVEX_URL } from "$env/static/public";
 
-   const convex = new ConvexHttpClient(process.env.NEXT_PUBLIC_CONVEX_URL!);
+   const convex = new ConvexHttpClient(PUBLIC_CONVEX_URL);
 
-   export const runtime = "nodejs";
-
-   export async function POST(req: Request) {
-     const { submission, files } = await parseFeedback(req);
+   export async function POST({ request }) {
+     const { submission, files } = await parseFeedback(request);
 
      const uploaded: Array<{
        filename: string;
@@ -131,20 +127,21 @@ set up the remediate feedback widget in this project. one component on the clien
        files: uploaded,
      });
 
-     return Response.json({ ok: true, id });
+     return json({ ok: true, id });
    }
    ```
 
-   also create or extend `convex/schema.ts` with a `feedback` table and `convex/feedback.ts` with `generateUploadUrl` and `insert` mutations — see [recipes › convex](https://www.remediate.ski/docs/recipes#convex) for the full schema and mutation files. remind the user to run `npx convex dev` once so the codegen is current.
+   also create or extend `convex/schema.ts` with a `feedback` table and `convex/feedback.ts` with `generateUploadUrl` and `insert` mutations — see [recipes › convex](https://www.remediate.ski/docs/recipes#convex) for the full schema and mutation files. remind the user to run `npx convex dev` once so the codegen is current, and to set `PUBLIC_CONVEX_URL` in `.env`.
 
    ### template: vercel blob
 
    ```ts
-   import { parseFeedback } from "remediate/server";
+   import { parseFeedback } from "remediate-svelte/server";
+   import { json } from "@sveltejs/kit";
    import { put } from "@vercel/blob";
 
-   export async function POST(req: Request) {
-     const { submission, files } = await parseFeedback(req);
+   export async function POST({ request }) {
+     const { submission, files } = await parseFeedback(request);
      const urls: Record<string, string> = {};
      for (const [name, file] of files) {
        const blob = await put(
@@ -155,7 +152,7 @@ set up the remediate feedback widget in this project. one component on the clien
        urls[name] = blob.url;
      }
      console.log("[feedback]", submission.id, urls);
-     return Response.json({ ok: true, id: submission.id });
+     return json({ ok: true, id: submission.id });
    }
    ```
 
@@ -164,14 +161,15 @@ set up the remediate feedback widget in this project. one component on the clien
    ### template: postgres + drizzle
 
    ```ts
-   import { parseFeedback } from "remediate/server";
-   import { db } from "@/db";
-   import { feedback } from "@/db/schema";
+   import { parseFeedback } from "remediate-svelte/server";
+   import { json } from "@sveltejs/kit";
+   import { db } from "$lib/server/db";
+   import { feedback } from "$lib/server/db/schema";
    import { writeFile, mkdir } from "node:fs/promises";
    import { join } from "node:path";
 
-   export async function POST(req: Request) {
-     const { submission, files } = await parseFeedback(req);
+   export async function POST({ request }) {
+     const { submission, files } = await parseFeedback(request);
 
      const dir = join(process.cwd(), "uploads", submission.id);
      await mkdir(dir, { recursive: true });
@@ -186,19 +184,21 @@ set up the remediate feedback widget in this project. one component on the clien
        createdAt: new Date(),
      });
 
-     return Response.json({ ok: true, id: submission.id });
+     return json({ ok: true, id: submission.id });
    }
    ```
 
-   the import paths (`@/db`, `@/db/schema`) assume the project's existing convention — adjust to match. tell the user they may need to add a `feedback` table to their schema.
+   the import paths (`$lib/server/db`, `$lib/server/db/schema`) assume the project's existing convention — adjust to match. tell the user they may need to add a `feedback` table to their schema.
 
    ### template: slack webhook
 
    ```ts
-   import { parseFeedback } from "remediate/server";
+   import { parseFeedback } from "remediate-svelte/server";
+   import { json } from "@sveltejs/kit";
+   import { env } from "$env/dynamic/private";
 
-   export async function POST(req: Request) {
-     const { submission } = await parseFeedback(req);
+   export async function POST({ request }) {
+     const { submission } = await parseFeedback(request);
      const lines = submission.items.map((item) => {
        const tag = item.priority !== "none" ? ` *[${item.priority}]*` : "";
        const text =
@@ -208,7 +208,7 @@ set up the remediate feedback widget in this project. one component on the clien
        return `• ${item.type}${tag} — ${text}`;
      });
      try {
-       await fetch(process.env.SLACK_WEBHOOK_URL!, {
+       await fetch(env.SLACK_WEBHOOK_URL!, {
          method: "POST",
          headers: { "Content-Type": "application/json" },
          body: JSON.stringify({ text: [`*feedback on ${submission.url}*`, "", ...lines].join("\n") }),
@@ -216,7 +216,7 @@ set up the remediate feedback widget in this project. one component on the clien
      } catch (err) {
        console.error("[feedback] slack delivery failed:", err);
      }
-     return Response.json({ ok: true, id: submission.id });
+     return json({ ok: true, id: submission.id });
    }
    ```
 
@@ -225,10 +225,12 @@ set up the remediate feedback widget in this project. one component on the clien
    ### template: discord webhook
 
    ```ts
-   import { parseFeedback } from "remediate/server";
+   import { parseFeedback } from "remediate-svelte/server";
+   import { json } from "@sveltejs/kit";
+   import { env } from "$env/dynamic/private";
 
-   export async function POST(req: Request) {
-     const { submission, files } = await parseFeedback(req);
+   export async function POST({ request }) {
+     const { submission, files } = await parseFeedback(request);
 
      const body = submission.items
        .map((item) => {
@@ -255,14 +257,14 @@ set up the remediate feedback widget in this project. one component on the clien
      }
 
      try {
-       await fetch(process.env.DISCORD_WEBHOOK_URL!, {
+       await fetch(env.DISCORD_WEBHOOK_URL!, {
          method: "POST",
          body: form,
        });
      } catch (err) {
        console.error("[feedback] discord delivery failed:", err);
      }
-     return Response.json({ ok: true, id: submission.id });
+     return json({ ok: true, id: submission.id });
    }
    ```
 
@@ -271,10 +273,12 @@ set up the remediate feedback widget in this project. one component on the clien
    ### template: github issues
 
    ```ts
-   import { parseFeedback } from "remediate/server";
+   import { parseFeedback } from "remediate-svelte/server";
+   import { json } from "@sveltejs/kit";
+   import { env } from "$env/dynamic/private";
 
-   export async function POST(req: Request) {
-     const { submission } = await parseFeedback(req);
+   export async function POST({ request }) {
+     const { submission } = await parseFeedback(request);
      const body = submission.items
        .map((item) => {
          if (item.type === "textNote") return item.text;
@@ -286,11 +290,11 @@ set up the remediate feedback widget in this project. one component on the clien
 
      try {
        await fetch(
-         `https://api.github.com/repos/${process.env.GITHUB_OWNER}/${process.env.GITHUB_REPO}/issues`,
+         `https://api.github.com/repos/${env.GITHUB_OWNER}/${env.GITHUB_REPO}/issues`,
          {
            method: "POST",
            headers: {
-             Authorization: `Bearer ${process.env.GITHUB_TOKEN}`,
+             Authorization: `Bearer ${env.GITHUB_TOKEN}`,
              "Content-Type": "application/json",
            },
            body: JSON.stringify({
@@ -303,7 +307,7 @@ set up the remediate feedback widget in this project. one component on the clien
      } catch (err) {
        console.error("[feedback] github issue creation failed:", err);
      }
-     return Response.json({ ok: true, id: submission.id });
+     return json({ ok: true, id: submission.id });
    }
    ```
 
@@ -312,13 +316,15 @@ set up the remediate feedback widget in this project. one component on the clien
    ### template: email (resend)
 
    ```ts
-   import { parseFeedback } from "remediate/server";
+   import { parseFeedback } from "remediate-svelte/server";
+   import { json } from "@sveltejs/kit";
+   import { env } from "$env/dynamic/private";
    import { Resend } from "resend";
 
-   const resend = new Resend(process.env.RESEND_API_KEY);
+   const resend = new Resend(env.RESEND_API_KEY);
 
-   export async function POST(req: Request) {
-     const { submission, files } = await parseFeedback(req);
+   export async function POST({ request }) {
+     const { submission, files } = await parseFeedback(request);
 
      const attachments = [];
      for (const [, file] of files) {
@@ -337,7 +343,7 @@ set up the remediate feedback widget in this project. one component on the clien
      } catch (err) {
        console.error("[feedback] email delivery failed:", err);
      }
-     return Response.json({ ok: true, id: submission.id });
+     return json({ ok: true, id: submission.id });
    }
    ```
 
@@ -346,19 +352,20 @@ set up the remediate feedback widget in this project. one component on the clien
    ### template: local disk (default for local-only setups)
 
    ```ts
-   import { parseFeedback } from "remediate/server";
+   import { parseFeedback } from "remediate-svelte/server";
+   import { json } from "@sveltejs/kit";
    import { writeFile, mkdir } from "node:fs/promises";
    import { join } from "node:path";
 
-   export async function POST(req: Request) {
-     const { submission, files } = await parseFeedback(req);
+   export async function POST({ request }) {
+     const { submission, files } = await parseFeedback(request);
      const dir = join(process.cwd(), ".feedback", submission.id);
      await mkdir(dir, { recursive: true });
      await writeFile(join(dir, "submission.json"), JSON.stringify(submission, null, 2));
      for (const [, file] of files) {
        await writeFile(join(dir, file.filename), Buffer.from(await file.blob.arrayBuffer()));
      }
-     return Response.json({ ok: true, id: submission.id });
+     return json({ ok: true, id: submission.id });
    }
    ```
 
@@ -369,9 +376,9 @@ set up the remediate feedback widget in this project. one component on the clien
    all the templates above handle storage and delivery. for destinations that display text (slack, discord, github issues, linear, email), use `toMarkdown()` to format the submission as structured markdown instead of hand-building it:
 
    ```ts
-   import { parseFeedback, toMarkdown } from "remediate/server";
+   import { parseFeedback, toMarkdown } from "remediate-svelte/server";
 
-   const { submission, files } = await parseFeedback(req);
+   const { submission, files } = await parseFeedback(request);
    const body = toMarkdown(submission);
    // body is structured markdown: grouped by type, numbered items, priority badges, environment line
    ```
@@ -396,43 +403,52 @@ set up the remediate feedback widget in this project. one component on the clien
 
 7. **add the component**
 
-   `Remediate` is a client component. in next.js app router, `layout.tsx` is a server component by default — you can't add `<Remediate>` directly. create a wrapper:
+   `Remediate` is a browser-only widget — it no-ops during SSR and renders on the client, so no `"use client"`-style boundary or wrapper is needed. mount it once, high in the tree.
 
-   **next.js app router:**
-   1. create `app/components/feedback-widget.tsx` (or wherever the project keeps components):
-      ```tsx
-      "use client";
-      import { Remediate } from "remediate";
+   **sveltekit:** add it to `src/routes/+layout.svelte`, after the page content:
+   ```svelte
+   <script lang="ts">
+     import { Remediate } from "remediate-svelte";
+     let { children } = $props();
+   </script>
 
-      export function FeedbackWidget() {
-        return <Remediate endpoint="/api/feedback" />;
-      }
-      ```
-   2. import and render `<FeedbackWidget />` in `app/layout.tsx`, inside `<body>`, after `{children}`
+   {@render children()}
+   <Remediate endpoint="/api/feedback" />
+   ```
 
-   if step 5b detected auth and the user said yes, add `metadata` and `headers` props to the `<Remediate>` call inside the wrapper, with the appropriate auth hook (e.g. `useUser()` from clerk, `useSession()` from next-auth).
+   if step 5b detected auth and the user said yes, add a `metadata` prop reading from `$app/state`'s `page` (see wire auth for how the session gets there):
+   ```svelte
+   <script lang="ts">
+     import { Remediate } from "remediate-svelte";
+     import { page } from "$app/state";
+     let { children } = $props();
+   </script>
 
-   **next.js pages router** → `pages/_app.tsx`, after the `<Component>` (no wrapper needed, pages router is client by default)
+   {@render children()}
+   <Remediate
+     endpoint="/api/feedback"
+     metadata={{ userId: page.data.session?.user?.id, email: page.data.session?.user?.email }}
+   />
+   ```
 
-   **remix** → `app/root.tsx`, inside `<body>` (remix components are client-capable)
-
-   **vite / other** → root app component
-
-   ```tsx
-   import { Remediate } from "remediate";
+   **vite / other svelte app** → mount it in your root component (e.g. `src/App.svelte`):
+   ```svelte
+   <script lang="ts">
+     import { Remediate } from "remediate-svelte";
+   </script>
 
    <Remediate endpoint="/api/feedback" />
    ```
 
-   do NOT gate it behind `NODE_ENV` or any conditional. remediate is meant for production use. if the developer wants to gate it (beta testers, staging only), they can add that themselves.
+   do NOT gate it behind `import.meta.env.DEV` or any conditional. remediate is meant for production use. if the developer wants to gate it (beta testers, staging only), they can add that themselves.
 
 8. **confirm setup**
    - tell the user remediate is configured with the backend they chose
    - tell them to start their dev server and look for the floating button in the bottom corner
-   - if env vars were added (e.g. `SLACK_WEBHOOK_URL`, `RESEND_API_KEY`), remind the user to **restart the dev server** — next.js and most frameworks don't hot-reload `.env` changes
+   - if env vars were added (e.g. `SLACK_WEBHOOK_URL`, `RESEND_API_KEY`), remind the user to **restart the dev server** — vite doesn't hot-reload `.env` changes
    - if backend is `convex`, also tell them to run `npx convex dev` in another terminal
    - if backend is `local disk`, confirm `.feedback/` was added to `.gitignore`
-   - if auth was detected and wired, confirm which user fields are being passed via `metadata` and that the auth token is sent via `headers`
+   - if auth was detected and wired, confirm which user fields are being passed via `metadata`
    - mention that submissions land via the route they just created
    - mention `submission.items` is where the content lives (text notes, annotations, photos, videos, voice notes) and `files` is a `Map<string, ParsedFile>` of blobs
    - point them to the docs:
@@ -442,14 +458,14 @@ set up the remediate feedback widget in this project. one component on the clien
 
 ## notes
 
-- remediate requires react 18+
-- `Remediate` is a client component — in next.js app router it must be inside a `"use client"` boundary
+- remediate-svelte requires svelte 5+
+- `Remediate` is browser-only — it guards SSR internally, so it's safe to place directly in `+layout.svelte`
 - styles inject automatically, no css import needed
 - video and voice recording require https (localhost is fine for dev)
 - video recording is desktop-only (no mobile safari support)
 - the `metadata` prop attaches user context (userId, email, etc.) to every submission — arrives as `submission.metadata` on the server
 - the `headers` prop sends custom headers on the POST (e.g. `Authorization: Bearer ...`) — cleaner than putting auth tokens in metadata
-- `parseFeedback` works with any web-standard `Request` object — app router, remix, hono, bun, deno, cloudflare workers
+- `parseFeedback` works with any web-standard `Request` object — sveltekit, hono, bun, deno, cloudflare workers
 - `submission.items` is the actual content array (not `submission.body`) — narrow on `item.type` to get type-specific fields
 - `files` is a `Map<string, ParsedFile>` (not an array) — iterate with `for (const [, file] of files)`
 - `toMarkdown(submission)` formats a submission as structured markdown (grouped sections, numbered items, priority badges, environment). pass `fileUrls` to embed screenshots inline. works for github issues, linear, discord, email.
@@ -465,11 +481,11 @@ add or replace a backend integration in an existing remediate setup. use this wh
 ## steps
 
 1. **confirm remediate is installed**
-   - check `package.json` for `remediate` in dependencies
+   - check `package.json` for `remediate-svelte` in dependencies
    - if not found, tell the user to run setup first and exit
 
 2. **find the existing route file**
-   - search for files containing `parseFeedback` in `app/`, `pages/`, `src/`
+   - search for files containing `parseFeedback` in `src/routes/`, `src/`
    - this is the definitive signal that a remediate server route exists
    - record the file path
 
@@ -495,7 +511,7 @@ add or replace a backend integration in an existing remediate setup. use this wh
 5. **replace path**
    - read the existing route file
    - replace the POST handler body with the new backend template from the setup section's templates
-   - keep the same export wrapper (app router / pages router / remix / vite)
+   - keep the same export wrapper (`+server.ts` for sveltekit)
    - if the new backend needs a package not yet installed, install it
    - if the new backend needs env vars, tell the user
    - do NOT auto-uninstall the old backend's dependencies — warn the user they may want to remove them manually
@@ -503,12 +519,14 @@ add or replace a backend integration in an existing remediate setup. use this wh
 6. **fan-out path**
    - read the existing route file
    - restructure the POST handler so both backends share the same `submission` and `files` variables
-   - **critical:** `parseFeedback(req)` consumes the request body — it can only be called once. both backends must use the same parsed result.
+   - **critical:** `parseFeedback(request)` consumes the request body — it can only be called once. both backends must use the same parsed result.
 
    pattern:
    ```ts
-   export async function POST(req: Request) {
-     const { submission, files } = await parseFeedback(req);
+   import { json } from "@sveltejs/kit";
+
+   export async function POST({ request }) {
+     const { submission, files } = await parseFeedback(request);
 
      // --- existing: {old backend} ---
      {existing backend logic, refactored to use the shared submission/files}
@@ -516,7 +534,7 @@ add or replace a backend integration in an existing remediate setup. use this wh
      // --- new: {new backend} ---
      {new backend logic from the template}
 
-     return Response.json({ ok: true, id: submission.id });
+     return json({ ok: true, id: submission.id });
    }
    ```
 
@@ -543,11 +561,13 @@ add or replace a backend integration in an existing remediate setup. use this wh
 
 add user identity to the remediate widget after initial setup. use this when the user wants to pass userId, email, or auth tokens with feedback submissions.
 
+in sveltekit, session/user is exposed to components through a layout load function (populated from `hooks.server.ts` + `event.locals`), then read from `$app/state`'s `page` as `page.data`. this differs from react's client hooks — there's no `useUser()`; you read `page.data.session` instead.
+
 ## steps
 
 1. **find the existing mount**
-   - search for `<Remediate` or imports from `"remediate"` in `app/`, `src/`, `pages/`
-   - record the file path and component name
+   - search for `<Remediate` or imports from `"remediate-svelte"` in `src/routes/`, `src/`
+   - record the file path (usually `src/routes/+layout.svelte`)
 
 2. **check if auth is already wired**
    - look for `metadata={{` containing `userId` or `email`
@@ -557,86 +577,83 @@ add user identity to the remediate widget after initial setup. use this when the
 
 3. **detect auth library**
    check `package.json` dependencies:
-   - `@clerk/nextjs` → clerk
-   - `next-auth` or `@auth/core` → nextauth
-   - `@supabase/auth-helpers-nextjs` or `@supabase/ssr` → supabase
+   - `@auth/sveltekit` → auth.js
+   - `lucia` → lucia
+   - `@supabase/ssr` or `@supabase/supabase-js` → supabase
    - if none found, ask the user which auth system they use
-   - if custom or none, add placeholder props with comments and skip hook wiring
+   - if custom or none, add placeholder props with comments and skip session wiring
 
-4. **verify client boundary**
-   - auth hooks only work in client components
-   - check if the mount file has `"use client"` at the top
-   - if it's a server component (e.g. `layout.tsx`), look for a `"use client"` wrapper file that renders `<Remediate>`
-   - if no wrapper exists, create one (same pattern as setup step 7) and add the auth hook there
+4. **make sure the session reaches `page.data`**
+   the widget mount reads `page.data.session` (or `page.data.user`). that data comes from a layout load. if the project doesn't already expose it, add a root `src/routes/+layout.server.ts`:
 
-5. **add the auth hook** based on detected library:
+   **auth.js:**
+   ```ts
+   import type { LayoutServerLoad } from "./$types";
 
-   **clerk:**
-   ```tsx
-   import { useUser, useAuth } from "@clerk/nextjs";
-
-   // inside the component:
-   const { user } = useUser();
-   const { getToken } = useAuth();
+   export const load: LayoutServerLoad = async (event) => {
+     return { session: await event.locals.auth() };
+   };
    ```
 
-   **nextauth:**
-   ```tsx
-   import { useSession } from "next-auth/react";
+   **lucia:**
+   ```ts
+   import type { LayoutServerLoad } from "./$types";
 
-   // inside the component:
-   const { data: session } = useSession();
+   export const load: LayoutServerLoad = async (event) => {
+     return { user: event.locals.user };
+   };
+   ```
+
+   **supabase** (with `@supabase/ssr` set up in `hooks.server.ts` → `event.locals.safeGetSession`):
+   ```ts
+   import type { LayoutServerLoad } from "./$types";
+
+   export const load: LayoutServerLoad = async (event) => {
+     const { session, user } = await event.locals.safeGetSession();
+     return { session, user };
+   };
+   ```
+
+5. **add metadata (and headers) to the mount**
+   in `+layout.svelte`, read `page` from `$app/state` and pass the fields:
+
+   **auth.js:**
+   ```svelte
+   <script lang="ts">
+     import { Remediate } from "remediate-svelte";
+     import { page } from "$app/state";
+     let { children } = $props();
+   </script>
+
+   {@render children()}
+   <Remediate
+     endpoint="/api/feedback"
+     metadata={{ userId: page.data.session?.user?.id, email: page.data.session?.user?.email }}
+   />
+   ```
+   the session cookie is sent automatically with same-origin requests — no explicit `headers` prop needed unless you want a JWT.
+
+   **lucia:**
+   ```svelte
+   <Remediate
+     endpoint="/api/feedback"
+     metadata={{ userId: page.data.user?.id, email: page.data.user?.email }}
+   />
    ```
 
    **supabase:**
-   ```tsx
-   import { createBrowserClient } from "@supabase/ssr";
-
-   // inside the component:
-   const supabase = createBrowserClient(
-     process.env.NEXT_PUBLIC_SUPABASE_URL!,
-     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-   );
-   // + useEffect to fetch session
-   ```
-
-6. **add metadata and headers props**
-
-   **clerk:**
-   ```tsx
+   ```svelte
    <Remediate
      endpoint="/api/feedback"
-     metadata={{ userId: user?.id, email: user?.primaryEmailAddress?.emailAddress }}
-   />
-   ```
-   note: clerk's `getToken()` is async. the `headers` prop accepts a sync function. two options:
-   - cache the token in a `useEffect` + state, then pass via `headers`
-   - skip the client-side header and validate server-side using clerk's `auth()` in the route handler
-
-   ask the user which they prefer. if server-side, add the `auth()` check to the route file instead.
-
-   **nextauth:**
-   ```tsx
-   <Remediate
-     endpoint="/api/feedback"
-     metadata={{ userId: session?.user?.id, email: session?.user?.email }}
-   />
-   ```
-   the session cookie is sent automatically with same-origin requests — no explicit `headers` prop needed unless they want a JWT.
-
-   **supabase:**
-   ```tsx
-   <Remediate
-     endpoint="/api/feedback"
-     metadata={{ userId: session?.user?.id, email: session?.user?.email }}
-     headers={{ Authorization: `Bearer ${session?.access_token}` }}
+     metadata={{ userId: page.data.user?.id, email: page.data.user?.email }}
+     headers={{ Authorization: `Bearer ${page.data.session?.access_token}` }}
    />
    ```
 
-7. **merge, don't overwrite**
+6. **merge, don't overwrite**
    if the `<Remediate>` component already has a `metadata` prop with other fields, merge the auth fields into the existing object — don't replace it.
 
-8. **confirm**
+7. **confirm**
    tell the user which fields are being passed and remind them that `submission.metadata.userId` and `submission.metadata.email` is where the data lands server-side. note that if the user isn't logged in, these will be `undefined` and won't appear in the submission (JSON.stringify strips undefined values).
 
 ---
@@ -649,11 +666,11 @@ send a synthetic feedback submission to verify the server route works. use this 
 
 1. **find the endpoint URL**
    - search for `<Remediate` with an `endpoint` prop — extract the path (e.g. `/api/feedback`)
-   - if not found, check standard route file locations: `app/api/feedback/route.ts`, `pages/api/feedback.ts`, `app/routes/api.feedback.ts`, `src/api/feedback.ts`
+   - if not found, check standard route file locations: `src/routes/api/feedback/+server.ts`, `src/api/feedback.ts`
    - if nothing found, ask the user for the endpoint path
 
 2. **determine the base URL**
-   - check `package.json` scripts for the dev port (next.js defaults to 3000, vite to 5173)
+   - check `package.json` scripts / `vite.config` for the dev port (sveltekit + vite default to 5173)
    - base URL is `http://localhost:{port}`
    - tell the user to make sure their dev server is running
 
@@ -662,7 +679,7 @@ send a synthetic feedback submission to verify the server route works. use this 
    ```json
    {
      "id": "fb_test000000",
-     "url": "http://localhost:3000/test",
+     "url": "http://localhost:5173/test",
      "timestamp": "{current ISO string}",
      "environment": {
        "userAgent": "remediate-test/1.0",
@@ -723,8 +740,8 @@ send a synthetic feedback submission to verify the server route works. use this 
 
 ## edge cases
 
-- if the route uses auth checks (look for `auth()`, `getToken`, `Authorization` in the route file), warn the user the test will likely return 401 without a valid token
-- if the backend is convex and `NEXT_PUBLIC_CONVEX_URL` isn't set, the test will fail at the convex client — flag this
+- if the route uses auth checks (look for `locals.auth`, `getSession`, `Authorization` in the route file), warn the user the test will likely return 401 without a valid token
+- if the backend is convex and `PUBLIC_CONVEX_URL` isn't set, the test will fail at the convex client — flag this
 - if the backend is local disk, after a successful test, tell the user to check `.feedback/fb_test000000/submission.json`
 
 ---
@@ -736,12 +753,12 @@ check for updates and upgrade remediate to the latest version.
 ## steps
 
 1. **read the installed version**
-   - check `node_modules/remediate/package.json` for the `version` field
+   - check `node_modules/remediate-svelte/package.json` for the `version` field
    - also note the version spec in the project's `package.json` dependencies (e.g. `^0.1.2`)
 
 2. **check the latest version**
    ```bash
-   npm view remediate version
+   npm view remediate-svelte version
    ```
 
 3. **compare**
@@ -750,19 +767,16 @@ check for updates and upgrade remediate to the latest version.
 4. **detect package manager** (same as setup step 1)
 
 5. **run the upgrade**
-   - pnpm: `pnpm update remediate --latest`
-   - npm: `npm install remediate@latest`
-   - yarn: `yarn add remediate@latest`
-   - bun: `bun add remediate@latest`
+   - pnpm: `pnpm update remediate-svelte --latest`
+   - npm: `npm install remediate-svelte@latest`
+   - yarn: `yarn add remediate-svelte@latest`
+   - bun: `bun add remediate-svelte@latest`
 
 6. **check for breaking changes**
    consult this migration map:
 
    ```
-   0.1.0 → 0.1.1: no breaking changes
-   0.1.1 → 0.1.2: no breaking changes
-   0.1.2 → 0.1.3: no breaking changes
-   0.1.3 → 0.1.4: new optional props added (captureTypes, open, onOpenChange, debug, messages) — no breaks
+   0.1.0 → 0.1.8: no breaking changes
    ```
 
    if the upgrade crosses a known breaking boundary (none yet):
@@ -771,10 +785,10 @@ check for updates and upgrade remediate to the latest version.
    - offer to auto-fix or provide instructions
 
 7. **verify the upgrade**
-   read `node_modules/remediate/package.json` again to confirm the new version.
+   read `node_modules/remediate-svelte/package.json` again to confirm the new version.
 
 8. **confirm**
-   report the version change (e.g. "upgraded from v0.1.2 to v0.1.4") and mention any new features the user might want to use.
+   report the version change (e.g. "upgraded from v0.1.2 to v0.1.8") and mention any new features the user might want to use.
 
 ## edge cases
 
@@ -791,7 +805,7 @@ create a simple admin page to view submitted feedback. use this when the user wa
 ## steps
 
 1. **identify the backend**
-   find the existing route file (search for `parseFeedback` in `app/`, `pages/`, `src/`) and identify the backend using the same signals as the add integration tool.
+   find the existing route file (search for `parseFeedback` in `src/routes/`, `src/`) and identify the backend using the same signals as the add integration tool.
 
 2. **check if the backend is queryable**
    - **queryable:** local disk, convex, postgres + drizzle, vercel blob
@@ -799,21 +813,57 @@ create a simple admin page to view submitted feedback. use this when the user wa
 
    if the backend is send-only, tell the user: "your current backend ({name}) sends feedback out but doesn't store it queryably. add a storage backend alongside it first using the add integration tool." then exit.
 
-3. **detect framework** for the page path (same as setup step 4):
-   - next.js app router → `app/admin/feedback/page.tsx`
-   - next.js pages router → `pages/admin/feedback.tsx`
-   - remix → `app/routes/admin.feedback.tsx`
-   - vite / other → `src/pages/admin-feedback.tsx` (tell the user to wire routing)
+3. **framework path** — sveltekit uses a `+page.server.ts` load (server-side data) plus a `+page.svelte` (render):
+   - sveltekit → `src/routes/admin/feedback/+page.server.ts` and `src/routes/admin/feedback/+page.svelte`
+   - vite / other → a route in your app's router (tell the user to wire it up)
 
-4. **generate the dashboard page** based on the backend:
+4. **generate the dashboard** based on the backend. every backend shares the same `+page.svelte` table — only the `+page.server.ts` load differs.
 
-   ### template: local disk
+   ### shared: `+page.svelte`
 
-   ```tsx
+   ```svelte
+   <script lang="ts">
+     let { data } = $props();
+   </script>
+
+   <div style="padding: 2rem; font-family: system-ui;">
+     <h1>feedback ({data.submissions.length})</h1>
+     <table style="width: 100%; border-collapse: collapse;">
+       <thead>
+         <tr>
+           {#each ["id", "url", "time", "items", "types"] as h}
+             <th style="text-align: left; border-bottom: 1px solid #ddd; padding: 8px;">{h}</th>
+           {/each}
+         </tr>
+       </thead>
+       <tbody>
+         {#each data.submissions as s (s.id)}
+           <tr>
+             <td style="padding: 8px; border-bottom: 1px solid #eee; font-family: monospace; font-size: 0.85em;">{s.id}</td>
+             <td style="padding: 8px; border-bottom: 1px solid #eee;">{s.url}</td>
+             <td style="padding: 8px; border-bottom: 1px solid #eee;">{new Date(s.timestamp).toLocaleString()}</td>
+             <td style="padding: 8px; border-bottom: 1px solid #eee;">{s.items.length}</td>
+             <td style="padding: 8px; border-bottom: 1px solid #eee;">
+               {[...new Set(s.items.map((i) => i.type))].join(", ")}
+             </td>
+           </tr>
+         {/each}
+       </tbody>
+     </table>
+     {#if data.submissions.length === 0}
+       <p style="color: #888;">no feedback yet. submit something through the widget first.</p>
+     {/if}
+   </div>
+   ```
+
+   ### template: local disk — `+page.server.ts`
+
+   ```ts
    import { readdir, readFile } from "node:fs/promises";
    import { join } from "node:path";
+   import type { PageServerLoad } from "./$types";
 
-   export default async function FeedbackDashboard() {
+   export const load: PageServerLoad = async () => {
      const base = join(process.cwd(), ".feedback");
      let entries: string[] = [];
      try {
@@ -826,70 +876,30 @@ create a simple admin page to view submitted feedback. use this when the user wa
        entries.map(async (id) => {
          const raw = await readFile(join(base, id, "submission.json"), "utf-8");
          return JSON.parse(raw);
-       })
+       }),
      );
 
      submissions.sort(
-       (a: any, b: any) =>
-         new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+       (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime(),
      );
 
-     return (
-       <div style={{ padding: "2rem", fontFamily: "system-ui" }}>
-         <h1>feedback ({submissions.length})</h1>
-         <table style={{ width: "100%", borderCollapse: "collapse" }}>
-           <thead>
-             <tr>
-               {["id", "url", "time", "items", "types"].map((h) => (
-                 <th key={h} style={{ textAlign: "left", borderBottom: "1px solid #ddd", padding: "8px" }}>
-                   {h}
-                 </th>
-               ))}
-             </tr>
-           </thead>
-           <tbody>
-             {submissions.map((s: any) => (
-               <tr key={s.id}>
-                 <td style={{ padding: "8px", borderBottom: "1px solid #eee", fontFamily: "monospace", fontSize: "0.85em" }}>{s.id}</td>
-                 <td style={{ padding: "8px", borderBottom: "1px solid #eee" }}>{s.url}</td>
-                 <td style={{ padding: "8px", borderBottom: "1px solid #eee" }}>{new Date(s.timestamp).toLocaleString()}</td>
-                 <td style={{ padding: "8px", borderBottom: "1px solid #eee" }}>{s.items.length}</td>
-                 <td style={{ padding: "8px", borderBottom: "1px solid #eee" }}>
-                   {[...new Set(s.items.map((i: any) => i.type))].join(", ")}
-                 </td>
-               </tr>
-             ))}
-           </tbody>
-         </table>
-         {submissions.length === 0 && (
-           <p style={{ color: "#888" }}>no feedback yet. submit something through the widget first.</p>
-         )}
-       </div>
-     );
-   }
+     return { submissions };
+   };
    ```
 
-   ### template: convex
+   ### template: convex — `+page.server.ts`
 
-   create the dashboard as a client component using `useQuery`:
-   ```tsx
-   "use client";
-   import { useQuery } from "convex/react";
-   import { api } from "../../../convex/_generated/api";
+   ```ts
+   import { ConvexHttpClient } from "convex/browser";
+   import { api } from "$lib/../convex/_generated/api";
+   import { PUBLIC_CONVEX_URL } from "$env/static/public";
+   import type { PageServerLoad } from "./$types";
 
-   export default function FeedbackDashboard() {
-     const submissions = useQuery(api.feedback.list) ?? [];
-
-     return (
-       <div style={{ padding: "2rem", fontFamily: "system-ui" }}>
-         <h1>feedback ({submissions.length})</h1>
-         {/* same table structure as local disk template */}
-         {submissions.length === 0 && (
-           <p style={{ color: "#888" }}>no feedback yet.</p>
-         )}
-       </div>
-     );
-   }
+   export const load: PageServerLoad = async () => {
+     const convex = new ConvexHttpClient(PUBLIC_CONVEX_URL);
+     const submissions = await convex.query(api.feedback.list, {});
+     return { submissions: submissions.map((r) => r.payload) };
+   };
    ```
 
    also add a `list` query to `convex/feedback.ts`:
@@ -903,75 +913,56 @@ create a simple admin page to view submitted feedback. use this when the user wa
    });
    ```
 
-   check that a `ConvexClientProvider` wrapper exists in the layout — convex queries won't work without it.
+   ### template: postgres + drizzle — `+page.server.ts`
 
-   ### template: postgres + drizzle
-
-   ```tsx
-   import { db } from "@/db";
-   import { feedback } from "@/db/schema";
+   ```ts
+   import { db } from "$lib/server/db";
+   import { feedback } from "$lib/server/db/schema";
    import { desc } from "drizzle-orm";
+   import type { PageServerLoad } from "./$types";
 
-   export default async function FeedbackDashboard() {
-     const submissions = await db
+   export const load: PageServerLoad = async () => {
+     const rows = await db
        .select()
        .from(feedback)
        .orderBy(desc(feedback.createdAt))
        .limit(100);
-
-     return (
-       <div style={{ padding: "2rem", fontFamily: "system-ui" }}>
-         <h1>feedback ({submissions.length})</h1>
-         {/* same table structure — adapt column access to the drizzle schema */}
-       </div>
-     );
-   }
+     return { submissions: rows.map((r) => r.payload) };
+   };
    ```
 
    adjust import paths to match the project's conventions.
 
-   ### template: vercel blob
+   ### template: vercel blob — `+page.server.ts`
 
-   ```tsx
+   ```ts
    import { list } from "@vercel/blob";
+   import type { PageServerLoad } from "./$types";
 
-   export default async function FeedbackDashboard() {
+   export const load: PageServerLoad = async () => {
      const { blobs } = await list({ prefix: "feedback/" });
-
-     return (
-       <div style={{ padding: "2rem", fontFamily: "system-ui" }}>
-         <h1>feedback blobs ({blobs.length})</h1>
-         <ul>
-           {blobs.map((b) => (
-             <li key={b.pathname} style={{ fontFamily: "monospace", fontSize: "0.85em", padding: "4px 0" }}>
-               {b.pathname} — {b.size} bytes — {new Date(b.uploadedAt).toLocaleString()}
-             </li>
-           ))}
-         </ul>
-         {blobs.length === 0 && (
-           <p style={{ color: "#888" }}>no feedback yet.</p>
-         )}
-       </div>
-     );
-   }
+     // blob store lists files, not parsed submissions — adapt the +page.svelte
+     // to show pathname / size / uploadedAt instead of the submission columns
+     return { blobs };
+   };
    ```
 
 5. **warn about auth**
-   add a comment at the top of the file:
-   ```tsx
+   add a comment at the top of `+page.server.ts`:
+   ```ts
    // WARNING: this page has no authentication.
-   // add auth middleware before deploying to production.
+   // guard it in hooks.server.ts (or a +layout.server.ts) before deploying to production.
    ```
    and tell the user: "this dashboard has no authentication. anyone who knows the URL can see all feedback. add auth before exposing it in production."
 
 6. **confirm**
-   tell the user the page path and URL (e.g. `http://localhost:3000/admin/feedback`), and remind them about the auth warning.
+   tell the user the page path and URL (e.g. `http://localhost:5173/admin/feedback`), and remind them about the auth warning.
 
 ## edge cases
 
 - if the dashboard page already exists, ask before overwriting
 - if `.feedback/` directory doesn't exist yet (no submissions), the local disk template renders the empty state gracefully
-- for convex, if no `ConvexClientProvider` wrapper exists in the layout, warn that queries won't work without it
+- for convex, make sure `PUBLIC_CONVEX_URL` is set so the server-side client can connect
 
 ---
 
@@ -982,7 +973,7 @@ configure which capture modes the widget exposes. use this when the user wants t
 ## steps
 
 1. **find the existing mount**
-   search for `<Remediate` or the wrapper component that renders it.
+   search for `<Remediate` in `src/routes/+layout.svelte` or wherever it's rendered.
 
 2. **check if `captureTypes` is already set**
    look for the `captureTypes` prop on the component. if present, report what it's currently set to and ask: "replace the current list or modify it?"
@@ -993,7 +984,7 @@ configure which capture modes the widget exposes. use this when the user wants t
 
 4. **static path**
    add or modify the `captureTypes` prop:
-   ```tsx
+   ```svelte
    <Remediate
      endpoint="/api/feedback"
      captureTypes={["annotation", "textNote"]}
@@ -1001,51 +992,46 @@ configure which capture modes the widget exposes. use this when the user wants t
    ```
 
 5. **conditional path**
-   this requires logic in the wrapper component. check if the mount is in a `"use client"` wrapper. if not, create one (same pattern as setup step 7).
+   read the condition from state available in the component. common patterns:
 
-   ask what the condition is. common patterns:
+   **role-based (reading session from `page.data`):**
+   ```svelte
+   <script lang="ts">
+     import { Remediate, type CaptureType } from "remediate-svelte";
+     import { page } from "$app/state";
+     let { children } = $props();
 
-   **role-based (e.g. with clerk):**
-   ```tsx
-   "use client";
-   import { Remediate, type CaptureType } from "remediate";
-   import { useUser } from "@clerk/nextjs";
+     const ADMIN_TYPES: CaptureType[] = ["photo", "video", "annotation", "textNote", "voiceNote"];
+     const USER_TYPES: CaptureType[] = ["annotation", "textNote"];
 
-   const ADMIN_TYPES: CaptureType[] = ["photo", "video", "annotation", "textNote", "voiceNote"];
-   const USER_TYPES: CaptureType[] = ["annotation", "textNote"];
-
-   export function FeedbackWidget() {
-     const { user } = useUser();
-     const isAdmin = user?.publicMetadata?.role === "admin";
-     return (
-       <Remediate
-         endpoint="/api/feedback"
-         captureTypes={isAdmin ? ADMIN_TYPES : USER_TYPES}
-       />
+     let captureTypes = $derived(
+       page.data.session?.user?.role === "admin" ? ADMIN_TYPES : USER_TYPES,
      );
-   }
+   </script>
+
+   {@render children()}
+   <Remediate endpoint="/api/feedback" {captureTypes} />
    ```
 
    **environment-based:**
-   ```tsx
-   import { Remediate, type CaptureType } from "remediate";
+   ```svelte
+   <script lang="ts">
+     import { Remediate, type CaptureType } from "remediate-svelte";
 
-   const captureTypes: CaptureType[] =
-     process.env.NODE_ENV === "development"
+     const captureTypes: CaptureType[] = import.meta.env.DEV
        ? ["photo", "video", "annotation", "textNote", "voiceNote"]
        : ["annotation", "textNote"];
+   </script>
 
-   export function FeedbackWidget() {
-     return <Remediate endpoint="/api/feedback" captureTypes={captureTypes} />;
-   }
+   <Remediate endpoint="/api/feedback" {captureTypes} />
    ```
 
    **feature flag:**
    ask the user for the flag variable name and build accordingly.
 
 6. **import `CaptureType`** if the project uses typescript:
-   ```tsx
-   import { Remediate, type CaptureType } from "remediate";
+   ```ts
+   import { Remediate, type CaptureType } from "remediate-svelte";
    ```
 
 7. **confirm**
@@ -1072,45 +1058,41 @@ cleanly uninstall remediate from the project. use this when the user wants to re
 
 2. **inventory all artifacts**
    find everything remediate-related and present the list before any deletion:
-   - `remediate` in `package.json` dependencies
-   - `<Remediate>` or `<FeedbackWidget>` component mount(s) — file path and line
-   - wrapper component file (e.g. `app/components/feedback-widget.tsx`)
-   - API route file (e.g. `app/api/feedback/route.ts`)
+   - `remediate-svelte` in `package.json` dependencies
+   - `<Remediate>` component mount(s) — file path and line (usually `src/routes/+layout.svelte`)
+   - API route file (e.g. `src/routes/api/feedback/+server.ts`)
    - `.gitignore` entry for `.feedback/`
    - convex schema/mutation files referencing feedback (if convex backend)
-   - any other files importing from `"remediate"` or `"remediate/server"`
+   - any other files importing from `"remediate-svelte"` or `"remediate-svelte/server"`
 
 3. **remove the component mount**
-   in the file that contains `<FeedbackWidget />` or `<Remediate />`:
-   - remove the JSX element
-   - remove the corresponding import statement
-   - if this leaves an import with no specifiers, remove the import entirely
+   in the file that contains `<Remediate />`:
+   - remove the element
+   - remove the corresponding `import { Remediate }` statement
+   - if this leaves the `<script>` with an unused `page`/`$app/state` import that was only for the widget metadata, remove that too
 
-4. **remove the wrapper component file**
-   if a dedicated file like `app/components/feedback-widget.tsx` exists that only contains the remediate wrapper, delete it. if the file contains other components too, only remove the remediate-related code.
+4. **remove the API route file**
+   delete the route file (e.g. `src/routes/api/feedback/+server.ts`). if the parent directory is now empty (e.g. `src/routes/api/feedback/` has no other files), delete the directory too.
 
-5. **remove the API route file**
-   delete the route file (e.g. `app/api/feedback/route.ts`). if the parent directory is now empty (e.g. `app/api/feedback/` has no other files), delete the directory too.
-
-6. **handle backend-specific artifacts — DO NOT auto-delete data**
+5. **handle backend-specific artifacts — DO NOT auto-delete data**
    - **convex:** warn that `convex/feedback.ts` and the `feedback` table in `convex/schema.ts` still exist. tell the user: "the convex feedback table and mutations are still in your project. remove them manually if you don't need the data."
    - **local disk:** warn that `.feedback/` directory may contain submitted feedback. tell the user: "`.feedback/` still contains submitted feedback. delete it manually if you don't need it."
    - **postgres + drizzle:** warn about the feedback table in their schema
    - **vercel blob:** warn about uploaded blobs in their vercel blob store
    - **webhook-only backends** (slack, discord, github, email): nothing to clean up beyond the route file
 
-7. **uninstall the package**
+6. **uninstall the package**
    detect the package manager (same as setup step 1) and run:
-   - pnpm: `pnpm remove remediate`
-   - npm: `npm uninstall remediate`
-   - yarn: `yarn remove remediate`
-   - bun: `bun remove remediate`
+   - pnpm: `pnpm remove remediate-svelte`
+   - npm: `npm uninstall remediate-svelte`
+   - yarn: `yarn remove remediate-svelte`
+   - bun: `bun remove remediate-svelte`
 
-8. **clean up `.gitignore`**
+7. **clean up `.gitignore`**
    if `.feedback/` was added to `.gitignore`, remove that line.
 
-9. **check for remaining references**
-   search the entire project for `from "remediate"`, `from 'remediate'`, `remediate/server`, `parseFeedback`. if any are found, report them as leftover references that need manual cleanup.
+8. **check for remaining references**
+   search the entire project for `from "remediate-svelte"`, `from 'remediate-svelte'`, `remediate-svelte/server`, `parseFeedback`. if any are found, report them as leftover references that need manual cleanup.
 
-10. **confirm**
-    report everything that was removed and everything that was intentionally left (data directories, convex tables, etc.).
+9. **confirm**
+   report everything that was removed and everything that was intentionally left (data directories, convex tables, etc.).

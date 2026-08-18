@@ -1,5 +1,6 @@
 packages:
   - package
+  - svelte
 
 ignoredBuiltDependencies:
   - sharp
