@@ -32,19 +32,26 @@ export function AnnotationMarkers({
     setRects(next);
   }, [annotations]);
 
+  // Only track the page while there is something to track; coalesce bursts of scroll events to one read per frame.
+  const hasAnnotations = annotations.length > 0;
   useEffect(() => {
+    if (!hasAnnotations) return;
     recalcRects();
-    const onScroll = () => recalcRects();
-    const onResize = () => recalcRects();
-    window.addEventListener("scroll", onScroll, true);
-    window.addEventListener("resize", onResize);
-    return () => {
-      window.removeEventListener("scroll", onScroll, true);
-      window.removeEventListener("resize", onResize);
+    let frame = 0;
+    const schedule = () => {
+      if (frame) return;
+      frame = requestAnimationFrame(() => { frame = 0; recalcRects(); });
     };
-  }, [recalcRects]);
+    window.addEventListener("scroll", schedule, true);
+    window.addEventListener("resize", schedule);
+    return () => {
+      cancelAnimationFrame(frame);
+      window.removeEventListener("scroll", schedule, true);
+      window.removeEventListener("resize", schedule);
+    };
+  }, [hasAnnotations, recalcRects]);
 
-  if (annotations.length === 0) return null;
+  if (!hasAnnotations) return null;
 
   const hoveredAnn = hoveredId ? annotations.find((a) => a.id === hoveredId) : null;
   const hoveredRect = hoveredId ? rects.get(hoveredId) : null;
@@ -54,7 +61,6 @@ export function AnnotationMarkers({
       {annotations.map((ann) => {
         const rect = rects.get(ann.id);
         if (!rect) return null;
-        const offset = ann.clickOffset ?? { x: rect.width - 3, y: -8 };
         return (
           <div
             key={ann.id}
@@ -65,7 +71,7 @@ export function AnnotationMarkers({
             <AnnotationBadge
               index={ann.index}
               rect={rect}
-              clickOffset={offset}
+              clickOffset={ann.clickOffset}
               color={markerColor}
               onClick={() => onBadgeClick(ann.id === activePopoverAnnotationId ? "" : ann.id)}
             />
@@ -78,8 +84,8 @@ export function AnnotationMarkers({
         <MarkerTooltip
           descriptor={hoveredAnn.element.name}
           note={hoveredAnn.note}
-          top={hoveredRect.top + (hoveredAnn.clickOffset?.y ?? 0) + 16}
-          left={hoveredRect.left + (hoveredAnn.clickOffset?.x ?? 0) - 11}
+          top={hoveredRect.top + hoveredAnn.clickOffset.y + 16}
+          left={hoveredRect.left + hoveredAnn.clickOffset.x - 11}
         />
       )}
     </div>

@@ -1,12 +1,11 @@
-import { useReducer, useCallback, useState, useEffect, useMemo, useRef } from "react";
+import { useReducer, useState, useEffect, useMemo, useRef } from "react";
 import type {
-  WidgetMode, FeedbackItem,
-  AnnotationItem, AnnotationPriority, RemediateProps, CaptureType,
+  WidgetMode, FeedbackItem, AnnotationItem, AnnotationPriority, RemediateProps, CaptureType,
 } from "../types";
 import { isVideoRecordingSupported } from "../utils/capture-video";
 import { createItem } from "../utils/create-item";
 import { widgetReducer, getInitialState } from "../state/widget-reducer";
-import { derivePanelKey, PANEL_WIDTHS } from "../state/panel-layout";
+import { derivePanelKey, PANEL_ANCHORS, PANEL_WIDTHS } from "../state/panel-layout";
 import { WidgetProvider } from "../state/WidgetContext";
 import { useCapture } from "../hooks/useCapture";
 import { useVoiceRecording } from "../hooks/useVoiceRecording";
@@ -15,7 +14,7 @@ import { useConsoleCapture } from "../hooks/useConsoleCapture";
 import { useWidgetKeyboard } from "../hooks/useWidgetKeyboard";
 import { usePanelPosition } from "../hooks/usePanelPosition";
 import { FeedbackBar } from "./toolbar/FeedbackBar";
-import { SubMenu } from "./shared/SubMenu";
+import { SubMenu, type SubMenuItem } from "./shared/SubMenu";
 import { AnnotateMode } from "./annotate/AnnotateMode";
 import { AnnotationMarkers } from "./annotate/AnnotationMarkers";
 import { AnnotationPopover } from "./annotate/AnnotationPopover";
@@ -33,10 +32,22 @@ const ALL_CAPTURE_TYPES: CaptureType[] = ["photo", "video", "annotation", "textN
 
 const DEFAULT_MESSAGES = {
   submitButton: "Submit",
-  submittingButton: "Sending\u2026",
+  submittingButton: "Sending…",
   cancelButton: "Cancel",
   successMessage: "Sent!",
 };
+
+/** Resolve the page element an annotation points at, as a 2×2 rect at the click point. */
+function annotationAnchorRect(ann: AnnotationItem): DOMRect | null {
+  try {
+    const el = document.querySelector(ann.element.selector);
+    if (!el) return null;
+    const rect = el.getBoundingClientRect();
+    return new DOMRect(rect.left + ann.clickOffset.x - 1, rect.top + ann.clickOffset.y - 1, 2, 2);
+  } catch {
+    return null; // selector may not match
+  }
+}
 
 export function Remediate({
   endpoint, onSubmit, onError, metadata: extraMetadata,
@@ -50,11 +61,9 @@ export function Remediate({
 
   // Hooks
   const {
-    screenshotBlobRef, videoBlobRef,
-    isVideoReady,
-    cancelVideoRecording,
+    pendingBlobRef, isVideoReady, cancelVideoRecording,
     handleAreaSelected, handleStopVideoRecording, handleAddCapture,
-    preparePreview, clearBlobs,
+    preparePreview, clearBlob,
   } = useCapture({ mode: state.mode, pendingCapture: state.pendingCapture, dispatch });
 
   const { voiceRecorderRef, startVoice, handleAddVoiceNote } = useVoiceRecording({ dispatch });
@@ -76,9 +85,10 @@ export function Remediate({
   }, [controlledOpen, state.mode]);
 
   // Notify parent of open/close changes
+  const isOpen = state.mode !== "idle";
   useEffect(() => {
-    onOpenChange?.(state.mode !== "idle");
-  }, [state.mode !== "idle", onOpenChange]);
+    onOpenChange?.(isOpen);
+  }, [isOpen, onOpenChange]);
 
   // Debug logging
   useEffect(() => {
@@ -87,22 +97,18 @@ export function Remediate({
 
   // Auto-reset after success/error
   useEffect(() => {
-    if (state.mode === "success") {
-      const timer = setTimeout(() => dispatch({ type: "SET_MODE", mode: "active" }), 2000);
-      return () => clearTimeout(timer);
-    }
-    if (state.mode === "submitError") {
-      const timer = setTimeout(() => dispatch({ type: "SET_MODE", mode: "reviewing" }), 2000);
-      return () => clearTimeout(timer);
-    }
-  }, [state.mode, dispatch]);
+    if (state.mode !== "success" && state.mode !== "submitError") return;
+    const next: WidgetMode = state.mode === "success" ? "active" : "reviewing";
+    const timer = setTimeout(() => dispatch({ type: "SET_MODE", mode: next }), 2000);
+    return () => clearTimeout(timer);
+  }, [state.mode]);
 
   // Bounce out of review when the list empties (last item removed)
   useEffect(() => {
     if (state.mode === "reviewing" && state.items.length === 0) {
       dispatch({ type: "SET_MODE", mode: "active" });
     }
-  }, [state.mode, state.items.length, dispatch]);
+  }, [state.mode, state.items.length]);
 
   useWidgetKeyboard({
     mode: state.mode,
@@ -111,67 +117,82 @@ export function Remediate({
     cancelVideoRecording,
   });
 
-  // Bar element ref + anchor button aria-label.
-  // usePanelPosition reads positions live from the DOM via these — no cached
-  // x/y state to go stale on viewport resize / browser zoom.
+  // usePanelPosition reads bar/button positions live from the DOM via this ref.
   const barRef = useRef<HTMLDivElement>(null);
-  const [anchorAriaLabel, setAnchorAriaLabel] = useState<string | null>(null);
 
   const showAreaSelector =
     state.mode === "capturePhoto" ||
     state.mode === "captureVideo" ||
     state.mode === "captureDragging";
-  const isVideoFlow = state.mode === "videoRecording";
-  const isIdle = state.mode === "idle";
 
   const panelKey = derivePanelKey(state);
-  const hasContent = state.items.length > 0;
 
   const { panelPosition, panelBelow } = usePanelPosition({
-    panelKey, panelWidth: panelKey ? PANEL_WIDTHS[panelKey] : 176, barRef, anchorAriaLabel,
+    panelKey,
+    panelWidth: panelKey ? PANEL_WIDTHS[panelKey] : 176,
+    barRef,
+    anchor: panelKey ? PANEL_ANCHORS[panelKey] : null,
   });
 
-  const annotations = state.items.filter(
-    (i): i is AnnotationItem => i.type === "annotation"
-  );
+  const annotations = state.items.filter((i): i is AnnotationItem => i.type === "annotation");
 
-  const handleAddAnnotation = useCallback((ann: AnnotationItem) => {
-    dispatch({ type: "ADD_ITEM", item: ann });
-  }, []);
-
-  const handleUpdateAnnotation = useCallback(
-    (id: string, note: string, priority: AnnotationPriority) => {
-      dispatch({ type: "UPDATE_ANNOTATION", id, note, priority });
-    },
-    []
-  );
-
-  const handleAddTextNote = useCallback((text: string, priority: AnnotationPriority) => {
-    dispatch({ type: "ADD_ITEM", item: createItem("textNote", { text, additionalText: "", priority }) });
-  }, []);
-
-  const anchorToButton = useCallback((ariaLabel: string) => {
-    setAnchorAriaLabel(ariaLabel);
-  }, []);
-
-  // --- Preview helpers ---
+  // --- Preview (edit an existing item) helpers ---
 
   const isPreviewing = !!state.previewingItemId;
 
   function previewSave(fields: Partial<FeedbackItem>) {
     dispatch({ type: "UPDATE_ITEM", id: state.previewingItemId!, item: fields });
-    anchorToButton("Review and submit");
   }
 
   function previewCancel(cleanup?: () => void) {
     cleanup?.();
-    if (isPreviewing) anchorToButton("Review and submit");
     dispatch({ type: "SET_MODE", mode: isPreviewing ? "reviewing" : "active" });
   }
 
+  function closePopover() {
+    dispatch({ type: "SET_ACTIVE_POPOVER", id: null });
+    if (state.previewingItemId) dispatch({ type: "SET_MODE", mode: "reviewing" });
+  }
+
+  const captureMenuItems: SubMenuItem[] = [];
+  if (enabledTypes.includes("photo")) {
+    captureMenuItems.push({
+      id: "photo", label: "Screenshot", icon: <CameraFill size={20} />,
+      onClick: () => dispatch({ type: "SET_MODE", mode: "capturePhoto" }),
+    });
+  }
+  if (enabledTypes.includes("video")) {
+    captureMenuItems.push({
+      id: "video", label: "Record", icon: <CamcorderFill size={20} />,
+      onClick: () => dispatch({ type: "SET_MODE", mode: "captureVideo" }),
+      disabled: !isVideoRecordingSupported(),
+      disabledReason: "Desktop browsers only",
+    });
+  }
+
+  const noteMenuItems: SubMenuItem[] = [];
+  if (enabledTypes.includes("textNote")) {
+    noteMenuItems.push({
+      id: "text", label: "Text", icon: <Message4Fill size={20} />,
+      onClick: () => dispatch({ type: "SET_MODE", mode: "textNote" }),
+    });
+  }
+  if (enabledTypes.includes("voiceNote")) {
+    noteMenuItems.push({
+      id: "voice", label: "Voice", icon: <VoiceFill size={20} />,
+      onClick: () => { dispatch({ type: "SET_MODE", mode: "voiceNote" }); startVoice(); },
+      disabled: state.mode === "voiceNote",
+    });
+  }
+
+  const activeAnnotation = state.activePopoverAnnotationId
+    ? annotations.find((a) => a.id === state.activePopoverAnnotationId) ?? null
+    : null;
+  const activeAnnotationRect = activeAnnotation ? annotationAnchorRect(activeAnnotation) : null;
+
   return (
     <WidgetProvider value={ctxValue}>
-      <div data-remediate-widget="" data-remediate-theme="dark" style={{ '--rm-accent': state.markerColor } as React.CSSProperties} suppressHydrationWarning>
+      <div data-remediate-widget="" style={{ "--rm-accent": state.markerColor } as React.CSSProperties} suppressHydrationWarning>
         <AnnotationMarkers
           annotations={annotations}
           markerColor={state.markerColor}
@@ -180,73 +201,37 @@ export function Remediate({
         />
 
         <FeedbackBar
-          isIdle={isIdle}
-          onActivate={() => dispatch({ type: "ACTIVATE" })}
           mode={state.mode}
           markerColor={state.markerColor}
           itemCount={state.items.length}
-          hasContent={hasContent}
+          onActivate={() => dispatch({ type: "ACTIVATE" })}
           onSetMode={(mode: WidgetMode) => dispatch({ type: "SET_MODE", mode })}
           onClose={() => dispatch({ type: "CLOSE" })}
           onReview={() => dispatch({ type: "REVIEW" })}
           onDeleteAll={() => dispatch({ type: "CLEAR_ALL" })}
-          onAnchorAriaLabel={setAnchorAriaLabel}
           panelOpen={panelKey !== null}
           barRef={barRef}
         />
 
         <PanelHost panelKey={panelKey} position={panelPosition} below={panelBelow} pill={state.mode === "voiceRecording"}>
           {panelKey === "captureMenu" && (
-            <SubMenu
-              items={[
-                enabledTypes.includes("photo") && { id: "photo", label: "Screenshot", icon: <CameraFill size={20} />, onClick: () => dispatch({ type: "SET_MODE", mode: "capturePhoto" }) },
-                enabledTypes.includes("video") && { id: "video", label: "Record", icon: <CamcorderFill size={20} />, onClick: () => dispatch({ type: "SET_MODE", mode: "captureVideo" }), disabled: !isVideoRecordingSupported() },
-              ].filter(Boolean) as any[]}
-              onDismiss={() => dispatch({ type: "SET_MODE", mode: "active" })}
-            />
+            <SubMenu items={captureMenuItems} onDismiss={() => dispatch({ type: "SET_MODE", mode: "active" })} />
           )}
 
           {panelKey === "noteMenu" && (
-            <SubMenu
-              items={[
-                enabledTypes.includes("textNote") && { id: "text", label: "Text", icon: <Message4Fill size={20} />, onClick: () => dispatch({ type: "SET_MODE", mode: "textNote" }) },
-                enabledTypes.includes("voiceNote") && { id: "voice", label: "Voice", icon: <VoiceFill size={20} />, onClick: () => { dispatch({ type: "SET_MODE", mode: "voiceNote" }); startVoice(); }, disabled: state.mode === "voiceNote" },
-              ].filter(Boolean) as any[]}
-              onDismiss={() => dispatch({ type: "SET_MODE", mode: "active" })}
-            />
+            <SubMenu items={noteMenuItems} onDismiss={() => dispatch({ type: "SET_MODE", mode: "active" })} />
           )}
 
-          {panelKey === "capturePhoto" && (
+          {panelKey === "capture" && state.pendingCapture && (
             <CapturePanel
-              variant="photo"
-              area={state.pendingCapture?.area ?? null}
-              isRecording={false}
-              screenshotBlob={screenshotBlobRef.current}
-              onStartRecording={() => {}}
-              onStopRecording={() => {}}
+              variant={state.pendingCapture.variant}
+              area={state.pendingCapture.area}
+              blob={pendingBlobRef.current}
               onAdd={isPreviewing
                 ? (text, priority) => previewSave({ additionalText: text, priority })
                 : handleAddCapture}
               onCancel={() => previewCancel(() => {
-                clearBlobs();
-                dispatch({ type: "SET_PENDING_CAPTURE", capture: null });
-              })}
-            />
-          )}
-
-          {panelKey === "captureVideo" && (
-            <CapturePanel
-              variant="video"
-              area={state.pendingCapture?.area ?? null}
-              isRecording={false}
-              screenshotBlob={videoBlobRef.current}
-              onStartRecording={() => {}}
-              onStopRecording={() => {}}
-              onAdd={isPreviewing
-                ? (text, priority) => previewSave({ additionalText: text, priority })
-                : handleAddCapture}
-              onCancel={() => previewCancel(() => {
-                clearBlobs();
+                clearBlob();
                 dispatch({ type: "SET_PENDING_CAPTURE", capture: null });
               })}
             />
@@ -256,7 +241,7 @@ export function Remediate({
             <TextNotePanel
               onAdd={isPreviewing
                 ? (text, priority) => previewSave({ text, priority })
-                : handleAddTextNote}
+                : (text, priority) => dispatch({ type: "ADD_ITEM", item: createItem("textNote", { text, additionalText: "", priority }) })}
               onCancel={() => previewCancel()}
             />
           )}
@@ -280,14 +265,8 @@ export function Remediate({
               messages={msgs}
               onRemoveItem={(id: string) => dispatch({ type: "REMOVE_ITEM", id })}
               onPreviewItem={(id: string) => {
-                const item = state.items.find(i => i.id === id);
+                const item = state.items.find((i) => i.id === id);
                 if (!item) return;
-                const label =
-                  item.type === "photo" || item.type === "video" ? "Capture mode"
-                  : item.type === "textNote" || item.type === "voiceNote" ? "Note mode"
-                  : item.type === "annotation" ? "Annotate mode"
-                  : null;
-                if (label) anchorToButton(label);
                 preparePreview(item);
                 dispatch({ type: "PREVIEW_ITEM", id });
               }}
@@ -295,7 +274,6 @@ export function Remediate({
               onSubmit={handleSubmit}
             />
           )}
-
         </PanelHost>
 
         {showAreaSelector && (
@@ -305,12 +283,11 @@ export function Remediate({
           />
         )}
 
-        {isVideoFlow && (
+        {state.mode === "videoRecording" && (
           <VideoToolbar
             area={state.pendingCapture?.area ?? null}
             isReady={isVideoReady}
             onStopRecording={handleStopVideoRecording}
-            onCancel={cancelVideoRecording}
           />
         )}
 
@@ -318,52 +295,24 @@ export function Remediate({
           <AnnotateMode
             annotations={annotations}
             markerColor={state.markerColor}
-            nextIndex={state.items.length + 1}
-            onAddAnnotation={handleAddAnnotation}
+            onAddAnnotation={(ann: AnnotationItem) => dispatch({ type: "ADD_ITEM", item: ann })}
           />
         )}
 
-        {(() => {
-          const ann = state.activePopoverAnnotationId
-            ? annotations.find((a) => a.id === state.activePopoverAnnotationId)
-            : null;
-          if (!ann) return null;
-          let anchorRect: DOMRect | null = null;
-          try {
-            const el = document.querySelector(ann.element.selector);
-            if (el) {
-              const rect = el.getBoundingClientRect();
-              const cx = rect.left + ann.clickOffset.x;
-              const cy = rect.top + ann.clickOffset.y;
-              anchorRect = new DOMRect(cx - 1, cy - 1, 2, 2);
-            }
-          } catch { /* selector may not match */ }
-          if (!anchorRect) return null;
-          return (
-            <AnnotationPopover
-              elementName={ann.element.name}
-              selector={ann.element.selector}
-              computedStyles={ann.element.computedStyles}
-              initialNote={ann.note}
-              initialPriority={ann.priority}
-              annotationIndex={ann.index}
-              anchorRect={anchorRect}
-              onSave={(note, priority) => {
-                handleUpdateAnnotation(ann.id, note, priority);
-                dispatch({ type: "SET_ACTIVE_POPOVER", id: null });
-                if (state.previewingItemId) {
-                  dispatch({ type: "SET_MODE", mode: "reviewing" });
-                }
-              }}
-              onCancel={() => {
-                dispatch({ type: "SET_ACTIVE_POPOVER", id: null });
-                if (state.previewingItemId) {
-                  dispatch({ type: "SET_MODE", mode: "reviewing" });
-                }
-              }}
-            />
-          );
-        })()}
+        {activeAnnotation && activeAnnotationRect && (
+          <AnnotationPopover
+            elementName={activeAnnotation.element.name}
+            initialNote={activeAnnotation.note}
+            initialPriority={activeAnnotation.priority}
+            anchorRect={activeAnnotationRect}
+            submitLabel="Save"
+            onSave={(note: string, priority: AnnotationPriority) => {
+              dispatch({ type: "UPDATE_ANNOTATION", id: activeAnnotation.id, note, priority });
+              closePopover();
+            }}
+            onCancel={closePopover}
+          />
+        )}
       </div>
     </WidgetProvider>
   );

@@ -2,8 +2,12 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import type { WidgetMode, AnnotationPriority, VoiceNoteItem } from "../../types";
 import type { AudioRecorder } from "../../utils/capture-audio";
 import { StopFill, PlayFill, PauseFill } from "../icons";
-import { PriorityButton } from "../shared/PriorityButton";
-import { usePreview, useWidget } from "../../state/WidgetContext";
+import { NoteComposer } from "../shared/NoteComposer";
+import { PanelActions } from "../shared/PanelActions";
+import { useNoteDraft } from "../../hooks/useNoteDraft";
+import { useElapsedSeconds } from "../../hooks/useElapsedSeconds";
+import { formatClock } from "../../utils/time";
+import { prefersReducedMotion } from "../../utils/reduced-motion";
 
 interface VoicePanelProps {
   mode: WidgetMode;
@@ -14,41 +18,38 @@ interface VoicePanelProps {
 }
 
 const BAR_COUNT = 22;
+const BAR_MAX = 28;
+const BAR_MIN = 4;
+const TICK_MS = 80;
 
 function generateBars(active: boolean, seed: number): number[] {
   return Array.from({ length: BAR_COUNT }, (_, i) => {
-    if (!active) return 4;
+    if (!active) return BAR_MIN;
     const base = Math.sin((i + seed) * 0.7) * 0.5 + 0.5;
-    const noise = Math.sin((i * 3.7 + seed * 2.3)) * 0.3;
-    return Math.max(4, Math.min(28, (base + noise) * 28));
+    const noise = Math.sin(i * 3.7 + seed * 2.3) * 0.3;
+    return Math.max(BAR_MIN, Math.min(BAR_MAX, (base + noise) * BAR_MAX));
   });
 }
 
-function waveformFromAnalyser(data: Uint8Array<ArrayBuffer> | null): number[] {
-  if (!data) return generateBars(true, 0);
+function waveformFromAnalyser(data: Uint8Array<ArrayBuffer>): number[] {
   const step = Math.floor(data.length / BAR_COUNT) || 1;
   return Array.from({ length: BAR_COUNT }, (_, i) => {
     const val = data[Math.min(i * step, data.length - 1)] / 255;
-    return Math.max(4, val * 28);
+    return Math.max(BAR_MIN, val * BAR_MAX);
   });
 }
 
-function formatTime(seconds: number) {
-  const m = Math.floor(seconds / 60);
-  const s = seconds % 60;
-  return `${m}:${String(s).padStart(2, "0")}`;
-}
-
+/** Bars are a fixed height and scaled on the compositor, so the waveform never triggers layout. */
 function Waveform({ bars, isAnimating }: { bars: number[]; isAnimating: boolean }) {
   return (
-    <div className="rm-voice__waveform">
+    <div className="rm-voice__waveform" aria-hidden="true">
       {bars.map((height, i) => (
         <div
           key={i}
           className="rm-voice__bar"
           style={{
-            height,
-            transition: isAnimating ? "height 80ms ease" : "none",
+            transform: `scaleY(${height / BAR_MAX})`,
+            transition: isAnimating ? `transform ${TICK_MS}ms ease` : "none",
           }}
         />
       ))}
@@ -56,28 +57,48 @@ function Waveform({ bars, isAnimating }: { bars: number[]; isAnimating: boolean 
   );
 }
 
-export function VoicePanel({ mode, recorder, onSetMode, onAdd, onCancel }: VoicePanelProps) {
-  const { state } = useWidget();
-  const preview = usePreview<VoiceNoteItem>("voiceNote");
-  const submitLabel = state.previewingItemId ? "Save" : "Add";
+/** Drives decorative bar motion at TICK_MS while `active`; static under reduced motion. */
+function useWaveform(active: boolean, source: () => number[]) {
+  const [bars, setBars] = useState<number[]>(() => generateBars(false, 0));
+  const sourceRef = useRef(source);
+  sourceRef.current = source;
 
+  useEffect(() => {
+    if (!active) return;
+    if (prefersReducedMotion()) {
+      setBars(generateBars(true, 42));
+      return;
+    }
+    const id = setInterval(() => setBars(sourceRef.current()), TICK_MS);
+    return () => clearInterval(id);
+  }, [active]);
+
+  return [bars, setBars] as const;
+}
+
+export function VoicePanel({ mode, recorder, onSetMode, onAdd, onCancel }: VoicePanelProps) {
+  const draft = useNoteDraft<VoiceNoteItem>("voiceNote", (item) => item.additionalText);
   const isRecording = mode === "voiceRecording";
   const isPreview = mode === "voicePreview";
 
-  const [time, setTime] = useState(0);
-  const [bars, setBars] = useState<number[]>(() => generateBars(false, 0));
+  const time = useElapsedSeconds(isRecording);
   const [isPlaying, setIsPlaying] = useState(false);
   const [finalDuration, setFinalDuration] = useState(0);
-  const [previewBars, setPreviewBars] = useState<number[]>([]);
-  const [text, setText] = useState(preview?.additionalText ?? "");
-  const [priority, setPriority] = useState<AnnotationPriority>(preview?.priority ?? "none");
-  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const animRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const seedRef = useRef(0);
   const recorderRef = useRef<AudioRecorder | null>(null);
   const audioBlobRef = useRef<Blob | null>(null);
   const audioUrlRef = useRef<string | null>(null);
   const audioElRef = useRef<HTMLAudioElement | null>(null);
+
+  const [bars, setBars] = useWaveform(isRecording, () => {
+    seedRef.current += 1;
+    const data = recorderRef.current?.getWaveformData();
+    return data ? waveformFromAnalyser(data) : generateBars(true, seedRef.current);
+  });
+  const [previewBars, setPreviewBars] = useWaveform(isPlaying && isPreview, () => {
+    seedRef.current += 1;
+    return generateBars(true, seedRef.current);
+  });
 
   // Accept recorder from parent (started in Remediate.tsx during voiceNote)
   useEffect(() => {
@@ -90,41 +111,17 @@ export function VoicePanel({ mode, recorder, onSetMode, onAdd, onCancel }: Voice
     };
   }, []);
 
-  useEffect(() => {
-    if (isRecording) {
-      setTime(0);
-      timerRef.current = setInterval(() => setTime((t) => t + 1), 1000);
-      animRef.current = setInterval(() => {
-        seedRef.current += 1;
-        const recorder = recorderRef.current;
-        if (recorder) {
-          const data = recorder.getWaveformData();
-          setBars(data ? waveformFromAnalyser(data) : generateBars(true, seedRef.current));
-        } else {
-          setBars(generateBars(true, seedRef.current));
-        }
-      }, 80);
-    } else {
-      if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null; }
-      if (animRef.current) { clearInterval(animRef.current); animRef.current = null; }
-      if (!isRecording) setBars(generateBars(false, 0));
-    }
-    return () => {
-      if (timerRef.current) clearInterval(timerRef.current);
-      if (animRef.current) clearInterval(animRef.current);
-    };
-  }, [isRecording]);
-
   const handleStopRecording = useCallback(async () => {
     const recorder = recorderRef.current;
     if (!recorder) return;
-    setBars((current) => { setPreviewBars([...current]); return current; });
+    setPreviewBars(bars);
     const blob = await recorder.stop();
     audioBlobRef.current = blob;
     recorderRef.current = null;
     setFinalDuration(time);
+    setBars(generateBars(false, 0));
     onSetMode("voicePreview");
-  }, [time, onSetMode]);
+  }, [bars, time, onSetMode, setBars, setPreviewBars]);
 
   const togglePlayback = useCallback(() => {
     if (!audioBlobRef.current) return;
@@ -144,18 +141,6 @@ export function VoicePanel({ mode, recorder, onSetMode, onAdd, onCancel }: Voice
     }
   }, [isPlaying]);
 
-  useEffect(() => {
-    if (isPlaying && isPreview) {
-      animRef.current = setInterval(() => {
-        seedRef.current += 1;
-        setPreviewBars(generateBars(true, seedRef.current));
-      }, 80);
-      return () => {
-        if (animRef.current) clearInterval(animRef.current);
-      };
-    }
-  }, [isPlaying, isPreview]);
-
   const handleCancel = useCallback(() => {
     recorderRef.current?.cancel();
     recorderRef.current = null;
@@ -163,14 +148,22 @@ export function VoicePanel({ mode, recorder, onSetMode, onAdd, onCancel }: Voice
     onCancel();
   }, [onCancel]);
 
+  const handleAdd = useCallback(() => {
+    // In edit mode the blob lives on the existing item; the parent only needs text/priority.
+    onAdd(finalDuration, audioBlobRef.current ?? new Blob(), draft.text.trim(), draft.priority);
+  }, [finalDuration, draft.text, draft.priority, onAdd]);
+
+  const previewTabIndex = isPreview ? 0 : -1;
+
   return (
     <div className="rm-voice" data-remediate-widget="">
       {/* Recording State */}
       <div className={`rm-voice__state rm-voice__state--recording ${isRecording ? "rm-voice__state--active" : "rm-voice__state--inactive"}`}>
         <div className="rm-voice__top-row">
           <Waveform bars={bars} isAnimating={isRecording} />
-          <span className="rm-voice__timer">{formatTime(time)}</span>
+          <span className="rm-voice__timer" aria-live="off">{formatClock(time)}</span>
           <button
+            type="button"
             className="rm-voice__stop"
             onClick={handleStopRecording}
             aria-label="Stop recording"
@@ -185,53 +178,30 @@ export function VoicePanel({ mode, recorder, onSetMode, onAdd, onCancel }: Voice
       <div className={`rm-voice__state rm-voice__state--preview ${isPreview ? "rm-voice__state--active" : "rm-voice__state--inactive"}`}>
         <div className="rm-voice__top-row">
           <button
+            type="button"
             className="rm-voice__play"
             onClick={togglePlayback}
             aria-label={isPlaying ? "Pause playback" : "Play recording"}
-            tabIndex={isPreview ? 0 : -1}
+            tabIndex={previewTabIndex}
           >
             {isPlaying ? <PauseFill size={16} /> : <PlayFill size={16} />}
           </button>
-          <Waveform 
-            bars={previewBars.length > 0 ? previewBars : generateBars(true, 42)} 
-            isAnimating={isPlaying} 
-          />
+          <Waveform bars={previewBars} isAnimating={isPlaying} />
         </div>
 
-        <div className="rm-input-group" style={{ marginTop: 10 }}>
-          <textarea
-            className="rm-input-group__textarea"
-            placeholder="Add a note…"
-            value={text}
-            onChange={(e) => setText(e.target.value)}
-            rows={2}
-            tabIndex={isPreview ? 0 : -1}
-          />
-          <div className="rm-input-group__footer">
-            <PriorityButton priority={priority} onCycle={setPriority} />
-          </div>
-        </div>
+        <NoteComposer
+          value={draft.text}
+          onChange={draft.setText}
+          priority={draft.priority}
+          onPriorityChange={draft.setPriority}
+          placeholder="Add a note…"
+          rows={2}
+          tabIndex={previewTabIndex}
+          style={{ marginTop: 10 }}
+        />
 
         <div className="rm-voice__bottom-row">
-          <div className="rm-voice__actions">
-            <button className="rm-voice__cancel" onClick={handleCancel} tabIndex={isPreview ? 0 : -1}>
-              Cancel
-            </button>
-            <button
-              className="rm-voice__add"
-              tabIndex={isPreview ? 0 : -1}
-              onClick={() => {
-                if (audioBlobRef.current) {
-                  onAdd(finalDuration, audioBlobRef.current, text.trim(), priority);
-                } else {
-                  // Save mode — blob lives on the existing item, parent only needs text/priority
-                  onAdd(finalDuration, new Blob(), text.trim(), priority);
-                }
-              }}
-            >
-              {submitLabel}
-            </button>
-          </div>
+          <PanelActions onCancel={handleCancel} onSubmit={handleAdd} submitLabel={draft.submitLabel} tabIndex={previewTabIndex} />
         </div>
       </div>
     </div>

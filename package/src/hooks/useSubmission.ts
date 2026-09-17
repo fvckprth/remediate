@@ -5,6 +5,30 @@ import { collectEnvironment } from "../utils/metadata";
 import { nanoid } from "../utils/nanoid";
 import { serializeToFormData } from "../utils/serialize";
 
+const REQUEST_TIMEOUT_MS = 30_000;
+
+async function postSubmission(
+  endpoint: string,
+  submission: FeedbackSubmission,
+  headers?: Record<string, string> | (() => Record<string, string>),
+) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+  try {
+    const res = await fetch(endpoint, {
+      method: "POST",
+      body: serializeToFormData(submission),
+      headers: typeof headers === "function" ? headers() : headers,
+      signal: controller.signal,
+    });
+    if (!res.ok) {
+      throw new Error(`Feedback submission failed: ${res.status} ${res.statusText}`);
+    }
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
 export function useSubmission({
   state,
   dispatch,
@@ -47,62 +71,34 @@ export function useSubmission({
       console.log("[Remediate] submitting", { endpoint, items: submission.items.length, metadata: submission.metadata });
     }
 
-    if (endpoint) {
-      setIsSubmitting(true);
-      try {
-        const formData = serializeToFormData(submission);
-        const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), 30_000);
-        const extraHeaders = typeof headers === "function" ? headers() : headers;
-        const res = await fetch(endpoint, {
-          method: "POST",
-          body: formData,
-          headers: extraHeaders,
-          signal: controller.signal,
-        });
-        clearTimeout(timeout);
-        if (!res.ok) {
-          throw new Error(`Feedback submission failed: ${res.status} ${res.statusText}`);
-        }
-        onSubmit?.(submission);
-        dispatch({ type: "SUBMIT_SUCCESS" });
-      } catch (err) {
-        const error = err instanceof Error ? err : new Error(String(err));
-        if (onError) {
-          onError(error);
-        } else {
-          console.error("[Remediate] Submission failed:", error);
-        }
-        dispatch({ type: "SUBMIT_ERROR" });
-      } finally {
-        setIsSubmitting(false);
-      }
+    // With an endpoint, POST first and then notify onSubmit; without one, onSubmit is the delivery.
+    const send = endpoint
+      ? async () => { await postSubmission(endpoint, submission, headers); onSubmit?.(submission); }
+      : onSubmit;
+
+    if (!send) {
+      console.log(
+        "%c[Remediate] Feedback Submission",
+        "background: #3B82F6; color: white; padding: 4px 8px; border-radius: 4px; font-weight: 600;",
+        submission
+      );
+      console.warn("[Remediate] No endpoint or onSubmit configured — feedback was logged to console only.");
+      dispatch({ type: "SUBMIT_SUCCESS" });
       return;
     }
 
-    if (onSubmit) {
-      setIsSubmitting(true);
-      try {
-        await onSubmit(submission);
-        dispatch({ type: "SUBMIT_SUCCESS" });
-      } catch (err) {
-        const error = err instanceof Error ? err : new Error(String(err));
-        if (onError) onError(error);
-        else console.error("[Remediate] Submission failed:", error);
-        dispatch({ type: "SUBMIT_ERROR" });
-      } finally {
-        setIsSubmitting(false);
-      }
-      return;
+    setIsSubmitting(true);
+    try {
+      await send(submission);
+      dispatch({ type: "SUBMIT_SUCCESS" });
+    } catch (err) {
+      const error = err instanceof Error ? err : new Error(String(err));
+      if (onError) onError(error);
+      else console.error("[Remediate] Submission failed:", error);
+      dispatch({ type: "SUBMIT_ERROR" });
+    } finally {
+      setIsSubmitting(false);
     }
-
-    console.log(
-      "%c[Remediate] Feedback Submission",
-      "background: #3B82F6; color: white; padding: 4px 8px; border-radius: 4px; font-weight: 600;",
-      submission
-    );
-    console.warn("[Remediate] No endpoint or onSubmit configured — feedback was logged to console only.");
-    dispatch({ type: "SUBMIT_SUCCESS" });
   }, [state, onSubmit, endpoint, extraMetadata, headers, onError, dispatch, consoleCaptureRef, debug]);
 
   return { isSubmitting, handleSubmit };

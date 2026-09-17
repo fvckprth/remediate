@@ -2,6 +2,7 @@ import { useState, useRef, useCallback, useEffect } from "react";
 import type { AnnotationItem, AnnotationPriority } from "../../types";
 import { captureElement } from "../../utils/capture";
 import { identifyElement } from "../../utils/element-identify";
+import { createItem } from "../../utils/create-item";
 import { nanoid } from "../../utils/nanoid";
 import { AnnotationBadge } from "./AnnotationBadge";
 import { AnnotationPopover, type AnnotationPopoverRef } from "./AnnotationPopover";
@@ -16,25 +17,53 @@ const MEANINGFUL_TAGS = new Set([
 ]);
 
 function isMeaningfulElement(el: HTMLElement): boolean {
-  if (MEANINGFUL_TAGS.has(el.tagName.toLowerCase())) return true;
-  if (el.getAttribute("role") === "button") return true;
-  if (el.hasAttribute("tabindex")) return true;
-  const rect = el.getBoundingClientRect();
-  if (rect.width < 10 || rect.height < 10) return false;
-  if (rect.width > window.innerWidth * 0.8) return false;
-  return false;
+  return (
+    MEANINGFUL_TAGS.has(el.tagName.toLowerCase()) ||
+    el.getAttribute("role") === "button" ||
+    el.hasAttribute("tabindex")
+  );
 }
 
-function computeBoundingBox(rects: DOMRect[]): DOMRect {
-  if (rects.length === 0) return new DOMRect();
-  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-  for (const r of rects) {
-    minX = Math.min(minX, r.left);
-    minY = Math.min(minY, r.top);
-    maxX = Math.max(maxX, r.right);
-    maxY = Math.max(maxY, r.bottom);
+function isWidgetElement(el: Element | null): boolean {
+  return !!el?.closest("[data-remediate-widget]");
+}
+
+function isPageElement(el: Element | null): el is HTMLElement {
+  return !!el && el !== document.documentElement && el !== document.body && !isWidgetElement(el);
+}
+
+/** Distinct, meaningful page elements under a 3×3 grid of sample points in the rect. */
+function elementsInRect(left: number, top: number, width: number, height: number): HTMLElement[] {
+  const xs = [left, left + width / 2, left + width];
+  const ys = [top, top + height / 2, top + height];
+  const seen = new Set<HTMLElement>();
+  for (const y of ys) {
+    for (const x of xs) {
+      const el = document.elementFromPoint(x, y);
+      if (isPageElement(el) && isMeaningfulElement(el)) seen.add(el);
+    }
   }
-  return new DOMRect(minX, minY, maxX - minX, maxY - minY);
+  return [...seen];
+}
+
+function rectFromPoints(a: { x: number; y: number }, b: { x: number; y: number }) {
+  return {
+    left: Math.min(a.x, b.x),
+    top: Math.min(a.y, b.y),
+    width: Math.abs(b.x - a.x),
+    height: Math.abs(b.y - a.y),
+  };
+}
+
+function pendingFrom(el: HTMLElement, clickOffset?: { x: number; y: number }): PendingElement {
+  const rect = el.getBoundingClientRect();
+  return {
+    id: `ann_${nanoid(8)}`,
+    element: captureElement(el),
+    rect,
+    domElement: el,
+    clickOffset: clickOffset ?? { x: rect.width / 2, y: rect.height / 2 },
+  };
 }
 
 interface PendingElement {
@@ -48,16 +77,10 @@ interface PendingElement {
 interface AnnotateModeProps {
   annotations: AnnotationItem[];
   markerColor: string;
-  nextIndex: number;
   onAddAnnotation: (annotation: AnnotationItem) => void;
 }
 
-export function AnnotateMode({
-  annotations,
-  markerColor,
-  nextIndex,
-  onAddAnnotation,
-}: AnnotateModeProps) {
+export function AnnotateMode({ annotations, markerColor, onAddAnnotation }: AnnotateModeProps) {
   const [hoverInfo, setHoverInfo] = useState<{ rect: DOMRect; name: string; domElement: HTMLElement } | null>(null);
   const [hoverPos, setHoverPos] = useState({ x: 0, y: 0 });
   const [pendingElements, setPendingElements] = useState<PendingElement[]>([]);
@@ -72,31 +95,22 @@ export function AnnotateMode({
   const [dragBox, setDragBox] = useState<{ left: number; top: number; width: number; height: number } | null>(null);
   const [dragHighlights, setDragHighlights] = useState<DOMRect[]>([]);
 
-  const isWidgetElement = useCallback((el: Element | null): boolean => {
-    if (!el) return false;
-    let current: Element | null = el;
-    while (current) {
-      if (current.hasAttribute("data-remediate-widget")) return true;
-      if (current.classList?.contains("rm-popover")) return true;
-      if (current.classList?.contains("rm-badge")) return true;
-      if (current.classList?.contains("rm-toolbar")) return true;
-      if (current.classList?.contains("rm-bar")) return true;
-      current = current.parentElement;
-    }
-    return false;
-  }, []);
-
-  const getElementAtPoint = useCallback((x: number, y: number): HTMLElement | null => {
+  /** Run `fn` with the overlay transparent to hit-testing. */
+  const withOverlayHidden = useCallback(<T,>(fn: () => T): T | null => {
     const overlay = overlayRef.current;
     if (!overlay) return null;
     overlay.style.pointerEvents = "none";
-    const el = document.elementFromPoint(x, y) as HTMLElement | null;
-    overlay.style.pointerEvents = "auto";
-    if (!el || el === document.documentElement || el === document.body || isWidgetElement(el)) {
-      return null;
+    try {
+      return fn();
+    } finally {
+      overlay.style.pointerEvents = "auto";
     }
-    return el;
-  }, [isWidgetElement]);
+  }, []);
+
+  const getElementAtPoint = useCallback((x: number, y: number): HTMLElement | null => {
+    const el = withOverlayHidden(() => document.elementFromPoint(x, y));
+    return isPageElement(el ?? null) ? el as HTMLElement : null;
+  }, [withOverlayHidden]);
 
   // Track modifier keys for multi-select
   useEffect(() => {
@@ -137,55 +151,27 @@ export function AnnotateMode({
 
       if (!dragStartRef.current) {
         const el = getElementAtPoint(e.clientX, e.clientY);
-        if (el) {
-          setHoverInfo({ rect: el.getBoundingClientRect(), name: identifyElement(el).name, domElement: el });
-          setHoverPos({ x: e.clientX, y: e.clientY });
-        } else {
+        setHoverPos({ x: e.clientX, y: e.clientY });
+        if (!el) {
           setHoverInfo(null);
+        } else if (el !== hoverInfo?.domElement) {
+          setHoverInfo({ rect: el.getBoundingClientRect(), name: identifyElement(el).name, domElement: el });
         }
       }
     },
-    [showPopover, isDragging, getElementAtPoint]
+    [showPopover, isDragging, getElementAtPoint, hoverInfo?.domElement]
   );
 
   // Drag move — update drag box + highlights
   const handleDragMove = useCallback(
     (e: React.MouseEvent) => {
       if (!isDragging || !dragStartRef.current) return;
-
-      const left = Math.min(dragStartRef.current.x, e.clientX);
-      const top = Math.min(dragStartRef.current.y, e.clientY);
-      const width = Math.abs(e.clientX - dragStartRef.current.x);
-      const height = Math.abs(e.clientY - dragStartRef.current.y);
-      setDragBox({ left, top, width, height });
-
-      // Sample 9 points in the drag rect
-      const overlay = overlayRef.current;
-      if (!overlay) return;
-      overlay.style.pointerEvents = "none";
-
-      const seen = new Set<HTMLElement>();
-      const matched: DOMRect[] = [];
-      const points = [
-        [left, top], [left + width / 2, top], [left + width, top],
-        [left, top + height / 2], [left + width / 2, top + height / 2], [left + width, top + height / 2],
-        [left, top + height], [left + width / 2, top + height], [left + width, top + height],
-      ];
-
-      for (const [px, py] of points) {
-        const el = document.elementFromPoint(px, py) as HTMLElement | null;
-        if (el && !seen.has(el) && !isWidgetElement(el) && el !== document.documentElement && el !== document.body) {
-          seen.add(el);
-          if (isMeaningfulElement(el)) {
-            matched.push(el.getBoundingClientRect());
-          }
-        }
-      }
-
-      overlay.style.pointerEvents = "auto";
-      setDragHighlights(matched);
+      const box = rectFromPoints(dragStartRef.current, { x: e.clientX, y: e.clientY });
+      setDragBox(box);
+      const matched = withOverlayHidden(() => elementsInRect(box.left, box.top, box.width, box.height)) ?? [];
+      setDragHighlights(matched.map((el) => el.getBoundingClientRect()));
     },
-    [isDragging, isWidgetElement]
+    [isDragging, withOverlayHidden]
   );
 
   // Mouse down — start potential drag
@@ -204,59 +190,19 @@ export function AnnotateMode({
   const handleMouseUp = useCallback(
     (e: React.MouseEvent) => {
       if (isDragging && dragStartRef.current) {
-        // Finalize drag-to-select
-        const left = Math.min(dragStartRef.current.x, e.clientX);
-        const top = Math.min(dragStartRef.current.y, e.clientY);
-        const width = Math.abs(e.clientX - dragStartRef.current.x);
-        const height = Math.abs(e.clientY - dragStartRef.current.y);
-
-        const overlay = overlayRef.current;
-        if (overlay) {
-          overlay.style.pointerEvents = "none";
-
-          const seen = new Set<HTMLElement>();
-          const elements: PendingElement[] = [];
-          const points = [
-            [left, top], [left + width / 2, top], [left + width, top],
-            [left, top + height / 2], [left + width / 2, top + height / 2], [left + width, top + height / 2],
-            [left, top + height], [left + width / 2, top + height], [left + width, top + height],
-          ];
-
-          for (const [px, py] of points) {
-            const el = document.elementFromPoint(px, py) as HTMLElement | null;
-            if (el && !seen.has(el) && !isWidgetElement(el) && el !== document.documentElement && el !== document.body) {
-              seen.add(el);
-              if (isMeaningfulElement(el)) {
-                const elRect = el.getBoundingClientRect();
-                elements.push({
-                  id: `ann_${nanoid(8)}`,
-                  element: captureElement(el),
-                  rect: elRect,
-                  domElement: el,
-                  clickOffset: { x: elRect.width / 2, y: elRect.height / 2 },
-                });
-              }
-            }
-          }
-
-          overlay.style.pointerEvents = "auto";
-
-          if (elements.length > 0) {
-            setPendingElements(elements);
-            setShowPopover(true);
-          }
+        const box = rectFromPoints(dragStartRef.current, { x: e.clientX, y: e.clientY });
+        const matched = withOverlayHidden(() => elementsInRect(box.left, box.top, box.width, box.height)) ?? [];
+        if (matched.length > 0) {
+          setPendingElements(matched.map((el) => pendingFrom(el)));
+          setShowPopover(true);
         }
-
         setIsDragging(false);
         setDragBox(null);
         setDragHighlights([]);
-        dragStartRef.current = null;
-        return;
       }
-
       dragStartRef.current = null;
     },
-    [isDragging, isWidgetElement]
+    [isDragging, withOverlayHidden]
   );
 
   // Click — single or multi-select
@@ -278,25 +224,20 @@ export function AnnotateMode({
       if (isMultiSelect) {
         // Toggle element in/out of pending
         const existingIdx = pendingElements.findIndex((p) => p.domElement === el);
+        const rect = el.getBoundingClientRect();
+        const clickOffset = { x: e.clientX - rect.left, y: e.clientY - rect.top };
         if (existingIdx >= 0) {
           setPendingElements((prev) => prev.filter((_, i) => i !== existingIdx));
         } else {
-          const captured = captureElement(el);
-          const id = `ann_${nanoid(8)}`;
-          const rect = el.getBoundingClientRect();
-          const clickOffset = { x: e.clientX - rect.left, y: e.clientY - rect.top };
-          setPendingElements((prev) => [...prev, { id, element: captured, rect, domElement: el, clickOffset }]);
+          setPendingElements((prev) => [...prev, pendingFrom(el, clickOffset)]);
         }
         setHoverInfo(null);
         return;
       }
 
       // Standard single-click
-      const captured = captureElement(el);
-      const id = `ann_${nanoid(8)}`;
       const rect = el.getBoundingClientRect();
-      const clickOffset = { x: e.clientX - rect.left, y: e.clientY - rect.top };
-      setPendingElements([{ id, element: captured, rect, domElement: el, clickOffset }]);
+      setPendingElements([pendingFrom(el, { x: e.clientX - rect.left, y: e.clientY - rect.top })]);
       setShowPopover(true);
       setHoverInfo(null);
     },
@@ -307,25 +248,17 @@ export function AnnotateMode({
   const handleAddPending = useCallback(
     (note: string, priority: AnnotationPriority) => {
       if (pendingElements.length === 0) return;
-      let idx = nextIndex;
       for (const pe of pendingElements) {
-        const item: AnnotationItem = {
+        // The reducer assigns `index` on ADD_ITEM.
+        onAddAnnotation({
+          ...createItem("annotation", { element: pe.element, note, priority, clickOffset: pe.clickOffset, additionalText: "" }),
           id: pe.id,
-          index: idx++,
-          type: "annotation",
-          element: pe.element,
-          note,
-          priority,
-          clickOffset: pe.clickOffset,
-          timestamp: Date.now(),
-          additionalText: "",
-        };
-        onAddAnnotation(item);
+        });
       }
       setPendingElements([]);
       setShowPopover(false);
     },
-    [pendingElements, nextIndex, onAddAnnotation]
+    [pendingElements, onAddAnnotation]
   );
 
   const handleCancelPending = useCallback(() => {
@@ -400,7 +333,7 @@ export function AnnotateMode({
             <HighlightOverlay rect={pe.rect} color={pendingColor} variant={isMulti ? "multi-pending" : "persistent"} />
             {showBadge && (
               <AnnotationBadge
-                index={nextIndex + i}
+                index={annotations.length + 1 + i}
                 rect={pe.rect}
                 clickOffset={pe.clickOffset}
                 color={pendingColor}
@@ -419,11 +352,8 @@ export function AnnotateMode({
           elementName={isMulti
             ? `${pendingElements.length} elements`
             : lastPending.element.name}
-          selector={lastPending.element.selector}
-          computedStyles={lastPending.element.computedStyles}
           initialNote=""
           initialPriority="none"
-          annotationIndex={nextIndex}
           anchorRect={popoverAnchorRect}
           onSave={handleAddPending}
           onCancel={handleCancelPending}

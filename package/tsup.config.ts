@@ -1,11 +1,14 @@
 import { defineConfig } from "tsup";
-import { writeFileSync, readFileSync, copyFileSync, readdirSync, existsSync, unlinkSync } from "fs";
+import { writeFileSync, readFileSync, existsSync, unlinkSync } from "fs";
 import { join } from "path";
 
-// jsDelivr serves npm package files automatically once published.
-// Font URL will resolve after `npm publish`.
+const pkg = JSON.parse(readFileSync(new URL("./package.json", import.meta.url), "utf-8")) as { version: string };
+
+// jsDelivr serves npm package files automatically once published. Pinned to this
+// exact version so an older install never points at a moved file, and the URL is
+// immutable (1-year cache) instead of the short-TTL `@latest` redirect.
 const CDN_FONT_URL =
-  "https://cdn.jsdelivr.net/npm/remediate@latest/dist/OpenRunde-Medium.woff2";
+  `https://cdn.jsdelivr.net/npm/remediate@${pkg.version}/dist/OpenRunde-Medium.woff2`;
 
 /** Rewrite relative font url() references to the jsDelivr CDN URL. */
 function rewriteFontUrls(css: string): string {
@@ -26,6 +29,10 @@ export default defineConfig([
     external: ["react", "react-dom"],
     treeshake: true,
     outDir: "dist",
+    // Emit the font under its stable name so the CDN URL above resolves without a copy step.
+    esbuildOptions(options) {
+      options.assetNames = "[name]";
+    },
     onSuccess: async () => {
       // Read extracted CSS and rewrite font URLs for the injected version.
       // The extracted dist/index.css keeps relative paths (fonts co-located).
@@ -45,18 +52,6 @@ export default defineConfig([
         `document.head.appendChild(s);`,
         `})();`,
       ].join("");
-
-      // Copy hashed font file to stable name so the jsDelivr CDN URL resolves
-      const distDir = join(process.cwd(), "dist");
-      const hashedFont = readdirSync(distDir).find(
-        (f) => f.startsWith("OpenRunde-Medium") && f.endsWith(".woff2"),
-      );
-      if (hashedFont && hashedFont !== "OpenRunde-Medium.woff2") {
-        copyFileSync(
-          join(distDir, hashedFont),
-          join(distDir, "OpenRunde-Medium.woff2"),
-        );
-      }
 
       // Prepend "use client" + CSS injection to output files
       for (const file of ["dist/index.js", "dist/index.cjs"]) {
@@ -78,7 +73,6 @@ export default defineConfig([
     dts: true,
     sourcemap: true,
     clean: false,
-    external: ["react", "react-dom"],
     treeshake: true,
     outDir: "dist",
   },
@@ -131,6 +125,8 @@ export default defineConfig([
 
         writeFileSync(jsGlobalPath, injector + js);
         unlinkSync(cssPath);
+        // The CSS map has nothing to map to once the stylesheet is inlined.
+        if (existsSync(cssPath + ".map")) unlinkSync(cssPath + ".map");
       }
 
       // 2. Rename widget.global.js → widget.js

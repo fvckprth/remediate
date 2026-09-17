@@ -1,35 +1,35 @@
 import { useState, useRef, useEffect, useLayoutEffect, useCallback, forwardRef, useImperativeHandle } from "react";
-import { PriorityButton } from "../shared/PriorityButton";
 import type { AnnotationPriority } from "../../types";
+import { NoteComposer } from "../shared/NoteComposer";
+import { PanelActions } from "../shared/PanelActions";
 
 interface AnnotationPopoverProps {
   elementName: string;
-  selector: string;
-  computedStyles: Record<string, string>;
   initialNote: string;
   initialPriority: AnnotationPriority;
-  annotationIndex: number;
   anchorRect: DOMRect;
   onSave: (note: string, priority: AnnotationPriority) => void;
   onCancel: () => void;
   placeholder?: string;
+  submitLabel?: string;
 }
 
 export interface AnnotationPopoverRef {
   shake: () => void;
 }
 
+const POPOVER_WIDTH = 280;
+const GAP = 12;
+
 export const AnnotationPopover = forwardRef<AnnotationPopoverRef, AnnotationPopoverProps>(function AnnotationPopover({
   elementName,
-  selector,
-  computedStyles,
   initialNote,
   initialPriority,
-  annotationIndex,
   anchorRect,
   onSave,
   onCancel,
   placeholder,
+  submitLabel = "Add",
 }, ref) {
   const [note, setNote] = useState(initialNote);
   const [priority, setPriority] = useState<AnnotationPriority>(initialPriority);
@@ -39,9 +39,6 @@ export const AnnotationPopover = forwardRef<AnnotationPopoverRef, AnnotationPopo
   const shakeTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const [position, setPosition] = useState({ top: undefined as number | undefined, bottom: undefined as number | undefined, left: 0 });
   const placementRef = useRef<"above" | "below" | null>(null);
-
-  const popoverWidth = 280;
-  const gap = 12;
 
   useImperativeHandle(ref, () => ({
     shake: () => {
@@ -61,19 +58,19 @@ export const AnnotationPopover = forwardRef<AnnotationPopoverRef, AnnotationPopo
 
     // Lock placement side on first render
     if (placementRef.current === null) {
-      placementRef.current = anchorRect.top - height - gap < 10 ? "below" : "above";
+      placementRef.current = anchorRect.top - height - GAP < 10 ? "below" : "above";
     }
 
-    let left = anchorRect.left + anchorRect.width / 2 - popoverWidth / 2;
+    let left = anchorRect.left + anchorRect.width / 2 - POPOVER_WIDTH / 2;
     if (left < 10) left = 10;
-    if (left + popoverWidth > window.innerWidth - 10) {
-      left = window.innerWidth - popoverWidth - 10;
+    if (left + POPOVER_WIDTH > window.innerWidth - 10) {
+      left = window.innerWidth - POPOVER_WIDTH - 10;
     }
 
     if (placementRef.current === "below") {
-      setPosition({ top: anchorRect.bottom + gap, bottom: undefined, left });
+      setPosition({ top: anchorRect.bottom + GAP, bottom: undefined, left });
     } else {
-      setPosition({ top: undefined, bottom: window.innerHeight - anchorRect.top + gap, left });
+      setPosition({ top: undefined, bottom: window.innerHeight - anchorRect.top + GAP, left });
     }
   }, [anchorRect]);
 
@@ -83,75 +80,46 @@ export const AnnotationPopover = forwardRef<AnnotationPopoverRef, AnnotationPopo
 
   useEffect(() => {
     const timer = setTimeout(() => textareaRef.current?.focus(), 50);
-    return () => clearTimeout(timer);
-  }, []);
-
-  useEffect(() => {
     return () => {
+      clearTimeout(timer);
       if (shakeTimerRef.current) clearTimeout(shakeTimerRef.current);
     };
   }, []);
 
-  const handleSubmit = useCallback(() => {
-    if (note.trim()) onSave(note.trim(), priority);
-  }, [note, priority, onSave]);
-
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.nativeEvent.isComposing) return;
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
-      handleSubmit();
-    }
-  };
-
   const hasContent = note.trim().length > 0;
+
+  const handleSubmit = useCallback(() => {
+    if (hasContent) onSave(note.trim(), priority);
+  }, [hasContent, note, priority, onSave]);
 
   return (
     <div
       ref={popoverRef}
+      role="dialog"
+      aria-label={`Annotate ${elementName}`}
       className={`rm-popover${isShaking ? " rm-popover--shake" : ""}`}
       data-remediate-widget=""
       data-placement={placementRef.current ?? undefined}
-      style={{ top: position.top, bottom: position.bottom, left: position.left, width: popoverWidth }}
+      style={{ top: position.top, bottom: position.bottom, left: position.left, width: POPOVER_WIDTH }}
       onClick={(e) => e.stopPropagation()}
-      onKeyDown={handleKeyDown}
     >
       <div className="rm-popover__header">
-        <span className="rm-popover__header-meta">
-          {elementName}
-        </span>
+        <span className="rm-popover__header-meta">{elementName}</span>
       </div>
 
-      {/* Textarea + priority group */}
-      <div className="rm-input-group">
-        <textarea
-          ref={textareaRef}
-          className="rm-input-group__textarea"
-          placeholder={placeholder ?? "What should change?"}
-          value={note}
-          onChange={(e) => setNote(e.target.value)}
-          maxLength={2000}
-          rows={3}
-        />
-        <div className="rm-input-group__footer">
-          <PriorityButton priority={priority} onCycle={setPriority} />
-        </div>
-      </div>
+      <NoteComposer
+        ref={textareaRef}
+        value={note}
+        onChange={setNote}
+        priority={priority}
+        onPriorityChange={setPriority}
+        placeholder={placeholder ?? "What should change?"}
+        onSubmit={handleSubmit}
+        maxLength={2000}
+      />
 
-      {/* Actions footer */}
       <div className="rm-popover__footer">
-        <div className="rm-popover__actions">
-          <button className="rm-popover__cancel" onClick={onCancel}>
-            Cancel
-          </button>
-          <button
-            className="rm-popover__submit"
-            onClick={() => hasContent && onSave(note.trim(), priority)}
-            disabled={!hasContent}
-          >
-            Add
-          </button>
-        </div>
+        <PanelActions onCancel={onCancel} onSubmit={handleSubmit} submitLabel={submitLabel} disabled={!hasContent} />
       </div>
     </div>
   );
