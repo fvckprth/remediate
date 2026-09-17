@@ -22,7 +22,7 @@ export function PriorityIcon({ priority }: { priority: AnnotationPriority }) {
   const [c1, c2, c3] = BAR_COLORS[priority] ?? BAR_COLORS.none;
 
   return (
-    <div className="rm-priority__icon-wrapper">
+    <div className="rm-priority__icon-wrapper" aria-hidden="true">
       <svg
         className={`rm-priority__icon ${!isUrgent ? "rm-priority__icon--active" : ""}`}
         width={16}
@@ -61,14 +61,17 @@ export function PriorityButton({ priority, onCycle }: PriorityButtonProps) {
     onCycle(PRIORITY_OPTIONS[nextIdx].value);
   }, [priority, onCycle]);
 
+  const current = PRIORITY_OPTIONS.find((p) => p.value === priority) ?? PRIORITY_OPTIONS[0];
+
   return (
     <button
       className={`rm-priority rm-priority--${priority}`}
       onClick={cyclePriority}
       type="button"
+      aria-label={priority === "none" ? "Set priority" : `Priority: ${current.label}. Activate to change`}
     >
       <PriorityIcon priority={priority} />
-      <div className="rm-priority__labels">
+      <div className="rm-priority__labels" aria-hidden="true">
         {PRIORITY_OPTIONS.map((p) => (
           <span
             key={p.value}

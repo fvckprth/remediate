@@ -13,8 +13,8 @@ export function useCapture({
   pendingCapture: PendingCapture | null;
   dispatch: React.Dispatch<WidgetAction>;
 }) {
-  const screenshotBlobRef = useRef<Blob | null>(null);
-  const videoBlobRef = useRef<Blob | null>(null);
+  // Only one capture (photo or video) is ever pending, so one blob slot is enough.
+  const pendingBlobRef = useRef<Blob | null>(null);
   const pendingAreaRef = useRef<SelectionArea | null>(null);
   const video = useVideoRecorder();
 
@@ -25,95 +25,80 @@ export function useCapture({
     dispatch({ type: "SET_MODE", mode: "active" });
   }, [dispatch, video]);
 
-  const handleAreaSelected = useCallback(async (area: { x: number; y: number; width: number; height: number }) => {
+  const handleAreaSelected = useCallback(async (area: SelectionArea) => {
     const isPhoto = mode === "capturePhoto" || mode === "captureDragging";
 
     if (isPhoto) {
-      const blob = await captureScreenshot(area);
-      screenshotBlobRef.current = blob;
-      const capture: PendingCapture = { area, variant: "photo" };
-      dispatch({ type: "SET_PENDING_CAPTURE", capture });
+      pendingBlobRef.current = await captureScreenshot(area);
+      dispatch({ type: "SET_PENDING_CAPTURE", capture: { area, variant: "photo" } });
       dispatch({ type: "SET_MODE", mode: "capturePreview" });
-    } else {
-      const capture: PendingCapture = { area, variant: "video" };
-      pendingAreaRef.current = area;
-      dispatch({ type: "SET_PENDING_CAPTURE", capture });
-      dispatch({ type: "SET_MODE", mode: "videoRecording" });
+      return;
+    }
 
-      try {
-        await video.start(area, (blob) => {
-          videoBlobRef.current = blob;
-          const saved = pendingAreaRef.current;
-          if (saved) {
-            dispatch({ type: "SET_PENDING_CAPTURE", capture: { area: saved, variant: "video" } });
-          }
-          dispatch({ type: "SET_MODE", mode: "capturePreview" });
-        });
-      } catch (err) {
-        console.warn("[Remediate] Video recording failed:", err);
-        cancelVideoRecording();
-      }
+    pendingAreaRef.current = area;
+    dispatch({ type: "SET_PENDING_CAPTURE", capture: { area, variant: "video" } });
+    dispatch({ type: "SET_MODE", mode: "videoRecording" });
+
+    try {
+      await video.start(area, (blob) => {
+        pendingBlobRef.current = blob;
+        const saved = pendingAreaRef.current;
+        if (saved) {
+          dispatch({ type: "SET_PENDING_CAPTURE", capture: { area: saved, variant: "video" } });
+        }
+        dispatch({ type: "SET_MODE", mode: "capturePreview" });
+      });
+    } catch (err) {
+      console.warn("[Remediate] Video recording failed:", err);
+      cancelVideoRecording();
     }
   }, [mode, dispatch, cancelVideoRecording, video]);
 
   const handleStopVideoRecording = useCallback(async (duration: number) => {
     const blob = await video.stop();
     if (!blob) return;
-    videoBlobRef.current = blob;
+    pendingBlobRef.current = blob;
 
     const area = pendingAreaRef.current;
     if (area) {
-      dispatch({ type: "SET_PENDING_CAPTURE", capture: {
-        area,
-        variant: "video",
-        recordingDuration: duration,
-      }});
+      dispatch({ type: "SET_PENDING_CAPTURE", capture: { area, variant: "video", recordingDuration: duration } });
     }
     dispatch({ type: "SET_MODE", mode: "capturePreview" });
   }, [dispatch, video]);
 
   const handleAddCapture = useCallback((additionalText: string, priority: AnnotationPriority) => {
     if (!pendingCapture) return;
+    const blob = pendingBlobRef.current ?? undefined;
     const item: FeedbackItem = pendingCapture.variant === "photo"
-      ? createItem("photo", {
-          area: pendingCapture.area,
-          additionalText,
-          priority,
-          blob: screenshotBlobRef.current ?? undefined,
-        })
+      ? createItem("photo", { area: pendingCapture.area, additionalText, priority, blob })
       : createItem("video", {
           area: pendingCapture.area,
           duration: pendingCapture.recordingDuration ?? 0,
           additionalText,
           priority,
-          blob: videoBlobRef.current ?? undefined,
+          blob,
         });
     dispatch({ type: "ADD_ITEM", item });
-    screenshotBlobRef.current = null;
-    videoBlobRef.current = null;
+    pendingBlobRef.current = null;
   }, [pendingCapture, dispatch]);
 
-  /** Set the appropriate blob ref for previewing an existing item from review. */
+  /** Load an existing item's blob for previewing from review. */
   const preparePreview = useCallback((item: FeedbackItem) => {
-    if (item.type === "photo") screenshotBlobRef.current = item.blob ?? null;
-    if (item.type === "video") videoBlobRef.current = item.blob ?? null;
+    if (item.type === "photo" || item.type === "video") pendingBlobRef.current = item.blob ?? null;
   }, []);
 
-  /** Clear all blob refs (used when cancelling a capture). */
-  const clearBlobs = useCallback(() => {
-    screenshotBlobRef.current = null;
-    videoBlobRef.current = null;
+  const clearBlob = useCallback(() => {
+    pendingBlobRef.current = null;
   }, []);
 
   return {
-    screenshotBlobRef,
-    videoBlobRef,
+    pendingBlobRef,
     isVideoReady: video.isReady,
     cancelVideoRecording,
     handleAreaSelected,
     handleStopVideoRecording,
     handleAddCapture,
     preparePreview,
-    clearBlobs,
+    clearBlob,
   };
 }

@@ -3,53 +3,36 @@ import type { WidgetMode } from "../../types";
 import { isCaptureMode, isNoteMode } from "../../types";
 import { useDraggable } from "../../hooks/useDraggable";
 import {
-  ScanLine,
-  Cursor3Fill,
-  PenFill,
-  CloseLine,
-  Delete2Fill,
-  SendFill,
-  CheckLine,
-  AlertDiamondFill,
+  ScanLine, Cursor3Fill, PenFill, CloseLine, Delete2Fill, SendFill, CheckLine, AlertDiamondFill,
 } from "../icons";
 import { Tooltip } from "../shared/Tooltip";
 
 interface FeedbackBarProps {
-  isIdle: boolean;
-  onActivate: () => void;
   mode: WidgetMode;
   markerColor: string;
   itemCount: number;
-  hasContent: boolean;
+  onActivate: () => void;
   onSetMode: (mode: WidgetMode) => void;
   onClose: () => void;
   onReview: () => void;
   onDeleteAll: () => void;
-  onAnchorAriaLabel?: (ariaLabel: string) => void;
   panelOpen?: boolean;
   barRef: RefObject<HTMLDivElement | null>;
 }
 
+const BAR_PADDING = 8;
+
 export function FeedbackBar({
-  isIdle,
-  onActivate,
-  mode,
-  markerColor,
-  itemCount,
-  hasContent,
-  onSetMode,
-  onClose,
-  onReview,
-  onDeleteAll,
-  onAnchorAriaLabel,
-  panelOpen,
-  barRef,
+  mode, markerColor, itemCount, onActivate, onSetMode, onClose, onReview, onDeleteAll, panelOpen, barRef,
 }: FeedbackBarProps) {
-  const isSuccess = mode === "success";
-  const isError = mode === "submitError";
+  const isIdle = mode === "idle";
+  const hasContent = itemCount > 0;
+  const status = mode === "success" ? "success" : mode === "submitError" ? "error" : null;
+  const showTools = !isIdle && !status;
   const captureActive = isCaptureMode(mode);
   const annotateActive = mode === "annotating";
   const noteActive = isNoteMode(mode);
+  const countOnly = isIdle && hasContent;
 
   const [tooltipsHidden, setTooltipsHidden] = useState(false);
   const hideTooltips = () => setTooltipsHidden(true);
@@ -60,25 +43,16 @@ export function FeedbackBar({
     barRef,
   });
 
-  // Measure tools width and set bar width dynamically
+  // Morph the bar to fit its current contents. Fixed states are sized here so the
+  // width transition runs between every state; the expanded width is measured.
   const toolsRef = useRef<HTMLDivElement>(null);
-  const BAR_PADDING = 8;
-
   useEffect(() => {
     const bar = barRef.current;
     if (!bar) return;
-    if (isSuccess) {
-      bar.style.width = "48px";
-      bar.style.height = "40px";
-      return;
-    }
-    if (isError) {
-      bar.style.width = "172px";
-      bar.style.height = "40px";
-      return;
-    }
+    if (status === "success") { bar.style.width = "48px"; bar.style.height = "40px"; return; }
+    if (status === "error") { bar.style.width = "172px"; bar.style.height = "40px"; return; }
     if (isIdle) {
-      if (itemCount > 0) {
+      if (hasContent) {
         bar.style.width = itemCount > 9 ? "48px" : "36px";
         bar.style.height = "36px";
       } else {
@@ -90,40 +64,29 @@ export function FeedbackBar({
     const tools = toolsRef.current;
     if (!tools) return;
     const id = requestAnimationFrame(() => {
-      const width = tools.scrollWidth + BAR_PADDING;
-      bar.style.width = `${width}px`;
+      bar.style.width = `${tools.scrollWidth + BAR_PADDING}px`;
       bar.style.height = "40px";
     });
     return () => cancelAnimationFrame(id);
-  }, [isIdle, isSuccess, isError, hasContent, itemCount, barRef]);
+  }, [isIdle, status, hasContent, itemCount, barRef]);
 
-  const guardClick = (fn: () => void) => {
+  const guardClick = (fn: () => void) => () => {
     if (justDragged.current) return;
+    hideTooltips();
     fn();
-  };
-
-  const reportAnchor = (e: React.MouseEvent<HTMLButtonElement>) => {
-    const label = e.currentTarget.getAttribute("aria-label");
-    if (label) onAnchorAriaLabel?.(label);
   };
 
   return (
     <div
       ref={barRef}
-      className={`rm-bar ${!position ? "rm-pos-br" : ""} ${isIdle ? "" : "rm-bar--expanded"} ${isDragging ? "rm-bar--dragging" : ""} ${isIdle && itemCount > 0 ? "rm-bar--count-only" : ""}`}
+      className={`rm-bar ${!position ? "rm-pos-br" : ""} ${isIdle ? "" : "rm-bar--expanded"} ${isDragging ? "rm-bar--dragging" : ""} ${countOnly ? "rm-bar--count-only" : ""}`}
       data-remediate-widget=""
-      data-has-submenu={
-        mode === "captureMenu" || mode === "noteMenu" || undefined
-      }
-      data-has-content={hasContent}
-      data-success={isSuccess ? "" : undefined}
-      data-error={isError ? "" : undefined}
+      data-status={status ?? undefined}
       onMouseDown={handleMouseDown}
       style={{
         position: "fixed",
-        zIndex: 999999,
-        visibility: "var(--rm-ready, hidden)" as any,
-        ...(isIdle && itemCount > 0 ? { background: markerColor } : {}),
+        zIndex: "var(--rm-z-bar)" as unknown as number,
+        visibility: "var(--rm-ready, hidden)" as React.CSSProperties["visibility"],
         ...(position
           ? position.r < position.x
             ? { right: position.r, top: position.y, left: "auto", bottom: "auto" }
@@ -132,49 +95,53 @@ export function FeedbackBar({
       }}
     >
       <button
-        className={`rm-bar__trigger ${isIdle ? "" : "rm-bar__trigger--hidden"} ${isIdle && itemCount > 0 ? "rm-bar__trigger--count" : ""}`}
-        onClick={() => guardClick(onActivate)}
-        aria-label={itemCount > 0 ? `Open feedback widget, ${itemCount} items` : "Open feedback widget"}
+        type="button"
+        className={`rm-bar__trigger ${isIdle ? "" : "rm-bar__trigger--hidden"} ${countOnly ? "rm-bar__trigger--count" : ""}`}
+        onClick={guardClick(onActivate)}
+        aria-label={hasContent ? `Open feedback widget, ${itemCount} items` : "Open feedback widget"}
+        aria-expanded={!isIdle}
+        tabIndex={isIdle ? 0 : -1}
+        aria-hidden={!isIdle}
       >
-        <span className={`rm-bar__count-text ${isIdle && itemCount > 0 ? "rm-bar__count-text--visible" : ""}`}>
-          {itemCount > 0 ? itemCount : ""}
+        <span className={`rm-bar__count-text ${countOnly ? "rm-bar__count-text--visible" : ""}`}>
+          {hasContent ? itemCount : ""}
         </span>
-        <div className={`rm-bar__text-wrapper ${isIdle && itemCount > 0 ? "rm-bar__text-wrapper--hidden" : ""}`}>
+        <div className={`rm-bar__text-wrapper ${countOnly ? "rm-bar__text-wrapper--hidden" : ""}`}>
           <span className="rm-bar__text">Feedback</span>
-          {isIdle && itemCount > 0 && (
-            <span className="rm-bar__badge">{itemCount}</span>
-          )}
         </div>
       </button>
 
-      {isSuccess && (
-        <div className="rm-bar__check">
-          <CheckLine size={24} />
-        </div>
-      )}
+      {/* Submit outcome, announced to assistive tech and auto-cleared by the parent */}
+      <div role="status" aria-live="polite" className="rm-bar__status">
+        {status === "success" && (
+          <div className="rm-bar__check" aria-label="Sent">
+            <CheckLine size={24} />
+          </div>
+        )}
+        {status === "error" && (
+          <div className="rm-bar__error">
+            <AlertDiamondFill size={20} />
+            <span className="rm-bar__error-text">Submission Failed</span>
+          </div>
+        )}
+      </div>
 
-      {isError && (
-        <div className="rm-bar__error">
-          <AlertDiamondFill size={20} />
-          <span className="rm-bar__error-text">Submission Failed</span>
-        </div>
-      )}
-
+      {/* Tools are always mounted for the morph; `inert` keeps hidden tools out of the tab order */}
       <div
         ref={toolsRef}
-        className={`rm-bar__tools ${!isIdle && !isSuccess && !isError ? "rm-bar__tools--visible" : ""}`}
+        className={`rm-bar__tools ${showTools ? "rm-bar__tools--visible" : ""}`}
         onMouseLeave={showTooltips}
+        inert={!showTools}
       >
         <div className="rm-toolbar__actions">
           <Tooltip content="Capture" disabled={tooltipsHidden} anchorRef={barRef}>
             <button
+              type="button"
               className={`rm-toolbar-btn ${captureActive ? "rm-toolbar-btn--active" : ""}`}
-              onClick={(e) => guardClick(() => {
-                hideTooltips();
-                if (!captureActive) reportAnchor(e);
-                onSetMode(captureActive ? "active" : "captureMenu");
-              })}
+              onClick={guardClick(() => onSetMode(captureActive ? "active" : "captureMenu"))}
               aria-label="Capture mode"
+              aria-pressed={captureActive}
+              data-rm-anchor="capture"
             >
               <ScanLine size={20} />
             </button>
@@ -182,12 +149,11 @@ export function FeedbackBar({
 
           <Tooltip content="Annotate" disabled={tooltipsHidden} anchorRef={barRef}>
             <button
+              type="button"
               className={`rm-toolbar-btn ${annotateActive ? "rm-toolbar-btn--active" : ""}`}
-              onClick={() => guardClick(() => {
-                hideTooltips();
-                onSetMode(annotateActive ? "active" : "annotating");
-              })}
+              onClick={guardClick(() => onSetMode(annotateActive ? "active" : "annotating"))}
               aria-label="Annotate mode"
+              aria-pressed={annotateActive}
             >
               <Cursor3Fill size={20} />
             </button>
@@ -195,13 +161,12 @@ export function FeedbackBar({
 
           <Tooltip content="Note" disabled={tooltipsHidden} anchorRef={barRef}>
             <button
+              type="button"
               className={`rm-toolbar-btn ${noteActive ? "rm-toolbar-btn--active" : ""}`}
-              onClick={(e) => guardClick(() => {
-                hideTooltips();
-                if (!noteActive) reportAnchor(e);
-                onSetMode(noteActive ? "active" : "noteMenu");
-              })}
+              onClick={guardClick(() => onSetMode(noteActive ? "active" : "noteMenu"))}
               aria-label="Note mode"
+              aria-pressed={noteActive}
+              data-rm-anchor="note"
             >
               <PenFill size={20} />
             </button>
@@ -214,11 +179,9 @@ export function FeedbackBar({
             <div className="rm-toolbar__actions">
               <Tooltip content="Delete all" disabled={tooltipsHidden} anchorRef={barRef}>
                 <button
+                  type="button"
                   className="rm-toolbar-btn"
-                  onClick={() => guardClick(() => {
-                    hideTooltips();
-                    onDeleteAll();
-                  })}
+                  onClick={guardClick(onDeleteAll)}
                   aria-label="Delete all items"
                 >
                   <Delete2Fill size={20} />
@@ -226,19 +189,14 @@ export function FeedbackBar({
               </Tooltip>
               <Tooltip content="Review" disabled={tooltipsHidden} anchorRef={barRef}>
                 <button
+                  type="button"
                   className="rm-toolbar-btn rm-toolbar-btn--review"
-                  onClick={(e) => guardClick(() => {
-                    hideTooltips();
-                    reportAnchor(e);
-                    onReview();
-                  })}
-                  aria-label="Review and submit"
+                  onClick={guardClick(onReview)}
+                  aria-label={`Review and submit, ${itemCount} items`}
+                  data-rm-anchor="review"
                 >
                   <SendFill size={20} />
-                  <span
-                    className="rm-toolbar-btn__badge"
-                    style={{ background: markerColor }}
-                  >
+                  <span className="rm-toolbar-btn__badge" style={{ background: markerColor }} aria-hidden="true">
                     {itemCount}
                   </span>
                 </button>
@@ -251,11 +209,9 @@ export function FeedbackBar({
 
         <Tooltip content="Close" disabled={tooltipsHidden} anchorRef={barRef}>
           <button
+            type="button"
             className="rm-toolbar-btn rm-toolbar-btn--close"
-            onClick={() => guardClick(() => {
-              hideTooltips();
-              onClose();
-            })}
+            onClick={guardClick(onClose)}
             aria-label="Close widget"
           >
             <CloseLine size={20} />

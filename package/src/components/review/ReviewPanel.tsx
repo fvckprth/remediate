@@ -1,15 +1,16 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { FeedbackItem } from "../../types";
+import type { FeedbackItem, WidgetMessages } from "../../types";
 import {
   CameraFill, CamcorderFill, Cursor3Fill, Message4Fill, VoiceFill,
   CloseLine, EyeLine,
 } from "../icons";
 import { PriorityIcon } from "../shared/PriorityButton";
+import { PanelActions } from "../shared/PanelActions";
 
 interface ReviewPanelProps {
   items: FeedbackItem[];
   isSubmitting?: boolean;
-  messages?: { submitButton: string; submittingButton: string; cancelButton: string };
+  messages: Pick<WidgetMessages, "submitButton" | "submittingButton" | "cancelButton">;
   onRemoveItem: (id: string) => void;
   onPreviewItem: (id: string) => void;
   onBack: () => void;
@@ -29,15 +30,17 @@ function itemIcon(type: FeedbackItem["type"]) {
 function itemLabel(item: FeedbackItem) {
   switch (item.type) {
     case "photo":
-      return `${Math.round(item.area.width)} \u00d7 ${Math.round(item.area.height)} at (${Math.round(item.area.x)}, ${Math.round(item.area.y)})`;
+      return `${Math.round(item.area.width)} × ${Math.round(item.area.height)} at (${Math.round(item.area.x)}, ${Math.round(item.area.y)})`;
     case "video":
       return `${item.duration} seconds`;
     case "annotation":
       return item.element.name;
     case "textNote":
       return item.text;
-    case "voiceNote":
-      return `~${Math.ceil(item.duration / 60)} minute${Math.ceil(item.duration / 60) !== 1 ? "s" : ""}`;
+    case "voiceNote": {
+      const minutes = Math.ceil(item.duration / 60);
+      return `~${minutes} minute${minutes !== 1 ? "s" : ""}`;
+    }
   }
 }
 
@@ -59,23 +62,17 @@ export function ReviewPanel({ items, isSubmitting, messages, onRemoveItem, onPre
   }, [items.length, updateScrollMask]);
 
   return (
-    <div
-      className="rm-review-panel"
-      data-remediate-widget=""
-    >
+    <div className="rm-review-panel" data-remediate-widget="">
       <div
         ref={listRef}
         className="rm-review-panel__list"
+        role="list"
         onScroll={updateScrollMask}
         data-mask-top={scrollMask.top || undefined}
         data-mask-bottom={scrollMask.bottom || undefined}
       >
-        {items.map((item, i) => (
-          <div
-            key={item.id}
-            className="rm-review-item"
-            style={{ animationDelay: `${i * 40}ms` }}
-          >
+        {items.map((item) => (
+          <div key={item.id} className="rm-review-item" role="listitem">
             <span className="rm-review-item__priority">
               {item.priority && item.priority !== "none" ? (
                 <PriorityIcon priority={item.priority} />
@@ -89,6 +86,7 @@ export function ReviewPanel({ items, isSubmitting, messages, onRemoveItem, onPre
             </div>
             <div className="rm-review-item__actions">
               <button
+                type="button"
                 className="rm-review-item__action-btn"
                 onClick={() => onPreviewItem(item.id)}
                 aria-label={`Preview item ${item.index}`}
@@ -96,6 +94,7 @@ export function ReviewPanel({ items, isSubmitting, messages, onRemoveItem, onPre
                 <EyeLine size={16} />
               </button>
               <button
+                type="button"
                 className="rm-review-item__action-btn rm-review-item__action-btn--danger"
                 onClick={() => onRemoveItem(item.id)}
                 aria-label={`Remove item ${item.index}`}
@@ -108,21 +107,16 @@ export function ReviewPanel({ items, isSubmitting, messages, onRemoveItem, onPre
       </div>
 
       <div className="rm-review-panel__footer">
-        <span className="rm-review-panel__count">
+        <span className="rm-review-panel__count" aria-live="polite">
           {items.length} item{items.length !== 1 ? "s" : ""}
         </span>
-        <div className="rm-popover__actions">
-          <button className="rm-popover__cancel" onClick={onBack}>
-            {messages?.cancelButton ?? "Cancel"}
-          </button>
-          <button
-            className="rm-popover__submit"
-            onClick={onSubmit}
-            disabled={items.length === 0 || isSubmitting}
-          >
-            {isSubmitting ? (messages?.submittingButton ?? "Sending\u2026") : (messages?.submitButton ?? "Submit")}
-          </button>
-        </div>
+        <PanelActions
+          onCancel={onBack}
+          onSubmit={onSubmit}
+          cancelLabel={messages.cancelButton}
+          submitLabel={isSubmitting ? messages.submittingButton : messages.submitButton}
+          disabled={items.length === 0 || isSubmitting}
+        />
       </div>
     </div>
   );

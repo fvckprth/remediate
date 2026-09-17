@@ -67,13 +67,6 @@ export function AreaSelector({ onSelect, onCancel }: AreaSelectorProps) {
     onSelect(rect);
   }, [drag, onSelect]);
 
-  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
-    if (e.key === "Escape") {
-      setDrag(null);
-      onCancel();
-    }
-  }, [onCancel]);
-
   const rect = drag ? toRect(drag) : null;
 
   return (
@@ -86,7 +79,6 @@ export function AreaSelector({ onSelect, onCancel }: AreaSelectorProps) {
       onTouchStart={handleTouchStart}
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
-      onKeyDown={handleKeyDown}
       tabIndex={0}
       data-remediate-widget=""
     >

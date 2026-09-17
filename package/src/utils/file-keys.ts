@@ -15,14 +15,8 @@ const ITEM_TYPE_TO_FILE: Record<string, { prefix: FileCategory; ext: string }> =
   voiceNote: { prefix: "voice",      ext: "webm" },
 };
 
-const PREFIX_TO_ITEM_TYPE: Record<FileCategory, string> = {
-  screenshot: "photo",
-  recording:  "video",
-  voice:      "voiceNote",
-};
-
 /** All recognized file prefixes, in the order they appear in FormData. */
-export const FILE_PREFIXES: readonly FileCategory[] = ["screenshot", "recording", "voice"] as const;
+const FILE_PREFIXES: readonly FileCategory[] = ["screenshot", "recording", "voice"] as const;
 
 /** Build the FormData field key for an item. Returns null for item types without files. */
 export function fileKey(item: Pick<FeedbackItem, "type" | "id">): string | null {
@@ -44,14 +38,4 @@ export function parseFileKey(key: string): { category: FileCategory; itemId: str
     }
   }
   return null;
-}
-
-/** Get the file prefix for an item type. Returns null for types without files. */
-export function filePrefixForType(itemType: string): FileCategory | null {
-  return ITEM_TYPE_TO_FILE[itemType]?.prefix ?? null;
-}
-
-/** Get the item type for a file prefix. */
-export function itemTypeForPrefix(prefix: FileCategory): string {
-  return PREFIX_TO_ITEM_TYPE[prefix];
 }

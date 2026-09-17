@@ -1,86 +1,48 @@
-import { useState, useRef, useEffect, useCallback } from "react";
-import { PriorityButton } from "../shared/PriorityButton";
-import { Delete2Fill } from "../icons";
+import { useRef, useEffect, useCallback } from "react";
 import type { AnnotationPriority, TextNoteItem } from "../../types";
-import { usePreview, useWidget } from "../../state/WidgetContext";
+import { NoteComposer } from "../shared/NoteComposer";
+import { PanelActions } from "../shared/PanelActions";
+import { useNoteDraft } from "../../hooks/useNoteDraft";
 
 interface TextNotePanelProps {
   onAdd: (text: string, priority: AnnotationPriority) => void;
   onCancel: () => void;
-  onDelete?: () => void;
 }
 
-export function TextNotePanel({ onAdd, onCancel, onDelete }: TextNotePanelProps) {
-  const { state } = useWidget();
-  const preview = usePreview<TextNoteItem>("textNote");
-  const submitLabel = state.previewingItemId ? "Save" : "Add";
-
-  const [text, setText] = useState(preview?.text ?? "");
-  const [priority, setPriority] = useState<AnnotationPriority>(preview?.priority ?? "none");
+export function TextNotePanel({ onAdd, onCancel }: TextNotePanelProps) {
+  const draft = useNoteDraft<TextNoteItem>("textNote", (item) => item.text);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
+  // Focus after the panel's entrance animation has started (two frames).
   useEffect(() => {
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        textareaRef.current?.focus();
-      });
+    const id = requestAnimationFrame(() => {
+      requestAnimationFrame(() => textareaRef.current?.focus());
     });
+    return () => cancelAnimationFrame(id);
   }, []);
 
-  const handleSubmit = useCallback(() => {
-    if (!text.trim()) return;
-    onAdd(text.trim(), priority);
-  }, [text, priority, onAdd]);
+  const hasContent = draft.text.trim().length > 0;
 
-  const handleKeyDown = useCallback(
-    (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-      if (e.nativeEvent.isComposing) return;
-      if (e.key === "Enter" && !e.shiftKey) {
-        e.preventDefault();
-        handleSubmit();
-      }
-    },
-    [handleSubmit]
-  );
+  const handleSubmit = useCallback(() => {
+    if (hasContent) onAdd(draft.text.trim(), draft.priority);
+  }, [hasContent, draft.text, draft.priority, onAdd]);
 
   return (
     <div className="rm-text-panel" data-remediate-widget="">
       <p className="rm-text-panel__title">Text</p>
 
-      <div className="rm-input-group">
-        <textarea
-          ref={textareaRef}
-          className="rm-input-group__textarea"
-          placeholder="What's on your mind?"
-          value={text}
-          onChange={(e) => setText(e.target.value)}
-          rows={3}
-          onKeyDown={handleKeyDown}
-        />
-        <div className="rm-input-group__footer">
-          <PriorityButton priority={priority} onCycle={setPriority} />
-        </div>
-      </div>
+      <NoteComposer
+        ref={textareaRef}
+        value={draft.text}
+        onChange={draft.setText}
+        priority={draft.priority}
+        onPriorityChange={draft.setPriority}
+        placeholder="What's on your mind?"
+        onSubmit={handleSubmit}
+      />
 
       <div className="rm-text-panel__footer">
-        {onDelete && (
-          <button className="rm-text-panel__delete" onClick={onDelete} aria-label="Delete">
-            <Delete2Fill size={20} />
-          </button>
-        )}
-        <div className="rm-text-panel__actions">
-          <button className="rm-text-panel__cancel" onClick={onCancel}>
-            Cancel
-          </button>
-          <button
-            className="rm-text-panel__submit"
-            style={{ opacity: text.trim() ? 1 : 0.4 }}
-            onClick={handleSubmit}
-            disabled={!text.trim()}
-          >
-            {submitLabel}
-          </button>
-        </div>
+        <PanelActions onCancel={onCancel} onSubmit={handleSubmit} submitLabel={draft.submitLabel} disabled={!hasContent} />
       </div>
     </div>
   );

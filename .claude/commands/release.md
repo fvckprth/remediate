@@ -30,12 +30,11 @@ publish a new version of remediate.
    - then commit the version bump alone with: `chore: bump to vX.Y.Z`
    - if you're on a worktree branch, push with `git push origin HEAD:main` (fast-forwards `origin/main` from the worktree HEAD)
 
-6. **update the marketing site (single commit, three file edits)**
-   - file 1: `/Users/parthpatel/Desktop/Projects/remediate-mktg/src/components/nav-config.tsx`
-     - update the `VERSION` constant
-   - file 2: `/Users/parthpatel/Desktop/Projects/remediate-mktg/package.json`
+6. **update the marketing site (single commit, two file edits)**
+   - the displayed version is derived from `package.json` (`src/site.ts`), so there is no constant to bump
+   - file 1: `/Users/parthpatel/Desktop/Projects/remediate-mktg/package.json`
      - bump `"remediate": "^X.Y.Z"`
-   - file 3: `/Users/parthpatel/Desktop/Projects/remediate-mktg/package-lock.json` — **hand-edit only, do NOT run npm install**
+   - file 2: `/Users/parthpatel/Desktop/Projects/remediate-mktg/package-lock.json` — **hand-edit only, do NOT run npm install**
      - top-level dep range: `packages."".dependencies.remediate` → `^X.Y.Z`
      - lockfile block: `node_modules/remediate` → update `version`, `resolved`, `integrity` (use the integrity from step 4)
    - **CRITICAL — DO NOT run `npm install remediate@latest` (or similar) on macOS.** npm strips cross-platform `optionalDependencies` (e.g. `lightningcss-linux-x64-gnu`) from `package-lock.json` when run on a single platform, and Vercel's Linux build fails with a native binary load error. Hand-editing keeps the rest of the lockfile intact.

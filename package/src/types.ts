@@ -79,8 +79,6 @@ export type WidgetMode =
   | "capturePreview"
   | "captureVideo"
   | "videoRecording"
-  | "videoPreview"
-  | "videoNoteEntry"
   | "annotating"
   | "noteMenu"
   | "textNote"
@@ -93,7 +91,7 @@ export type WidgetMode =
 
 const CAPTURE_MODES: WidgetMode[] = [
   "captureMenu", "capturePhoto", "captureDragging", "capturePreview",
-  "captureVideo", "videoRecording", "videoPreview", "videoNoteEntry",
+  "captureVideo", "videoRecording",
 ];
 const NOTE_MODES: WidgetMode[] = [
   "noteMenu", "textNote", "voiceNote", "voiceRecording", "voicePreview",
@@ -135,16 +133,6 @@ export type WidgetAction =
   | { type: "SUBMIT_ERROR" }
   | { type: "RESET" }
   | { type: "CLEAR_ALL" };
-
-// --- Legacy compat (used by AnnotateMode internals) ---
-
-export interface Annotation {
-  id: string;
-  index: number;
-  element: ElementCapture;
-  note: string;
-  timestamp: number;
-}
 
 // --- Submission ---
 

@@ -14,7 +14,7 @@ function getParentElement(element: Element): HTMLElement | null {
   return null;
 }
 
-export function closestCrossingShadow(element: Element, selector: string): Element | null {
+function closestCrossingShadow(element: Element, selector: string): Element | null {
   let current: Element | null = element;
   while (current) {
     if (current.matches(selector)) return current;
@@ -23,21 +23,9 @@ export function closestCrossingShadow(element: Element, selector: string): Eleme
   return null;
 }
 
-export function isInShadowDOM(element: Element): boolean {
-  return element.getRootNode() instanceof ShadowRoot;
-}
-
-export function getShadowHost(element: Element): Element | null {
-  const root = element.getRootNode();
-  if (root instanceof ShadowRoot) {
-    return root.host;
-  }
-  return null;
-}
-
 // --- Element path ---
 
-export function getElementPath(target: Element, maxDepth = 4): string {
+function getElementPath(target: Element, maxDepth = 4): string {
   const parts: string[] = [];
   let current: Element | null = target;
   let depth = 0;

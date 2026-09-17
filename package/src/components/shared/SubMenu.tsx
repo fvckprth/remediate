@@ -1,6 +1,6 @@
 import { useEffect, useRef, type ReactNode } from "react";
 
-interface SubMenuItem {
+export interface SubMenuItem {
   id: string;
   label: string;
   icon: ReactNode;
@@ -40,6 +40,7 @@ export function SubMenu({ items, onDismiss }: SubMenuProps) {
     >
       {items.map((item, i) => (
         <button
+          type="button"
           key={item.id}
           className={`rm-submenu__tile ${item.disabled ? "rm-submenu__tile--disabled" : ""}`}
           onClick={item.disabled ? undefined : item.onClick}

@@ -50,6 +50,9 @@ export function useDraggable({
       barX: rect.left,
       barY: rect.top,
     };
+    // Measured once here so each mousemove is a pure write (no forced layout per event).
+    const barWidth = rect.width;
+    const barHeight = rect.height;
     didDragRef.current = false;
 
     const handleMouseMove = (ev: MouseEvent) => {
@@ -67,8 +70,6 @@ export function useDraggable({
         setIsDragging(true);
       }
 
-      const barWidth = bar.offsetWidth;
-      const barHeight = bar.offsetHeight;
       const newX = Math.max(
         VIEWPORT_PADDING,
         Math.min(window.innerWidth - barWidth - VIEWPORT_PADDING, start.barX + deltaX)
